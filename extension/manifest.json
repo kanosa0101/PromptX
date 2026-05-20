@@ -1,0 +1,55 @@
+{
+  "manifest_version": 3,
+  "name": "PromptX",
+  "version": "1.0.0",
+  "description": "AI 提示词剪贴板管理工具 - 快速搜索、变量注入、一键输出",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    },
+    "default_title": "打开 PromptX"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "sidePanel",
+    "clipboardRead",
+    "clipboardWrite"
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Space",
+        "mac": "Alt+Space"
+      },
+      "description": "打开 PromptX Side Panel"
+    },
+    "open-sidepanel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+P",
+        "mac": "Command+Shift+P"
+      },
+      "description": "快捷打开 Side Panel"
+    }
+  },
+  "content_scripts": [
+    {
+      "js": ["content.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

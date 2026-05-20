@@ -1,0 +1,39 @@
+{
+  "name": "promptx",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@iconify/vue": "^4.1.1",
+    "@tauri-apps/api": "^2.0.0",
+    "fuse.js": "^7.0.0",
+    "pinia": "^2.1.7",
+    "pinyin-pro": "^3.28.1",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@tauri-apps/cli": "^2.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.1.0",
+    "@typescript-eslint/parser": "^7.1.0",
+    "@vitejs/plugin-vue": "^5.0.4",
+    "autoprefixer": "^10.4.18",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.23.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "~5.4.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^5.1.6",
+    "vue-tsc": "^2.0.6"
+  }
+}

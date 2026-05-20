@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 自定义基础样式 */
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 搜索框样式 */
+.search-bar {
+  @apply flex items-center gap-2 px-4 py-3;
+}
+
+.search-input {
+  @apply flex-1 bg-transparent outline-none text-base;
+}
+
+/* 结果列表样式 */
+.result-list {
+  @apply flex flex-col gap-1 overflow-y-auto max-h-[280px];
+}
+
+.prompt-item {
+  @apply px-4 py-3 cursor-pointer transition-colors duration-100;
+}
+
+.prompt-item.selected {
+  @apply bg-primary/10;
+}
+
+.prompt-title {
+  @apply font-medium text-sm;
+}
+
+.prompt-content {
+  @apply text-xs text-muted mt-1 line-clamp-1;
+}
+
+.prompt-tags {
+  @apply flex gap-1 mt-2;
+}
+
+.tag {
+  @apply text-xs px-2 py-0.5 rounded bg-border/50;
+}
+
+/* 空间标签样式 */
+.space-tabs {
+  @apply flex items-center gap-1 px-4 py-2;
+}
+
+.space-tab {
+  @apply px-3 py-1.5 rounded text-sm transition-colors duration-100;
+}
+
+.space-tab.active {
+  @apply bg-primary text-white;
+}
+
+.space-tab:not(.active) {
+  @apply hover:bg-border/50;
+}
+
+/* 变量表单样式 */
+.variable-form {
+  @apply p-4 space-y-4;
+}
+
+.variable-input {
+  @apply space-y-2;
+}
+
+.variable-input label {
+  @apply block text-sm font-medium;
+}
+
+.variable-input input {
+  @apply w-full px-3 py-2 rounded border border-border bg-background focus:outline-none focus:border-primary;
+}
+
+/* 设置面板样式 */
+.settings-panel {
+  @apply p-4 space-y-4;
+}
+
+.setting-item {
+  @apply flex items-center justify-between py-2;
+}
+
+.setting-label {
+  @apply text-sm font-medium;
+}
+
+/* 底部提示栏 */
+.status-bar {
+  @apply flex items-center justify-center gap-4 px-4 py-2 text-xs text-muted border-t border-border;
+}
+
+/* 空状态提示 */
+.empty-state {
+  @apply flex flex-col items-center justify-center py-8 text-center;
+}
+
+.empty-state p {
+  @apply text-muted text-sm;
+}
+
+.empty-state .hint {
+  @apply text-xs mt-2;
+}
+
+/* 高亮匹配文本 */
+.highlight-match {
+  @apply font-bold text-primary;
+}
+
+/* 按钮样式 */
+.btn {
+  @apply px-4 py-2 rounded text-sm font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-primary/80;
+}
+
+.btn-secondary {
+  @apply bg-border text-foreground hover:bg-border/80;
+}
+
+/* 图标按钮 */
+.icon-btn {
+  @apply p-1.5 rounded hover:bg-border/50 transition-colors;
+}
+
+/* 深色模式适配 */
+.dark .prompt-item.selected {
+  @apply bg-primary-dark/20;
+}
+
+.dark .space-tab.active {
+  @apply bg-primary-dark text-white;
+}
+
+.dark .tag {
+  @apply bg-border-dark/50;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}

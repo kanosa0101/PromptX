@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Side Panel 基础样式 */
+body {
+  width: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  overflow-x: hidden;
+}
+
+#app {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* 自定义组件样式 */
+.search-bar {
+  @apply sticky top-0 z-10 p-3 bg-background-light dark:bg-background-dark border-b border-border-light dark:border-border-dark;
+}
+
+.search-input {
+  @apply w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark
+         bg-background-light dark:bg-background-dark
+         text-foreground-light dark:text-foreground-dark
+         focus:outline-none focus:ring-2 focus:ring-primary-light dark:focus:ring-primary-dark;
+}
+
+.space-tabs {
+  @apply flex flex-wrap gap-2 p-2 bg-background-light dark:bg-background-dark;
+}
+
+.space-tab {
+  @apply px-3 py-1 rounded-full text-sm font-medium transition-colors
+         bg-gray-100 dark:bg-gray-700
+         text-gray-600 dark:text-gray-300
+         hover:bg-gray-200 dark:hover:bg-gray-600;
+}
+
+.space-tab.active {
+  @apply bg-primary-light dark:bg-primary-dark text-white;
+}
+
+.result-list {
+  @apply flex flex-col gap-1 p-2 overflow-y-auto;
+  max-height: calc(100vh - 180px);
+}
+
+.prompt-item {
+  @apply p-3 rounded-lg cursor-pointer transition-colors
+         bg-background-light dark:bg-background-dark
+         hover:bg-gray-50 dark:hover:bg-gray-800;
+}
+
+.prompt-item.selected {
+  @apply bg-blue-50 dark:bg-blue-900/30 ring-1 ring-primary-light dark:ring-primary-dark;
+}
+
+.prompt-title {
+  @apply font-medium text-foreground-light dark:text-foreground-dark;
+}
+
+.prompt-content {
+  @apply text-sm text-gray-500 dark:text-gray-400 truncate mt-1;
+}
+
+.prompt-tags {
+  @apply flex flex-wrap gap-1 mt-2;
+}
+
+.tag {
+  @apply px-2 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400;
+}
+
+.status-bar {
+  @apply fixed bottom-0 left-0 right-0 p-2 bg-background-light dark:bg-background-dark
+         border-t border-border-light dark:border-border-dark text-xs text-gray-500 dark:text-gray-400;
+}
+
+/* 变量表单 */
+.variable-form {
+  @apply p-4 bg-background-light dark:bg-background-dark rounded-lg border border-border-light dark:border-border-dark;
+}
+
+.variable-input {
+  @apply mb-3;
+}
+
+.variable-input label {
+  @apply block text-sm font-medium text-foreground-light dark:text-foreground-dark mb-1;
+}
+
+.variable-input input {
+  @apply w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark
+         bg-background-light dark:bg-background-dark
+         text-foreground-light dark:text-foreground-dark;
+}
+
+/* 输出状态提示 */
+.output-success {
+  @apply fixed bottom-4 left-4 right-4 p-3 rounded-lg bg-green-100 dark:bg-green-900/30
+         text-green-700 dark:text-green-300 text-center animate-fade-in;
+}
+
+.output-clipboard {
+  @apply fixed bottom-4 left-4 right-4 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30
+         text-yellow-700 dark:text-yellow-300 text-center animate-fade-in;
+}
+
+/* 动画 */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
+}
+
+/* 高亮匹配 */
+.highlight {
+  @apply bg-yellow-200 dark:bg-yellow-600/50 rounded;
+}
+
+/* 空状态 */
+.empty-state {
+  @apply p-8 text-center text-gray-500 dark:text-gray-400;
+}
+
+/* 加载状态 */
+.loading {
+  @apply p-8 text-center;
+}
+
+.spinner {
+  @apply w-8 h-8 border-4 border-primary-light dark:border-primary-dark
+         border-t-transparent rounded-full animate-spin mx-auto;
+}
+
+/* 按钮样式 */
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-colors;
+}
+
+.btn-primary {
+  @apply bg-primary-light dark:bg-primary-dark text-white
+         hover:bg-blue-600 dark:hover:bg-blue-500;
+}
+
+.btn-secondary {
+  @apply bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300
+         hover:bg-gray-200 dark:hover:bg-gray-600;
+}
+
+/* 编辑器样式 */
+.editor-panel {
+  @apply fixed inset-0 z-50 bg-background-light dark:bg-background-dark p-4;
+}
+
+.editor-input {
+  @apply w-full px-3 py-2 rounded-lg border border-border-light dark:border-border-dark
+         bg-background-light dark:bg-background-dark
+         text-foreground-light dark:text-foreground-dark
+         focus:outline-none focus:ring-2 focus:ring-primary-light;
+}
+
+.editor-textarea {
+  @apply w-full h-32 px-3 py-2 rounded-lg border border-border-light dark:border-border-dark
+         bg-background-light dark:bg-background-dark
+         text-foreground-light dark:text-foreground-dark resize-none
+         focus:outline-none focus:ring-2 focus:ring-primary-light;
+}

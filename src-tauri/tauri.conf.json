@@ -1,0 +1,42 @@
+{
+  "productName": "PromptX",
+  "version": "1.0.0",
+  "identifier": "com.promptx.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:51730",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "PromptX",
+        "width": 600,
+        "height": 400,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "visible": true,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ipc.localhost http://ipc.localhost; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "publisher": "PromptX",
+    "shortDescription": "Lightweight AI Prompt Manager",
+    "longDescription": "PromptX is a lightweight desktop prompt management tool for AI developers and researchers."
+  }
+}
