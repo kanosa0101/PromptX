@@ -30,19 +30,51 @@ const COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
 const RESTORE_DELAY_MS: u64 = 150;
 
+/// 轻量诊断日志（后台全自动流程无 UI，故障时需要可追溯）
+fn debug_log(msg: &str) {
+    let ts = chrono::Local::now().format("%m-%d %H:%M:%S%.3f");
+    let line = format!("[{}] {}\n", ts, msg);
+    let path = std::env::temp_dir().join("promptx-ai.log");
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+        use std::io::Write;
+        let _ = f.write_all(line.as_bytes());
+    }
+}
+
 /// 快捷键入口：截取选中文本并通知前端开始 AI 优化
 /// 全程不显示主窗口，焦点始终停留在目标应用
 pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
+    debug_log("快捷键触发: 开始截取选中文本");
     if let Err(err) = capture_inner(&app).await {
         // 截取失败：清理会话，弹出主窗口由前端展示错误
+        debug_log(&format!("截取失败: {}", err));
         *OPTIMIZE_SESSION.lock() = None;
-        let _ = emit_to_main(&app, "promptx-ai-error", serde_json::json!({ "message": err }));
+        match emit_to_main(&app, "promptx-ai-error", serde_json::json!({ "message": err })) {
+            Ok(()) => debug_log("已通知前端展示错误"),
+            Err(e) => debug_log(&format!("前端错误通知发送失败: {}", e)),
+        }
     }
+}
+
+/// 截断并转义内容用于日志预览
+fn preview(s: &str, max: usize) -> String {
+    let mut out: String = s.chars().take(max).collect::<String>().replace('\n', "\\n");
+    if s.chars().count() > max {
+        out.push('…');
+    }
+    out
 }
 
 async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
     // 1. 保存原剪贴板内容，用于结束后恢复
     let original = app.clipboard().read_text().ok();
+    debug_log(&format!(
+        "原剪贴板: {}",
+        match &original {
+            Some(t) => format!("{} 字符 [{}]", t.chars().count(), preview(t, 30)),
+            None => "不可读".to_string(),
+        }
+    ));
 
     // 2. 模拟 Ctrl+C 截取选中内容（窗口未显示，焦点仍在原应用）
     simulate_copy();
@@ -51,6 +83,11 @@ async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
     // 3. 读取截取结果；为空或与原剪贴板相同视为未截取到，
     //    避免把陈旧剪贴板内容当作选中文本送去优化并误替换
     let selected = app.clipboard().read_text().unwrap_or_default();
+    debug_log(&format!(
+        "Ctrl+C 后剪贴板: {} 字符 [{}]",
+        selected.chars().count(),
+        preview(&selected, 30)
+    ));
     if selected.trim().is_empty() || original.as_deref() == Some(selected.as_str()) {
         return Err("未截取到选中文本，请先在目标应用中选中要优化的内容".to_string());
     }
@@ -61,6 +98,10 @@ async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
     });
 
     // 4. 通知前端执行 AI 优化（前端完成后回调 optimize_apply_result）
+    debug_log(&format!(
+        "截取成功({} 字符)，通知前端调 AI",
+        selected.chars().count()
+    ));
     emit_to_main(
         app,
         "promptx-ai-captured",
@@ -71,6 +112,7 @@ async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
 /// 前端 AI 优化成功后调用：贴回原位置并保存历史
 #[tauri::command]
 pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Result<(), String> {
+    debug_log(&format!("前端回调贴回: {} 字符", text.chars().count()));
     let session = OPTIMIZE_SESSION
         .lock()
         .take()
@@ -103,6 +145,7 @@ pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Resul
 /// 前端 AI 优化失败后调用：恢复原剪贴板并结束会话
 #[tauri::command]
 pub fn optimize_cancel(app: tauri::AppHandle) -> Result<(), String> {
+    debug_log("前端回调取消: 恢复原剪贴板");
     if let Some(session) = OPTIMIZE_SESSION.lock().take() {
         if let Some(orig) = session.original_clipboard {
             let _ = app.clipboard().write_text(&orig);

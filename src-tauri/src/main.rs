@@ -24,6 +24,14 @@ pub struct AppState {
 
 fn main() {
     tauri::Builder::default()
+        // 单实例保护：重复启动时唤起已有实例的窗口并退出新进程，
+        // 避免多个实例抢占全局快捷键（否则快捷键会静默失效）
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_autostart::init(
@@ -136,8 +144,9 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
                 toggle_window_with_clipboard_capture(app);
             }
         });
-        if let Err(e) = result {
-            eprintln!("注册窗口快捷键 {} 失败: {}", global_hotkey, e);
+        match result {
+            Ok(()) => eprintln!("已注册窗口快捷键: {}", global_hotkey),
+            Err(e) => eprintln!("注册窗口快捷键 {} 失败: {}", global_hotkey, e),
         }
     }
 
@@ -151,8 +160,9 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
                 });
             }
         });
-        if let Err(e) = result {
-            eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e);
+        match result {
+            Ok(()) => eprintln!("已注册 AI 优化快捷键: {}", optimize_hotkey),
+            Err(e) => eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e),
         }
     }
 }
