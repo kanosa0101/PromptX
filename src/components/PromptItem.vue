@@ -29,6 +29,9 @@ const formatContent = (prompt: SearchResult) => {
   return highlightMatches(truncated, contentMatches)
 }
 
+// 格式化创建日期（YYYY-MM-DD）
+const formatDate = (iso: string) => (iso ? iso.slice(0, 10) : '')
+
 // 格式化变量显示
 const formatVariables = (variables: { name: string }[]) => {
   return variables.map(v => '{{' + v.name + '}}').join(' ')
@@ -89,15 +92,21 @@ const handleDelete = () => {
     <!-- 内容摘要 -->
     <div class="text-xs text-[#71717A] mt-1 line-clamp-1" v-html="formatContent(prompt)" />
 
-    <!-- 标签 -->
-    <div class="prompt-tags flex gap-1 mt-2">
+    <!-- 标签 + 创建日期 -->
+    <div class="flex items-center justify-between gap-2 mt-2">
+      <div class="flex flex-wrap gap-1 min-w-0">
+        <span
+          v-for="tag in prompt.tags"
+          :key="tag"
+          class="text-xs px-2 py-0.5 rounded-md bg-[#E4E4E7]/60 dark:bg-[#27272A]/60 border border-black/5 dark:border-white/10 text-[#71717A]"
+        >
+          {{ tag }}
+        </span>
+      </div>
       <span
-        v-for="tag in prompt.tags"
-        :key="tag"
-        class="text-xs px-2 py-0.5 rounded-md bg-[#E4E4E7]/60 dark:bg-[#27272A]/60 border border-black/5 dark:border-white/10 text-[#71717A]"
-      >
-        {{ tag }}
-      </span>
+        class="shrink-0 text-xs text-[#71717A]/60"
+        :title="'创建于 ' + prompt.createdAt"
+      >{{ formatDate(prompt.createdAt) }}</span>
     </div>
 
     <!-- 变量提示 -->

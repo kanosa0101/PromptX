@@ -62,9 +62,14 @@
           </div>
           <div class="prompt-content" v-html="highlightMatches(truncate(prompt.content, 60), prompt.matches?.filter(m => m.key === 'content'))">
           </div>
-          <div class="prompt-tags">
-            <span v-for="tag in prompt.tags" :key="tag" class="tag">
-              {{ tag }}
+          <div class="flex items-center justify-between gap-2">
+            <div class="prompt-tags min-w-0">
+              <span v-for="tag in prompt.tags" :key="tag" class="tag">
+                {{ tag }}
+              </span>
+            </div>
+            <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500" :title="'创建于 ' + prompt.createdAt">
+              {{ formatDate(prompt.createdAt) }}
             </span>
           </div>
         </div>
@@ -150,6 +155,9 @@ const pageSelection = computed(() => promptStore.pageSelection)
 const isLoading = computed(() => promptStore.isLoading)
 const filteredPrompts = computed(() => promptStore.filteredPrompts)
 const selectedIndex = computed(() => promptStore.selectedIndex)
+
+// 格式化创建日期（YYYY-MM-DD）
+const formatDate = (iso: string) => (iso ? iso.slice(0, 10) : '')
 
 // UI 状态
 const showVariableForm = computed(() => uiStore.showVariableForm)
