@@ -41,7 +41,7 @@ pub fn capture_selection_on_wakeup(app: &tauri::AppHandle) {
 #[tauri::command]
 pub async fn cut_selection(app: tauri::AppHandle) -> Result<String, String> {
     // 执行剪切
-    simulate_cut();
+    simulate_cut().map_err(|e| format!("模拟按键失败: {}", e))?;
 
     // 等待剪贴板更新
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -72,7 +72,7 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
     tokio::time::sleep(Duration::from_millis(50)).await;
 
     // 模拟粘贴
-    simulate_paste();
+    simulate_paste().map_err(|e| format!("模拟按键失败: {}", e))?;
 
     // 等待粘贴完成后恢复原剪贴板
     tokio::time::sleep(Duration::from_millis(150)).await;
@@ -99,63 +99,70 @@ pub fn paste_to_cursor(app: tauri::AppHandle, text: String) -> Result<(), String
     }
 
     // 模拟粘贴
-    simulate_paste();
+    simulate_paste().map_err(|e| format!("模拟按键失败: {}", e))?;
 
     Ok(())
 }
 
 /// 模拟复制按键 (Ctrl+C / Cmd+C)
-pub fn simulate_copy() {
-    simulate_copy_or_cut('c');
+pub fn simulate_copy() -> Result<(), String> {
+    simulate_copy_or_cut('c')
 }
 
 /// 模拟剪切按键 (Ctrl+X / Cmd+X)
-fn simulate_cut() {
-    simulate_copy_or_cut('x');
+fn simulate_cut() -> Result<(), String> {
+    simulate_copy_or_cut('x')
 }
 
 /// 模拟复制或剪切按键 (Ctrl+C/X 或 Cmd+C/X)
-fn simulate_copy_or_cut(key: char) {
+/// 初始化失败不再静默吞掉，由调用方记录诊断日志
+fn simulate_copy_or_cut(key: char) -> Result<(), String> {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
-    if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
-        #[cfg(target_os = "macos")]
-        {
-            // macOS: Cmd+C/X
-            let _ = enigo.key(Key::Meta, Direction::Press);
-            let _ = enigo.key(Key::Unicode(key), Direction::Click);
-            let _ = enigo.key(Key::Meta, Direction::Release);
-        }
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("enigo 初始化失败: {}", e))?;
 
-        #[cfg(not(target_os = "macos"))]
-        {
-            // Windows/Linux: Ctrl+C/X
-            let _ = enigo.key(Key::Control, Direction::Press);
-            let _ = enigo.key(Key::Unicode(key), Direction::Click);
-            let _ = enigo.key(Key::Control, Direction::Release);
-        }
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: Cmd+C/X
+        let _ = enigo.key(Key::Meta, Direction::Press);
+        let _ = enigo.key(Key::Unicode(key), Direction::Click);
+        let _ = enigo.key(Key::Meta, Direction::Release);
     }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        // Windows/Linux: Ctrl+C/X
+        let _ = enigo.key(Key::Control, Direction::Press);
+        let _ = enigo.key(Key::Unicode(key), Direction::Click);
+        let _ = enigo.key(Key::Control, Direction::Release);
+    }
+
+    Ok(())
 }
 
 /// 模拟粘贴按键 (Ctrl+V / Cmd+V)
-pub fn simulate_paste() {
+pub fn simulate_paste() -> Result<(), String> {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
-    if let Ok(mut enigo) = Enigo::new(&Settings::default()) {
-        #[cfg(target_os = "macos")]
-        {
-            // macOS: Cmd+V
-            let _ = enigo.key(Key::Meta, Direction::Press);
-            let _ = enigo.key(Key::Unicode('v'), Direction::Click);
-            let _ = enigo.key(Key::Meta, Direction::Release);
-        }
+    let mut enigo =
+        Enigo::new(&Settings::default()).map_err(|e| format!("enigo 初始化失败: {}", e))?;
 
-        #[cfg(not(target_os = "macos"))]
-        {
-            // Windows/Linux: Ctrl+V
-            let _ = enigo.key(Key::Control, Direction::Press);
-            let _ = enigo.key(Key::Unicode('v'), Direction::Click);
-            let _ = enigo.key(Key::Control, Direction::Release);
-        }
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: Cmd+V
+        let _ = enigo.key(Key::Meta, Direction::Press);
+        let _ = enigo.key(Key::Unicode('v'), Direction::Click);
+        let _ = enigo.key(Key::Meta, Direction::Release);
     }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        // Windows/Linux: Ctrl+V
+        let _ = enigo.key(Key::Control, Direction::Press);
+        let _ = enigo.key(Key::Unicode('v'), Direction::Click);
+        let _ = enigo.key(Key::Control, Direction::Release);
+    }
+
+    Ok(())
 }

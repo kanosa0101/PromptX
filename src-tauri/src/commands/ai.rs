@@ -19,7 +19,8 @@ use uuid::Uuid;
 /// 模拟按键后等待系统/应用响应的间隔
 const COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
-const RESTORE_DELAY_MS: u64 = 150;
+/// 贴回后等待目标应用读取剪贴板的时长，过长会导致慢应用粘到旧内容
+const RESTORE_DELAY_MS: u64 = 500;
 /// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
 const RELEASE_SETTLE_MS: u64 = 120;
 /// 会话有效期：超时的残留会话视为已失败，允许新触发覆盖
@@ -112,7 +113,10 @@ async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
     ));
 
     // 2. 模拟 Ctrl+C 截取选中内容（窗口未显示，焦点仍在原应用）
-    simulate_copy();
+    simulate_copy().map_err(|e| {
+        debug_log(&format!("模拟 Ctrl+C 失败: {}", e));
+        format!("模拟按键失败: {}", e)
+    })?;
     tokio::time::sleep(Duration::from_millis(COPY_DELAY_MS)).await;
 
     // 3. 读取截取结果；为空或与原剪贴板相同视为未截取到，
@@ -162,15 +166,21 @@ pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Resul
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
             window.hide().unwrap_or_default();
-            tokio::time::sleep(Duration::from_millis(PASTE_DELAY_MS)).await;
+            // 隐藏窗口后焦点归还目标应用，稍多等一会确保稳定
+            tokio::time::sleep(Duration::from_millis(150)).await;
         }
     }
     tokio::time::sleep(Duration::from_millis(PASTE_DELAY_MS)).await;
-    simulate_paste();
+    simulate_paste().map_err(|e| {
+        debug_log(&format!("模拟 Ctrl+V 失败: {}", e));
+        format!("模拟按键失败: {}", e)
+    })?;
+    debug_log("已模拟 Ctrl+V，等待目标应用读取剪贴板");
     tokio::time::sleep(Duration::from_millis(RESTORE_DELAY_MS)).await;
 
     if let Some(orig) = session.original_clipboard {
         let _ = app.clipboard().write_text(&orig);
+        debug_log("已恢复原剪贴板");
     }
 
     // 保存历史（失败不影响主流程）
