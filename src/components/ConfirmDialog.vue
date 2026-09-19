@@ -41,7 +41,7 @@ onUnmounted(() => {
     />
 
     <!-- 对话框 -->
-    <div class="dialog-content relative bg-white dark:bg-[#1A1A2E] rounded-lg shadow-lg p-4 min-w-[280px]">
+    <div class="dialog-content animate-fade-in relative bg-white dark:bg-[#1A1A2E] rounded-xl shadow-xl p-4 min-w-[280px]">
       <!-- 标题 -->
       <h3 v-if="title" class="text-base font-medium mb-2 text-[#1A1A2E] dark:text-[#E4E4E7]">
         {{ title }}

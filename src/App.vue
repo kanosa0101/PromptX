@@ -157,7 +157,7 @@ onUnmounted(() => {
     <!-- AI 优化错误横幅 -->
     <div
       v-if="uiStore.aiError"
-      class="fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg"
+      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg"
     >
       <span class="leading-snug">{{ uiStore.aiError }}</span>
       <button class="shrink-0 opacity-70 hover:opacity-100" @click="uiStore.clearAiError">✕</button>

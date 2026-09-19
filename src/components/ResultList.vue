@@ -26,9 +26,10 @@ const onItemClick = (index: number) => {
     />
 
     <!-- 空状态 -->
-    <div v-if="filteredPrompts.length === 0" class="empty-state py-8 text-center">
-      <p class="text-[#71717A]">暂无匹配结果</p>
-      <p class="text-xs text-[#71717A] mt-2">按 Ctrl+N 创建新提示词</p>
+    <div v-if="filteredPrompts.length === 0" class="empty-state py-10 text-center">
+      <div class="text-3xl mb-2 opacity-40" aria-hidden="true">🔍</div>
+      <p class="text-[#71717A] text-sm">暂无匹配结果</p>
+      <p class="text-xs text-[#71717A]/70 mt-1.5">按 Ctrl+N 创建新提示词</p>
     </div>
   </div>
 </template>

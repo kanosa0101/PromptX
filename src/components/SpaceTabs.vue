@@ -48,11 +48,11 @@ const deleteSpace = (spaceId: string) => {
       :key="space.id"
       role="tab"
       :aria-selected="space.id === currentSpaceId"
-      class="px-3 py-1.5 rounded text-sm transition-colors duration-100 group relative"
+      class="px-3.5 py-1.5 rounded-full text-sm transition-all duration-150 group relative"
       :class="[
         space.id === currentSpaceId
-          ? 'bg-[#3B82F6] text-white'
-          : 'hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]'
+          ? 'bg-[#3B82F6] text-white shadow-sm'
+          : 'hover:bg-[#E4E4E7]/80 dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]'
       ]"
       @click="selectSpace(space.id)"
       @dblclick="editSpace(space.id)"

@@ -41,7 +41,7 @@ body {
 }
 
 .space-tab.active {
-  @apply bg-primary-light dark:bg-primary-dark text-white;
+  @apply bg-primary-light dark:bg-primary-dark text-white shadow-sm;
 }
 
 .result-list {
@@ -50,13 +50,14 @@ body {
 }
 
 .prompt-item {
-  @apply p-3 rounded-lg cursor-pointer transition-colors
+  @apply p-3 rounded-lg cursor-pointer transition-all duration-150
          bg-background-light dark:bg-background-dark
-         hover:bg-gray-50 dark:hover:bg-gray-800;
+         border border-transparent
+         hover:bg-gray-50 dark:hover:bg-gray-800 hover:shadow-sm;
 }
 
 .prompt-item.selected {
-  @apply bg-blue-50 dark:bg-blue-900/30 ring-1 ring-primary-light dark:ring-primary-dark;
+  @apply bg-blue-50 dark:bg-blue-900/30 ring-1 ring-primary-light dark:ring-primary-dark shadow-sm;
 }
 
 .prompt-title {
@@ -108,6 +109,18 @@ body {
 .output-clipboard {
   @apply fixed bottom-4 left-4 right-4 p-3 rounded-lg bg-yellow-100 dark:bg-yellow-900/30
          text-yellow-700 dark:text-yellow-300 text-center animate-fade-in;
+}
+
+/* 文本选区颜色 */
+::selection {
+  background: rgba(59, 130, 246, 0.25);
+}
+
+/* 键盘焦点环 */
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.4);
+  border-radius: 4px;
 }
 
 /* 动画 */

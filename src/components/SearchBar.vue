@@ -53,12 +53,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="search-bar bg-white dark:bg-[#1A1A2E]" role="search">
+  <div class="search-bar group bg-white dark:bg-[#1A1A2E] border-b border-black/5 dark:border-white/5" role="search">
     <div class="flex items-center gap-3 px-4 py-3">
       <!-- 搜索图标（可拖拽） -->
       <span
         data-tauri-drag-region
-        class="text-[#71717A] cursor-move"
+        class="text-[#71717A] group-focus-within:text-[#3B82F6] transition-colors cursor-move"
       >🔍</span>
 
       <!-- 搜索输入框 -->
