@@ -18,6 +18,8 @@
 - **命名空间** - 分类管理提示词，Tab 快速切换
 - **模糊搜索** - 拼音首字母匹配，输入 "dj" 找到"代码解释"
 - **本地存储** - 数据不上云，隐私安全
+- **AI 快捷优化** - 快捷键截取选中文本，AI 优化后原位替换，结果自动存入「AI 优化」空间
+- **浏览器扩展** - 支持在浏览器中快速使用提示词
 
 ### 安装
 
@@ -56,11 +58,22 @@ npm run tauri:build
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### AI 快捷优化
+
+在任意应用中选中文本（如输入框里的提示词草稿），按下快捷键即可自动完成：截取 → AI 优化 → 原位替换，全程无窗口打断，结果自动存入独立的「AI 优化」历史空间。
+
+1. **配置**: 打开设置 (Ctrl+,) → 「AI 快捷优化」→ 填写 API Key、服务地址与模型（默认预置 DeepSeek，兼容任何 OpenAI 协议服务），点击「测试连接」验证
+2. **使用**: 选中文本 → `Ctrl+Alt+O` → AI 优化结果直接替换原文
+3. **沉淀**: 优化结果自动保存到「AI 优化」空间，可搜索、可复制，好结果可手动收藏进常用库
+
+> 优化指令模板可在设置中自定义；未配置 API Key 或未截取到选中文本时会弹出提示。
+
 ### 快捷键
 
 | 操作 | 快捷键 |
 |------|--------|
 | 呼出/隐藏 | Alt+Space |
+| AI 优化选中文本 | Ctrl+Alt+O (可在设置中修改) |
 | 上下选择 | ↑ ↓ |
 | 切换空间 | Tab |
 | 确认输出 | Enter |
@@ -108,6 +121,7 @@ PromptX/
 │   ├── composables/        # 组合函数
 │   ├── types/              # TypeScript 类型
 │   └── styles/             # 全局样式
+├── extension/              # 浏览器扩展
 ├── src-tauri/              # Rust 后端
 │   ├── src/
 │   │   ├── commands/       # Tauri 命令
@@ -142,6 +156,7 @@ npm run lint         # ESLint 检查
 
 - [docs/PRD.md](docs/PRD.md) - 产品需求文档
 - [docs/PRD2.0.md](docs/PRD2.0.md) - MVP 实现总结
+- [docs/PRD3.0.md](docs/PRD3.0.md) - 实态对齐版需求文档（含 AI 快捷优化）
 
 ---
 
@@ -159,6 +174,8 @@ A lightweight AI prompt management tool designed for AI developers and researche
 - **Workspaces** - Organize prompts by category, switch with Tab key
 - **Fuzzy Search** - Pinyin matching, type "dj" to find "代码解释" (Code Explanation)
 - **Local Storage** - Data stays local, privacy protected
+- **AI Quick Optimize** - Hotkey-captured selection is optimized by AI and replaced in place; results are saved to the "AI Optimize" space
+- **Browser Extension** - Quick access to prompts from the browser
 
 ### Installation
 
@@ -197,11 +214,22 @@ npm run tauri:build
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### AI Quick Optimize
+
+Select text in any app (e.g., a draft prompt in a chat box), press the hotkey, and PromptX will capture → AI-optimize → replace it in place, with no window interruption. Results are saved to a dedicated "AI Optimize" space.
+
+1. **Configure**: Open Settings (Ctrl+,) → "AI Quick Optimize" → fill in API Key, Base URL and model (DeepSeek preconfigured; any OpenAI-compatible service works), then click "Test Connection"
+2. **Use**: Select text → `Ctrl+Alt+O` → the optimized prompt replaces the original in place
+3. **Keep**: Results are saved to the "AI Optimize" space automatically for later search and reuse
+
+> The optimization instruction template is customizable in Settings; a notification appears if the API Key is missing or no selection is captured.
+
 ### Keyboard Shortcuts
 
 | Action | Shortcut |
 |--------|----------|
 | Toggle Window | Alt+Space |
+| AI Optimize Selection | Ctrl+Alt+O (configurable in Settings) |
 | Navigate | ↑ ↓ |
 | Switch Workspace | Tab |
 | Confirm Output | Enter |
@@ -249,6 +277,7 @@ PromptX/
 │   ├── composables/        # Composition functions
 │   ├── types/              # TypeScript types
 │   └── styles/             # Global styles
+├── extension/              # Browser extension
 ├── src-tauri/              # Rust backend
 │   ├── src/
 │   │   ├── commands/       # Tauri commands
@@ -283,6 +312,7 @@ npm run lint         # ESLint check
 
 - [docs/PRD.md](docs/PRD.md) - Product Requirements Document
 - [docs/PRD2.0.md](docs/PRD2.0.md) - MVP Implementation Summary
+- [docs/PRD3.0.md](docs/PRD3.0.md) - Implementation-aligned PRD (incl. AI Quick Optimize)
 
 ---
 

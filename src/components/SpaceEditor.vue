@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePromptStore } from '@/stores/promptStore'
+import type { Space } from '@/types'
+
+const props = defineProps<{
+  space?: Space | null
+}>()
 
 const promptStore = usePromptStore()
 
@@ -8,10 +13,25 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const isEditing = computed(() => !!props.space)
+
 // 表单状态
 const name = ref('')
 const icon = ref('📁')
 const color = ref('#3B82F6')
+
+// 从 props 初始化（编辑模式）
+watch(() => props.space, (space) => {
+  if (space) {
+    name.value = space.name
+    icon.value = space.icon
+    color.value = space.color
+  } else {
+    name.value = ''
+    icon.value = '📁'
+    color.value = '#3B82F6'
+  }
+}, { immediate: true })
 
 // 可选图标列表
 const iconOptions = ['📁', '💼', '🏠', '🎨', '📚', '💡', '🔧', '⭐', '🎯', '📝']
@@ -26,10 +46,18 @@ const handleSave = async () => {
   }
 
   try {
-    await promptStore.createSpace(name.value.trim(), icon.value, color.value)
+    if (isEditing.value && props.space) {
+      await promptStore.updateSpace(props.space.id, {
+        name: name.value.trim(),
+        icon: icon.value,
+        color: color.value,
+      })
+    } else {
+      await promptStore.createSpace(name.value.trim(), icon.value, color.value)
+    }
     emit('close')
   } catch (error) {
-    console.error('Failed to create space:', error)
+    console.error('Failed to save space:', error)
   }
 }
 
@@ -42,7 +70,7 @@ const handleClose = () => {
 <template>
   <div class="p-4 bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium">新建空间</h3>
+      <h3 class="text-base font-medium">{{ isEditing ? '编辑空间' : '新建空间' }}</h3>
       <button class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A]" @click="handleClose">✕</button>
     </div>
 
@@ -107,7 +135,7 @@ const handleClose = () => {
         :disabled="!name.trim()"
         @click="handleSave"
       >
-        创建
+        {{ isEditing ? '保存' : '创建' }}
       </button>
     </div>
   </div>

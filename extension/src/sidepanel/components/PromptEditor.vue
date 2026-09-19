@@ -68,7 +68,10 @@
 
 <script setup lang="ts">
 import { reactive, ref, computed } from 'vue'
+import { useUiStore } from '../stores/uiStore'
 import type { Prompt, Space } from '@/types'
+
+const uiStore = useUiStore()
 
 const props = defineProps<{
   prompt?: Prompt | null
@@ -104,8 +107,12 @@ const onSave = () => {
 }
 
 const onDelete = () => {
-  if (props.prompt && confirm('确定删除此提示词？')) {
-    emit('delete', props.prompt.id)
+  if (props.prompt) {
+    uiStore.openConfirmDialog(
+      '确定删除此提示词？',
+      () => emit('delete', props.prompt!.id),
+      '删除提示词'
+    )
   }
 }
 </script>

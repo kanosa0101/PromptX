@@ -7,36 +7,36 @@ import type { Variable } from '@/types'
 const SYSTEM_VARIABLES = ['clipboard', 'date', 'time', 'timestamp']
 
 /**
- * 解析提示词内容中的变量
+ * 解析提示词内容中的变量（支持中文等 Unicode 变量名）
  */
 export function parseVariables(content: string): Variable[] {
-  const regex = /\{\{(\w+)\}\}/g
-  const matches = content.matchAll(regex)
+  const regex = /\{\{([^{}]+)\}\}/g
   const variables: Variable[] = []
   const seen = new Set<string>()
 
-  for (const match of matches) {
-    const name = match[1]
-    if (!seen.has(name)) {
-      seen.add(name)
-      variables.push({
-        name,
-        type: SYSTEM_VARIABLES.includes(name) ? 'system' : 'custom',
-        defaultValue: undefined
-      })
-    }
+  let match
+  while ((match = regex.exec(content)) !== null) {
+    const name = match[1].trim()
+    if (!name || seen.has(name)) continue
+    seen.add(name)
+    variables.push({
+      name,
+      type: SYSTEM_VARIABLES.includes(name) ? 'system' : 'custom',
+      defaultValue: undefined
+    })
   }
 
   return variables
 }
 
 /**
- * 替换变量为实际值
+ * 替换变量为实际值（使用字符串替换避免正则注入）
  */
 export function replaceVariables(content: string, values: Record<string, string>): string {
   let result = content
   for (const [name, value] of Object.entries(values)) {
-    result = result.replace(new RegExp(`\\{\\{${name}\\}\\}`, 'g'), value)
+    const pattern = '{{' + name + '}}'
+    result = result.split(pattern).join(value)
   }
   return result
 }
@@ -61,17 +61,23 @@ export function getSystemVariableValue(name: string, clipboardText?: string): st
 }
 
 /**
- * 格式化日期
+ * 格式化日期（本地时间）
  */
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /**
- * 格式化时间
+ * 格式化时间（本地时间）
  */
 function formatTime(date: Date): string {
-  return date.toTimeString().split(' ')[0]
+  const h = String(date.getHours()).padStart(2, '0')
+  const m = String(date.getMinutes()).padStart(2, '0')
+  const s = String(date.getSeconds()).padStart(2, '0')
+  return `${h}:${m}:${s}`
 }
 
 /**

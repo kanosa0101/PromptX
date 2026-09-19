@@ -37,6 +37,67 @@
       />
     </div>
 
+    <!-- AI 优化设置 -->
+    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">AI 快捷优化</h4>
+        <button
+          class="px-3 py-1 rounded text-xs border border-[#E4E4E7] dark:border-[#27272A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
+          :disabled="isTestingAi"
+          @click="handleTestAi"
+        >
+          {{ isTestingAi ? '测试中...' : '测试连接' }}
+        </button>
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">API Key</span>
+        <input
+          v-model="aiApiKey"
+          type="password"
+          placeholder="sk-..."
+          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          @blur="saveSettings"
+        />
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">服务地址</span>
+        <input
+          v-model="aiBaseUrl"
+          type="text"
+          placeholder="https://api.deepseek.com"
+          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          @blur="saveSettings"
+        />
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">模型</span>
+        <input
+          v-model="aiModel"
+          type="text"
+          placeholder="deepseek-flash"
+          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          @blur="saveSettings"
+        />
+      </div>
+
+      <div class="py-1.5">
+        <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
+        <textarea
+          v-model="optimizeTemplate"
+          rows="3"
+          class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
+          @blur="saveSettings"
+        ></textarea>
+      </div>
+
+      <p class="text-xs text-[#71717A] leading-relaxed">
+        在网页输入框中选中文本，按 Alt+Shift+O 自动 AI 优化并原位替换（快捷键可在 chrome://extensions/shortcuts 修改）
+      </p>
+    </div>
+
     <!-- 导入导出 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
       <div class="flex gap-2 mb-3">
@@ -71,8 +132,10 @@
 import { ref, onMounted } from 'vue'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
 import { loadAppData, saveAppData } from '@/lib/storage'
+import { testAiConnection } from '@/lib/ai'
+import { DEFAULT_SETTINGS } from '@/types'
 
-const emit = defineEmits<{
+defineEmits<{
   close: []
 }>()
 
@@ -82,10 +145,21 @@ const theme = ref('system')
 const maxResults = ref(20)
 const statusMessage = ref<string | null>(null)
 
+// AI 优化设置（本地编辑，失焦保存）
+const aiBaseUrl = ref(DEFAULT_SETTINGS.aiBaseUrl)
+const aiApiKey = ref('')
+const aiModel = ref(DEFAULT_SETTINGS.aiModel)
+const optimizeTemplate = ref(DEFAULT_SETTINGS.optimizeTemplate)
+const isTestingAi = ref(false)
+
 onMounted(async () => {
   const data = await loadAppData()
   theme.value = data.settings?.theme || 'system'
   maxResults.value = data.settings?.maxResults || 20
+  aiBaseUrl.value = data.settings?.aiBaseUrl || DEFAULT_SETTINGS.aiBaseUrl
+  aiApiKey.value = data.settings?.aiApiKey || ''
+  aiModel.value = data.settings?.aiModel || DEFAULT_SETTINGS.aiModel
+  optimizeTemplate.value = data.settings?.optimizeTemplate || DEFAULT_SETTINGS.optimizeTemplate
 })
 
 const saveTheme = () => {
@@ -102,15 +176,37 @@ const applyTheme = (themeValue: string) => {
 }
 
 const saveSettings = async () => {
+  // 先读取现有数据，合并保存（避免覆盖其他设置字段）
+  const data = await loadAppData()
   await saveAppData({
     version: '1.0.0',
     settings: {
-      theme: theme.value,
-      maxResults: maxResults.value
+      ...data.settings,
+      theme: theme.value as 'light' | 'dark' | 'system',
+      maxResults: maxResults.value,
+      aiBaseUrl: aiBaseUrl.value,
+      aiApiKey: aiApiKey.value,
+      aiModel: aiModel.value,
+      optimizeTemplate: optimizeTemplate.value
     },
     spaces: promptStore.spaces,
     prompts: promptStore.prompts
   })
+}
+
+// 测试 AI 连接（使用当前表单值，无需先保存）
+const handleTestAi = async () => {
+  isTestingAi.value = true
+  statusMessage.value = '正在测试 AI 连接...'
+  try {
+    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value)
+    statusMessage.value = '连接成功，模型回复：' + reply.slice(0, 30)
+  } catch (err) {
+    statusMessage.value = '连接失败：' + (err as Error).message
+  } finally {
+    isTestingAi.value = false
+  }
+  setTimeout(() => statusMessage.value = null, 5000)
 }
 
 const handleExport = async () => {

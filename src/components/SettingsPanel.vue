@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { usePromptStore } from '@/stores/promptStore'
+import { testAiConnection } from '@/services/ai'
 
 const settingsStore = useSettingsStore()
 const uiStore = useUiStore()
@@ -13,24 +14,54 @@ const emit = defineEmits<{
   close: []
 }>()
 
-// 本地状态
-const theme = ref(settingsStore.theme)
-const hotkey = ref(settingsStore.globalHotkey)
-const windowOpacity = ref(settingsStore.windowOpacity)
-const autoHide = ref(settingsStore.autoHide)
-const showInDock = ref(settingsStore.showInDock)
-const launchAtLogin = ref(settingsStore.launchAtLogin)
+// 本地可编辑状态（通过 computed 从 store 读取，保存时写回 store）
+const theme = computed({
+  get: () => settingsStore.theme,
+  set: (v: 'light' | 'dark' | 'system') => { settingsStore.setTheme(v) }
+})
+const hotkey = computed(() => settingsStore.globalHotkey)
+const optimizeHotkey = computed(() => settingsStore.optimizeHotkey)
+const windowOpacity = computed({
+  get: () => settingsStore.windowOpacity,
+  set: (v: number) => { settingsStore.setWindowOpacity(v) }
+})
+const autoHide = computed({
+  get: () => settingsStore.autoHide,
+  set: (v: boolean) => { settingsStore.setAutoHide(v) }
+})
+const launchAtLogin = computed({
+  get: () => settingsStore.launchAtLogin,
+  set: (v: boolean) => { settingsStore.setLaunchAtLogin(v) }
+})
 
 // 导入导出状态
 const importStatus = ref<string | null>(null)
 
-// 快捷键捕获状态
-const isCapturingHotkey = ref(false)
-const capturedKeys = ref<string[]>([])
+// 快捷键捕获状态（记录正在捕获哪个快捷键）
+type HotkeyField = 'globalHotkey' | 'optimizeHotkey'
+const capturingField = ref<HotkeyField | null>(null)
 
+// AI 优化设置（本地编辑，失焦即保存）
+const aiBaseUrl = ref(settingsStore.aiBaseUrl)
+const aiApiKey = ref(settingsStore.aiApiKey)
+const aiModel = ref(settingsStore.aiModel)
+const optimizeTemplate = ref(settingsStore.optimizeTemplate)
+const isTestingAi = ref(false)
+
+// 透明度防抖
+let opacityTimer: ReturnType<typeof setTimeout> | null = null
+const updateOpacity = () => {
+  // 实时预览（通过 CSS）
+  document.documentElement.style.setProperty('--window-opacity', String(windowOpacity.value))
+  if (opacityTimer) clearTimeout(opacityTimer)
+  opacityTimer = setTimeout(() => {
+    settingsStore.setWindowOpacity(windowOpacity.value)
+  }, 300)
+}
 // 快捷键按键监听
 const handleHotkeyCapture = async (e: KeyboardEvent) => {
-  if (!isCapturingHotkey.value) return
+  const field = capturingField.value
+  if (!field) return
 
   e.preventDefault()
   e.stopPropagation()
@@ -47,58 +78,61 @@ const handleHotkeyCapture = async (e: KeyboardEvent) => {
   // 至少需要一个修饰键 + 一个普通键
   if (modifiers.length > 0 && key.length === 1) {
     const fullHotkey = [...modifiers, key].join('+')
-    hotkey.value = fullHotkey
-    capturedKeys.value = [...modifiers, key]
 
-    // 立即注册新快捷键
     try {
-      await invoke('register_hotkey', { hotkey: fullHotkey })
-      await saveSettings()
+      if (field === 'globalHotkey') {
+        // 立即注册新快捷键
+        await invoke('register_hotkey', { hotkey: fullHotkey })
+        await settingsStore.changeHotkey(fullHotkey)
+      } else {
+        // 保存后 update_settings 会统一重注册全部快捷键
+        await settingsStore.updateSettings({ optimizeHotkey: fullHotkey })
+      }
       importStatus.value = '快捷键已更新为 ' + fullHotkey
     } catch (error) {
-      importStatus.value = '快捷键注册失败：' + (error as string)
+      importStatus.value = '快捷键注册失败：' + (error instanceof Error ? error.message : String(error))
     }
 
-    isCapturingHotkey.value = false
+    capturingField.value = null
   }
 }
 
 // 开始捕获快捷键
-const startHotkeyCapture = () => {
-  isCapturingHotkey.value = true
-  capturedKeys.value = []
+const startHotkeyCapture = (field: HotkeyField) => {
+  capturingField.value = field
   importStatus.value = '请按下新的快捷键组合...'
 }
 
 // 取消捕获
 const cancelHotkeyCapture = () => {
-  isCapturingHotkey.value = false
-  capturedKeys.value = []
+  capturingField.value = null
   importStatus.value = null
 }
 
-// 透明度实时更新
-const updateOpacity = async () => {
-  // 实时预览（通过 CSS）
-  document.documentElement.style.setProperty('--window-opacity', String(windowOpacity.value))
-  await saveSettings()
+// 保存单个 AI 设置项（失焦触发）
+const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemplate', value: string) => {
+  settingsStore.updateSettings({ [field]: value }).catch((error) => {
+    importStatus.value = 'AI 设置保存失败：' + (error instanceof Error ? error.message : String(error))
+  })
 }
 
-// 保存设置
-const saveSettings = async () => {
-  await settingsStore.updateSettings({
-    theme: theme.value,
-    globalHotkey: hotkey.value,
-    windowOpacity: windowOpacity.value,
-    autoHide: autoHide.value,
-    showInDock: showInDock.value,
-    launchAtLogin: launchAtLogin.value,
-  })
+// 测试 AI 连接（使用当前表单值，无需先保存）
+const handleTestAi = async () => {
+  isTestingAi.value = true
+  importStatus.value = '正在测试 AI 连接...'
+  try {
+    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value)
+    importStatus.value = '连接成功，模型回复：' + reply.slice(0, 30)
+  } catch (error) {
+    importStatus.value = '连接失败：' + (error instanceof Error ? error.message : String(error))
+  } finally {
+    isTestingAi.value = false
+  }
 }
 
 // 关闭
 const handleClose = () => {
-  if (isCapturingHotkey.value) {
+  if (capturingField.value) {
     cancelHotkeyCapture()
   }
   emit('close')
@@ -185,7 +219,6 @@ onUnmounted(() => {
       <select
         v-model="theme"
         class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
-        @change="saveSettings"
       >
         <option v-for="opt in themeOptions" :key="opt.value" :value="opt.value">
           {{ opt.label }}
@@ -197,9 +230,9 @@ onUnmounted(() => {
     <div class="setting-item flex items-center justify-between py-2">
       <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">全局快捷键</span>
       <button
-        v-if="!isCapturingHotkey"
+        v-if="capturingField !== 'globalHotkey'"
         class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] w-24"
-        @click="startHotkeyCapture"
+        @click="startHotkeyCapture('globalHotkey')"
       >
         {{ hotkey }}
       </button>
@@ -234,18 +267,6 @@ onUnmounted(() => {
         v-model="autoHide"
         type="checkbox"
         class="w-4 h-4"
-        @change="saveSettings"
-      />
-    </div>
-
-    <!-- 显示在 Dock -->
-    <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">显示在任务栏</span>
-      <input
-        v-model="showInDock"
-        type="checkbox"
-        class="w-4 h-4"
-        @change="saveSettings"
       />
     </div>
 
@@ -256,8 +277,82 @@ onUnmounted(() => {
         v-model="launchAtLogin"
         type="checkbox"
         class="w-4 h-4"
-        @change="saveSettings"
       />
+    </div>
+
+    <!-- AI 优化设置 -->
+    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-3 mt-3">
+      <div class="flex items-center justify-between mb-2">
+        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">AI 快捷优化</h4>
+        <button
+          class="px-3 py-1 rounded text-xs border border-[#E4E4E7] dark:border-[#27272A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
+          :disabled="isTestingAi"
+          @click="handleTestAi"
+        >
+          {{ isTestingAi ? '测试中...' : '测试连接' }}
+        </button>
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">API Key</span>
+        <input
+          v-model="aiApiKey"
+          type="password"
+          placeholder="sk-..."
+          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          @blur="saveAiField('aiApiKey', aiApiKey)"
+        />
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">服务地址</span>
+        <input
+          v-model="aiBaseUrl"
+          type="text"
+          placeholder="https://api.deepseek.com"
+          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          @blur="saveAiField('aiBaseUrl', aiBaseUrl)"
+        />
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">模型</span>
+        <input
+          v-model="aiModel"
+          type="text"
+          placeholder="deepseek-flash"
+          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          @blur="saveAiField('aiModel', aiModel)"
+        />
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">优化快捷键</span>
+        <button
+          v-if="capturingField !== 'optimizeHotkey'"
+          class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] w-24"
+          @click="startHotkeyCapture('optimizeHotkey')"
+        >
+          {{ optimizeHotkey }}
+        </button>
+        <button
+          v-else
+          class="px-3 py-1.5 rounded border border-[#3B82F6] text-sm bg-[#3B82F6]/10 text-[#3B82F6] w-24 animate-pulse"
+          @click="cancelHotkeyCapture"
+        >
+          取消
+        </button>
+      </div>
+
+      <div class="py-1.5">
+        <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
+        <textarea
+          v-model="optimizeTemplate"
+          rows="3"
+          class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
+          @blur="saveAiField('optimizeTemplate', optimizeTemplate)"
+        ></textarea>
+      </div>
     </div>
 
     <!-- 导入导出 -->

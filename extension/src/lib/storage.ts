@@ -3,9 +3,9 @@
  */
 
 import type { AppData } from '@/types'
-import { DEFAULT_APP_DATA } from '@/types'
+import { DEFAULT_APP_DATA, DEFAULT_SETTINGS } from '@/types'
 
-const STORAGE_KEY = 'promptx_data'
+export const STORAGE_KEY = 'promptx_data'
 
 /**
  * 加载应用数据
@@ -14,7 +14,9 @@ export async function loadAppData(): Promise<AppData> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEY)
     if (result[STORAGE_KEY]) {
-      return result[STORAGE_KEY] as AppData
+      const data = result[STORAGE_KEY] as AppData
+      // 合并默认设置：兼容旧版本数据（补齐新增的 AI 设置字段）
+      return { ...data, settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) } }
     }
     return DEFAULT_APP_DATA
   } catch {

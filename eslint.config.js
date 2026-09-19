@@ -7,7 +7,7 @@ export default [
   ...ts.configs.recommended,
   ...vue.configs['vue3-recommended'],
   {
-    ignores: ['dist/**', 'node_modules/**', 'src-tauri/**', 'extension/**', 'promptx-shared/**'],
+    ignores: ['dist/**', 'node_modules/**', 'src-tauri/**', 'extension/**'],
   },
   {
     rules: {

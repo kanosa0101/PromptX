@@ -8,16 +8,14 @@ const promptStore = usePromptStore()
 const filteredPrompts = computed(() => promptStore.filteredPrompts)
 const selectedIndex = computed(() => promptStore.selectedIndex)
 
-// 点击选中项
+// 点击选中项（不直接输出，Enter 才输出）
 const onItemClick = (index: number) => {
-  if (filteredPrompts.value[index]) {
-    promptStore.selectAndOutput(filteredPrompts.value[index])
-  }
+  promptStore.moveSelection(index - promptStore.selectedIndex)
 }
 </script>
 
 <template>
-  <div class="result-list overflow-y-auto bg-white dark:bg-[#1A1A2E]">
+  <div class="result-list overflow-y-auto bg-white dark:bg-[#1A1A2E]" role="listbox" aria-label="提示词列表">
     <!-- 结果列表 -->
     <PromptItem
       v-for="(prompt, index) in filteredPrompts"

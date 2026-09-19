@@ -112,18 +112,64 @@ function getPinyinInitials(text: string): string {
 }
 
 /**
+ * HTML 特殊字符转义，防止 XSS
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
  * 高亮匹配文本
  */
 export function highlightMatches(text: string, matches?: MatchResult[]): string {
-  if (!matches || matches.length === 0) return text
+  if (!matches || matches.length === 0) return escapeHtml(text)
 
-  let result = text
+  // 先转义原始文本
+  const escaped = escapeHtml(text)
+
+  // 收集所有匹配位置
+  const positions: Array<[number, number]> = []
   for (const match of matches) {
     for (const [start, end] of match.indices) {
-      // 简化实现：不实际修改 HTML
-      // 实际高亮需要在 Vue 组件中处理
+      positions.push([start, end])
     }
   }
+
+  // 按位置排序
+  positions.sort((a, b) => a[0] - b[0])
+
+  // 合并重叠区域
+  const merged: Array<[number, number]> = []
+  for (const [start, end] of positions) {
+    if (merged.length === 0 || merged[merged.length - 1][1] < start) {
+      merged.push([start, end])
+    } else {
+      merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], end)
+    }
+  }
+
+  // 构建高亮文本
+  let result = escaped
+  let offset = 0
+  for (const [start, end] of merged) {
+    const beforeEscaped = escapeHtml(text.slice(0, start))
+    const matchEscaped = escapeHtml(text.slice(start, end + 1))
+
+    const beforeLength = beforeEscaped.length
+    const matchLength = matchEscaped.length
+
+    const before = result.slice(0, beforeLength + offset)
+    const match = result.slice(beforeLength + offset, beforeLength + offset + matchLength)
+    const after = result.slice(beforeLength + offset + matchLength)
+
+    result = `${before}<span class="highlight-match">${match}</span>${after}`
+    offset += '<span class="highlight-match">'.length + '</span>'.length
+  }
+
   return result
 }
 

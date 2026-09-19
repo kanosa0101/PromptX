@@ -46,6 +46,13 @@ export interface Size {
   height: number
 }
 
+// AI 优化历史空间的固定 ID（两端共用约定）
+export const AI_HISTORY_SPACE_ID = 'space_ai_history'
+
+// 默认优化指令模板
+export const DEFAULT_OPTIMIZE_TEMPLATE =
+  '你是提示词优化专家。将用户发来的内容改写为一条结构清晰、表达准确、上下文完整的提示词，保留原意，不新增无关要求。只输出优化后的提示词本身，不要任何解释、前言或 Markdown 代码块包裹。'
+
 // 设置模型
 export interface Settings {
   globalHotkey: string
@@ -55,8 +62,16 @@ export interface Settings {
   windowPosition: Position | null
   windowSize: Size
   autoHide: boolean
-  showInDock: boolean
+  searchDebounce: number
+  maxResults: number
   launchAtLogin: boolean
+  // AI 优化（OpenAI 兼容 Chat Completions）
+  aiBaseUrl: string
+  aiApiKey: string
+  aiModel: string
+  optimizeTemplate: string
+  // AI 优化全局快捷键（仅桌面端）
+  optimizeHotkey: string
 }
 
 // 应用数据结构
@@ -103,8 +118,14 @@ export const DEFAULT_SETTINGS: Settings = {
   windowPosition: null,
   windowSize: { width: 600, height: 400 },
   autoHide: true,
-  showInDock: false,
+  searchDebounce: 300,
+  maxResults: 6,
   launchAtLogin: false,
+  aiBaseUrl: 'https://api.deepseek.com',
+  aiApiKey: '',
+  aiModel: 'deepseek-flash',
+  optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE,
+  optimizeHotkey: 'Ctrl+Alt+O',
 }
 
 // 默认空间
@@ -115,8 +136,8 @@ export const DEFAULT_SPACES: Space[] = [
     icon: '📁',
     color: '#3B82F6',
     order: 0,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
     id: 'space_work',
@@ -124,8 +145,8 @@ export const DEFAULT_SPACES: Space[] = [
     icon: '💼',
     color: '#10B981',
     order: 1,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
     id: 'space_personal',
@@ -133,8 +154,8 @@ export const DEFAULT_SPACES: Space[] = [
     icon: '🏠',
     color: '#F59E0B',
     order: 2,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
   },
 ]
 
@@ -149,8 +170,8 @@ export const DEFAULT_PROMPTS: Prompt[] = [
     variables: [{ name: 'clipboard', type: 'system' }],
     usageCount: 0,
     lastUsedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
   },
   {
     id: 'prompt_002',
@@ -161,19 +182,7 @@ export const DEFAULT_PROMPTS: Prompt[] = [
     variables: [{ name: 'clipboard', type: 'system' }],
     usageCount: 0,
     lastUsedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-  {
-    id: 'prompt_003',
-    title: '翻译为英文',
-    content: '请将以下内容翻译为英文：\n\n{{clipboard}}',
-    tags: ['翻译'],
-    spaceId: 'space_default',
-    variables: [{ name: 'clipboard', type: 'system' }],
-    usageCount: 0,
-    lastUsedAt: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: '2024-01-01T00:00:00.000Z',
+    updatedAt: '2024-01-01T00:00:00.000Z',
   },
 ]

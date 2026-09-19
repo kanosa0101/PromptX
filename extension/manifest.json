@@ -26,6 +26,10 @@
     "clipboardRead",
     "clipboardWrite"
   ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "commands": {
     "_execute_action": {
       "suggested_key": {
@@ -40,6 +44,13 @@
         "mac": "Command+Shift+P"
       },
       "description": "快捷打开 Side Panel"
+    },
+    "optimize-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+O",
+        "mac": "Alt+Shift+O"
+      },
+      "description": "AI 优化选中文本并原位替换"
     }
   },
   "content_scripts": [

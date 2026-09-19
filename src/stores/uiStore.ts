@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import type { Prompt } from '@/types'
+import type { Prompt, Space } from '@/types'
 
 export const useUiStore = defineStore('ui', {
   state: () => ({
@@ -14,10 +14,20 @@ export const useUiStore = defineStore('ui', {
     confirmDialogCallback: null as (() => void) | null,
     currentPrompt: null as Prompt | null,
     editingPrompt: null as Prompt | null,
+    editingSpace: null as Space | null,
     windowVisible: true,
+    aiError: '',
   }),
 
   actions: {
+    showAiError(message: string) {
+      this.aiError = message
+    },
+
+    clearAiError() {
+      this.aiError = ''
+    },
+
     showSettingsPanel() {
       this.showSettings = true
     },
@@ -62,12 +72,14 @@ export const useUiStore = defineStore('ui', {
       this.showHelp = !this.showHelp
     },
 
-    openSpaceEditor() {
+    openSpaceEditor(space?: Space) {
+      this.editingSpace = space || null
       this.showSpaceEditor = true
     },
 
     closeSpaceEditor() {
       this.showSpaceEditor = false
+      this.editingSpace = null
     },
 
     // 确认对话框
@@ -105,7 +117,11 @@ export const useUiStore = defineStore('ui', {
       this.showHelp = false
       this.showSpaceEditor = false
       this.showConfirmDialog = false
+      this.confirmDialogMessage = ''
+      this.confirmDialogTitle = ''
+      this.confirmDialogCallback = null
       this.editingPrompt = null
+      this.editingSpace = null
       this.currentPrompt = null
     },
 

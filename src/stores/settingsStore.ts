@@ -7,10 +7,19 @@ export const useSettingsStore = defineStore('settings', {
   state: () => ({
     theme: 'system' as 'light' | 'dark' | 'system',
     globalHotkey: 'Alt+Space',
+    language: 'zh-CN',
     windowOpacity: 0.95,
+    windowPosition: null as { x: number; y: number } | null,
+    windowSize: { width: 600, height: 400 },
     autoHide: true,
-    showInDock: false,
+    searchDebounce: 300,
+    maxResults: 6,
     launchAtLogin: false,
+    aiBaseUrl: 'https://api.deepseek.com',
+    aiApiKey: '',
+    aiModel: 'deepseek-chat',
+    optimizeTemplate: DEFAULT_SETTINGS.optimizeTemplate,
+    optimizeHotkey: 'Ctrl+Alt+O',
   }),
 
   actions: {
@@ -28,15 +37,13 @@ export const useSettingsStore = defineStore('settings', {
 
     async updateSettings(updates: Partial<Settings>) {
       try {
-        await invoke('update_settings', { settings: updates })
+        // 后端 update_settings 要求完整 Settings 对象（整体替换），必须先合并出全量
+        const full: Settings = { ...this.$state, ...updates }
+        await invoke('update_settings', { settings: full })
         this.$patch(updates)
 
         if (updates.theme) {
           this.applyTheme()
-        }
-
-        if (updates.globalHotkey) {
-          await this.changeHotkey(updates.globalHotkey)
         }
       } catch (error) {
         console.error('Failed to update settings:', error)
@@ -45,9 +52,12 @@ export const useSettingsStore = defineStore('settings', {
     },
 
     async changeHotkey(newHotkey: string) {
-      // 当前版本仅保存设置，修改需重启应用生效
-      this.globalHotkey = newHotkey
-      await this.updateSettings({ globalHotkey: newHotkey })
+      try {
+        await this.updateSettings({ globalHotkey: newHotkey })
+      } catch (error) {
+        console.error('Failed to change hotkey:', error)
+        throw error
+      }
     },
 
     applyTheme() {
@@ -68,10 +78,6 @@ export const useSettingsStore = defineStore('settings', {
 
     setAutoHide(enabled: boolean) {
       this.updateSettings({ autoHide: enabled })
-    },
-
-    setShowInDock(enabled: boolean) {
-      this.updateSettings({ showInDock: enabled })
     },
 
     setLaunchAtLogin(enabled: boolean) {

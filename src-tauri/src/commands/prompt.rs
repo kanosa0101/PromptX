@@ -15,22 +15,22 @@ pub fn get_app_data(state: State<'_, AppState>) -> Result<AppData, String> {
 
 /// 获取所有提示词
 #[tauri::command]
-pub fn get_all_prompts(space_id: Option<String>, state: State<'_, AppState>) -> Vec<Prompt> {
+pub fn get_all_prompts(space_id: Option<String>, state: State<'_, AppState>) -> Result<Vec<Prompt>, String> {
     let storage = state.storage.read();
-    let data = storage.load().unwrap_or_default();
+    let data = storage.load().map_err(|e| e.to_string())?;
 
     if let Some(sid) = space_id {
-        data.prompts.into_iter().filter(|p| p.space_id == sid).collect()
+        Ok(data.prompts.into_iter().filter(|p| p.space_id == sid).collect())
     } else {
-        data.prompts
+        Ok(data.prompts)
     }
 }
 
 /// 搜索提示词
 #[tauri::command]
-pub fn search_prompts(query: String, space_id: Option<String>, state: State<'_, AppState>) -> Vec<Prompt> {
+pub fn search_prompts(query: String, space_id: Option<String>, state: State<'_, AppState>) -> Result<Vec<Prompt>, String> {
     let storage = state.storage.read();
-    let data = storage.load().unwrap_or_default();
+    let data = storage.load().map_err(|e| e.to_string())?;
 
     let mut prompts = data.prompts;
 
@@ -52,7 +52,7 @@ pub fn search_prompts(query: String, space_id: Option<String>, state: State<'_, 
             .collect();
     }
 
-    prompts
+    Ok(prompts)
 }
 
 /// 创建提示词
@@ -122,8 +122,11 @@ pub fn delete_prompt(id: String, state: State<'_, AppState>) -> Result<(), Strin
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 
+    let before_len = data.prompts.len();
     data.prompts.retain(|p| p.id != id);
-    storage.save(data).map_err(|e| e.to_string())?;
+    if data.prompts.len() < before_len {
+        storage.save(data).map_err(|e| e.to_string())?;
+    }
 
     Ok(())
 }
@@ -148,13 +151,6 @@ pub fn update_prompt_usage(id: String, state: State<'_, AppState>) -> Result<(),
     }
 }
 
-/// 导出数据
-#[tauri::command]
-pub fn export_data(state: State<'_, AppState>) -> Result<AppData, String> {
-    let storage = state.storage.read();
-    storage.load().map_err(|e| e.to_string())
-}
-
 /// 导入结果
 #[derive(serde::Serialize)]
 pub struct ImportResult {
@@ -165,6 +161,8 @@ pub struct ImportResult {
 }
 
 /// 导入数据
+/// merge=true: 冲突项用导入数据覆盖更新
+/// merge=false: 冲突项跳过（保留本地）
 #[tauri::command]
 pub fn import_data(
     import_data: AppData,
@@ -183,9 +181,13 @@ pub fn import_data(
 
     // 导入空间
     for space in import_data.spaces {
-        if data.spaces.iter().any(|s| s.id == space.id) {
-            result.conflicts.push(format!("Space ID {} already exists", space.id));
+        if let Some(existing) = data.spaces.iter_mut().find(|s| s.id == space.id) {
             if merge {
+                // 合并模式：用导入数据覆盖
+                *existing = space;
+                result.imported_spaces += 1;
+            } else {
+                result.conflicts.push(format!("Space ID {} already exists", space.id));
                 result.skipped += 1;
             }
         } else {
@@ -196,9 +198,13 @@ pub fn import_data(
 
     // 导入提示词
     for prompt in import_data.prompts {
-        if data.prompts.iter().any(|p| p.id == prompt.id) {
-            result.conflicts.push(format!("Prompt ID {} already exists", prompt.id));
+        if let Some(existing) = data.prompts.iter_mut().find(|p| p.id == prompt.id) {
             if merge {
+                // 合并模式：用导入数据覆盖
+                *existing = prompt;
+                result.imported_prompts += 1;
+            } else {
+                result.conflicts.push(format!("Prompt ID {} already exists", prompt.id));
                 result.skipped += 1;
             }
         } else {

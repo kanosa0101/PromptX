@@ -125,6 +125,10 @@ body {
   @apply bg-yellow-200 dark:bg-yellow-600/50 rounded;
 }
 
+.highlight-match {
+  @apply bg-yellow-200 dark:bg-yellow-600/50 rounded;
+}
+
 /* 空状态 */
 .empty-state {
   @apply p-8 text-center text-gray-500 dark:text-gray-400;

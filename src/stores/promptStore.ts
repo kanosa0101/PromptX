@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import type { Prompt, Space, Variable, AppData, ImportResult, PromptInput } from '@/types'
 import { DEFAULT_SPACES, DEFAULT_PROMPTS } from '@/types'
 import { useSearch } from '@/composables/useSearch'
+import { useSettingsStore } from './settingsStore'
 import { useUiStore } from './uiStore'
 
 export const usePromptStore = defineStore('prompt', {
@@ -18,7 +19,10 @@ export const usePromptStore = defineStore('prompt', {
   getters: {
     currentSpace: (state) => state.spaces.find((s) => s.id === state.currentSpaceId),
     filteredPrompts(): Prompt[] {
-      return useSearch(this.prompts, this.searchQuery, this.currentSpaceId)
+      const settingsStore = useSettingsStore()
+      const maxResults = settingsStore.maxResults || 6
+      const results = useSearch(this.prompts, this.searchQuery, this.currentSpaceId)
+      return results.slice(0, maxResults)
     },
     selectedPrompt(): Prompt | undefined {
       return this.filteredPrompts[this.selectedIndex]
@@ -109,7 +113,7 @@ export const usePromptStore = defineStore('prompt', {
           clipboard: clipboardText,
           date: this.formatDate(new Date()),
           time: this.formatTime(new Date()),
-          timestamp: String(Date.now()),
+          timestamp: String(Math.floor(Date.now() / 1000)),
         }
 
         // 替换变量
@@ -151,13 +155,14 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     parseVariables(content: string): Variable[] {
-      const regex = /\{\{(\w+)\}\}/g
+      const regex = /\{\{([^{}]+)\}\}/g
       const variables: Variable[] = []
       const systemVariables = ['clipboard', 'date', 'time', 'timestamp']
 
       let match
       while ((match = regex.exec(content)) !== null) {
-        const name = match[1]
+        const name = match[1].trim()
+        if (!name) continue
         if (!variables.find((v) => v.name === name)) {
           variables.push({
             name,
@@ -172,17 +177,25 @@ export const usePromptStore = defineStore('prompt', {
     replaceVariables(content: string, values: Record<string, string>): string {
       let result = content
       for (const [name, value] of Object.entries(values)) {
-        result = result.replace(new RegExp(`\\{\\{${name}\\}\\}`, 'g'), value)
+        // 使用字符串替换而非正则，避免变量名中的特殊字符导致正则注入
+        const pattern = '{{' + name + '}}'
+        result = result.split(pattern).join(value)
       }
       return result
     },
 
     formatDate(date: Date): string {
-      return date.toISOString().split('T')[0]
+      const y = date.getFullYear()
+      const m = String(date.getMonth() + 1).padStart(2, '0')
+      const d = String(date.getDate()).padStart(2, '0')
+      return `${y}-${m}-${d}`
     },
 
     formatTime(date: Date): string {
-      return date.toTimeString().split(' ')[0]
+      const h = String(date.getHours()).padStart(2, '0')
+      const m = String(date.getMinutes()).padStart(2, '0')
+      const s = String(date.getSeconds()).padStart(2, '0')
+      return `${h}:${m}:${s}`
     },
 
     setSearchQuery(query: string) {
@@ -203,12 +216,14 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     nextSpace() {
+      if (this.spaces.length === 0) return
       const currentIndex = this.spaces.findIndex((s) => s.id === this.currentSpaceId)
       const nextIndex = (currentIndex + 1) % this.spaces.length
       this.setCurrentSpace(this.spaces[nextIndex].id)
     },
 
     prevSpace() {
+      if (this.spaces.length === 0) return
       const currentIndex = this.spaces.findIndex((s) => s.id === this.currentSpaceId)
       const prevIndex = (currentIndex - 1 + this.spaces.length) % this.spaces.length
       this.setCurrentSpace(this.spaces[prevIndex].id)
@@ -243,7 +258,12 @@ export const usePromptStore = defineStore('prompt', {
       try {
         await invoke('delete_space', { id })
         this.spaces = this.spaces.filter((s) => s.id !== id)
-        this.prompts = this.prompts.filter((p) => p.spaceId !== id)
+        // 将该空间下的提示词移至默认空间（与后端行为一致）
+        this.prompts.forEach((p) => {
+          if (p.spaceId === id) {
+            p.spaceId = 'space_default'
+          }
+        })
         // 如果删除的是当前空间，切换到默认空间
         if (this.currentSpaceId === id) {
           this.setCurrentSpace('space_default')
@@ -256,7 +276,7 @@ export const usePromptStore = defineStore('prompt', {
 
     async exportData() {
       try {
-        const data = await invoke<AppData>('export_data')
+        const data = await invoke<AppData>('get_app_data')
         return data
       } catch (error) {
         console.error('Failed to export data:', error)

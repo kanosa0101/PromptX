@@ -13,7 +13,11 @@ export const useUiStore = defineStore('ui', {
     showEditor: false,
     editingPrompt: null as Prompt | null,
     showSettings: false,
-    showHelp: false
+    showHelp: false,
+    showConfirmDialog: false,
+    confirmDialogTitle: '' as string,
+    confirmDialogMessage: '' as string,
+    confirmDialogCallback: null as (() => void) | null
   }),
 
   actions: {
@@ -77,6 +81,36 @@ export const useUiStore = defineStore('ui', {
      */
     closeHelp() {
       this.showHelp = false
+    },
+
+    /**
+     * 打开确认对话框
+     */
+    openConfirmDialog(message: string, callback: () => void, title?: string) {
+      this.showConfirmDialog = true
+      this.confirmDialogTitle = title || ''
+      this.confirmDialogMessage = message
+      this.confirmDialogCallback = callback
+    },
+
+    /**
+     * 关闭确认对话框
+     */
+    closeConfirmDialog() {
+      this.showConfirmDialog = false
+      this.confirmDialogTitle = ''
+      this.confirmDialogMessage = ''
+      this.confirmDialogCallback = null
+    },
+
+    /**
+     * 执行确认操作
+     */
+    confirmAction() {
+      if (this.confirmDialogCallback) {
+        this.confirmDialogCallback()
+      }
+      this.closeConfirmDialog()
     }
   }
 })

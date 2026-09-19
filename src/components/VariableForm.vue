@@ -33,6 +33,11 @@ watch(() => props.prompt, (prompt) => {
   }
 }, { immediate: true })
 
+// 检查是否有空的自定义变量
+const hasEmptyVariable = computed(() =>
+  customVariables.value.some((v) => !values.value[v.name]?.trim())
+)
+
 // 确认
 const handleConfirm = () => {
   emit('confirm', values.value)
@@ -74,7 +79,7 @@ const handleCancel = () => {
       <button class="btn btn-secondary" @click="handleCancel">
         取消
       </button>
-      <button class="btn btn-primary" @click="handleConfirm">
+      <button class="btn btn-primary" :disabled="hasEmptyVariable" @click="handleConfirm">
         确认输出
       </button>
     </div>

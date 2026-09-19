@@ -4,6 +4,7 @@ import { onMounted, onUnmounted } from 'vue'
 defineProps<{
   title?: string
   message: string
+  confirmText?: string
 }>()
 
 const emit = defineEmits<{
@@ -32,11 +33,11 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="confirm-dialog fixed inset-0 flex items-center justify-center z-[100]">
+  <div class="confirm-dialog fixed inset-0 flex items-center justify-center z-[100]" role="alertdialog" aria-modal="true">
     <!-- 背景遮罩 -->
     <div
       class="absolute inset-0 bg-black/50"
-      @click="$emit('cancel')"
+      @click="emit('cancel')"
     />
 
     <!-- 对话框 -->
@@ -55,15 +56,15 @@ onUnmounted(() => {
       <div class="flex justify-end gap-2">
         <button
           class="px-3 py-1.5 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] hover:bg-[#D4D4D8] dark:hover:bg-[#3F3F46]"
-          @click="$emit('cancel')"
+          @click="emit('cancel')"
         >
           取消
         </button>
         <button
           class="px-3 py-1.5 rounded text-sm bg-[#EF4444] text-white hover:bg-[#DC2626]"
-          @click="$emit('confirm')"
+          @click="emit('confirm')"
         >
-          删除
+          {{ confirmText || '删除' }}
         </button>
       </div>
     </div>

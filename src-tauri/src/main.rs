@@ -9,11 +9,13 @@ mod services;
 mod utils;
 
 use commands::clipboard::capture_selection_on_wakeup;
+use commands::window;
 use parking_lot::RwLock;
 use services::storage::StorageService;
 use std::sync::Arc;
 use tauri::Manager;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use tauri_plugin_autostart::ManagerExt;
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
 /// 应用状态
 pub struct AppState {
@@ -25,6 +27,7 @@ fn main() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_autostart::init(
+            // MacosLauncher 参数仅在 macOS 上生效，其他平台会被 Tauri 忽略
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
         ))
@@ -36,15 +39,9 @@ fn main() {
                 storage,
             });
 
-            // 注册全局快捷键 Alt+Space
-            let shortcut = Shortcut::new(Some(tauri_plugin_global_shortcut::Modifiers::ALT), tauri_plugin_global_shortcut::Code::Space);
-
-            app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    // 切换窗口显示/隐藏（带剪贴板捕获）
-                    toggle_window_with_clipboard_capture(app);
-                }
-            })?;
+            // 按设置注册全部全局快捷键（窗口呼出 + AI 优化）
+            let app_handle = app.handle().clone();
+            apply_shortcuts(&app_handle);
 
             // 监听窗口失去焦点事件，自动隐藏
             if let Some(window) = app.get_webview_window("main") {
@@ -55,6 +52,21 @@ fn main() {
                         window_clone.hide().unwrap_or_default();
                     }
                 });
+            }
+
+            // 启动时应用保存的设置
+            let state = app_handle.state::<AppState>();
+            let storage_read = state.storage.read();
+            if let Ok(data) = storage_read.load() {
+                // 应用窗口透明度
+                window::apply_opacity(&app_handle, data.settings.window_opacity);
+
+                // 同步开机自启状态
+                if data.settings.launch_at_login {
+                    let _ = app_handle.autolaunch().enable();
+                } else {
+                    let _ = app_handle.autolaunch().disable();
+                }
             }
 
             Ok(())
@@ -68,7 +80,6 @@ fn main() {
             commands::prompt::update_prompt,
             commands::prompt::delete_prompt,
             commands::prompt::update_prompt_usage,
-            commands::prompt::export_data,
             commands::prompt::import_data,
             // 空间管理
             commands::space::create_space,
@@ -81,9 +92,13 @@ fn main() {
             commands::clipboard::paste_to_cursor,
             commands::clipboard::paste_and_restore,
             commands::clipboard::cut_selection,
+            // AI 优化
+            commands::ai::optimize_apply_result,
+            commands::ai::optimize_cancel,
             // 设置
             commands::settings::get_settings,
             commands::settings::update_settings,
+            commands::settings::register_hotkey,
             // 窗口
             commands::window::toggle_window,
             commands::window::hide_window,
@@ -93,9 +108,58 @@ fn main() {
         .expect("error while running tauri application");
 }
 
+/// 按当前设置注册全部全局快捷键（先注销已有注册）
+/// setup 启动与 update_settings 保存后共用
+pub fn apply_shortcuts(app: &tauri::AppHandle) {
+    use commands::settings::parse_hotkey;
+
+    let (global_hotkey, optimize_hotkey) = {
+        let state = app.state::<AppState>();
+        let storage = state.storage.read();
+        match storage.load() {
+            Ok(data) => (
+                data.settings.global_hotkey.clone(),
+                data.settings.optimize_hotkey.clone(),
+            ),
+            Err(_) => ("Alt+Space".to_string(), "Ctrl+Alt+O".to_string()),
+        }
+    };
+
+    // 先注销全部已注册快捷键，避免残留旧绑定
+    let _ = app.global_shortcut().unregister_all();
+
+    // 窗口呼出快捷键
+    if let Ok(shortcut) = parse_hotkey(&global_hotkey) {
+        let result = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                // 切换窗口显示/隐藏（带剪贴板捕获）
+                toggle_window_with_clipboard_capture(app);
+            }
+        });
+        if let Err(e) = result {
+            eprintln!("注册窗口快捷键 {} 失败: {}", global_hotkey, e);
+        }
+    }
+
+    // AI 优化快捷键（后台全自动流程：截取选中文本 → 前端调 AI → 贴回原位，不显示窗口）
+    if let Ok(shortcut) = parse_hotkey(&optimize_hotkey) {
+        let result = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                let app = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    commands::ai::capture_selection_for_optimize(app).await;
+                });
+            }
+        });
+        if let Err(e) = result {
+            eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e);
+        }
+    }
+}
+
 /// 切换窗口显示/隐藏（带剪贴板捕获，用于快捷键回调）
 /// 关键：在窗口显示前执行复制，此时焦点仍在原窗口
-fn toggle_window_with_clipboard_capture(app: &tauri::AppHandle) {
+pub fn toggle_window_with_clipboard_capture(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
             // 窗口已显示 → 隐藏窗口
@@ -103,13 +167,25 @@ fn toggle_window_with_clipboard_capture(app: &tauri::AppHandle) {
         } else {
             // 窗口隐藏 → 显示窗口
             // 关键步骤：在窗口显示前捕获选中内容
-            // 此时焦点仍在原窗口，Ctrl+C 会发送到原窗口
             capture_selection_on_wakeup(app);
 
-            // 居中显示
+            // 尝试恢复保存的位置，无保存位置则居中
             use tauri::Position;
+            let state = app.state::<AppState>();
+            let storage = state.storage.read();
+            let saved_position = storage.load()
+                .ok()
+                .and_then(|data| data.settings.window_position);
+            drop(storage); // 释放读锁
 
-            if let Some(monitor) = window.current_monitor().ok().flatten() {
+            if let Some(pos) = saved_position {
+                window
+                    .set_position(Position::Physical(tauri::PhysicalPosition {
+                        x: pos.x,
+                        y: pos.y,
+                    }))
+                    .unwrap_or_default();
+            } else if let Some(monitor) = window.current_monitor().ok().flatten() {
                 let monitor_size = monitor.size();
                 let window_size = window.outer_size().unwrap_or_default();
 

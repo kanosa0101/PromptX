@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { usePromptStore } from '@/stores/promptStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
+import { useAiOptimizer } from '@/composables/useAiOptimizer'
+import type { Prompt } from '@/types'
 import SearchBar from '@/components/SearchBar.vue'
 import SpaceTabs from '@/components/SpaceTabs.vue'
 import ResultList from '@/components/ResultList.vue'
@@ -19,8 +21,11 @@ const promptStore = usePromptStore()
 const settingsStore = useSettingsStore()
 const uiStore = useUiStore()
 
+// AI 快捷优化事件编排（全局快捷键截取选中文本后由 Rust 通过事件推送到前端）
+const aiOptimizer = useAiOptimizer()
+
 // 保存提示词并关闭编辑器
-const handleSavePrompt = async (prompt: any) => {
+const handleSavePrompt = async (prompt: Prompt) => {
   try {
     await promptStore.savePrompt(prompt)
     // 重新加载数据确保同步
@@ -30,12 +35,6 @@ const handleSavePrompt = async (prompt: any) => {
     console.error('Failed to save prompt:', error)
   }
 }
-
-// 初始化应用
-onMounted(async () => {
-  await promptStore.loadPrompts()
-  await settingsStore.loadSettings()
-})
 
 // 处理键盘事件
 const handleKeyDown = async (e: KeyboardEvent) => {
@@ -122,8 +121,26 @@ const handleKeyDown = async (e: KeyboardEvent) => {
   }
 }
 
-onMounted(() => {
+// 系统主题变化监听
+const handleSystemThemeChange = () => {
+  if (settingsStore.theme === 'system') {
+    settingsStore.applyTheme()
+  }
+}
+
+// 初始化应用并注册键盘监听
+onMounted(async () => {
+  await promptStore.loadPrompts()
+  await settingsStore.loadSettings()
+  await aiOptimizer.start()
   window.addEventListener('keydown', handleKeyDown)
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange)
+})
+
+onUnmounted(() => {
+  aiOptimizer.stop()
+  window.removeEventListener('keydown', handleKeyDown)
+  window.matchMedia('(prefers-color-scheme: dark)').removeEventListener('change', handleSystemThemeChange)
 })
 </script>
 
@@ -137,6 +154,15 @@ onMounted(() => {
   <div
     class="app-container min-h-screen bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]"
   >
+    <!-- AI 优化错误横幅 -->
+    <div
+      v-if="uiStore.aiError"
+      class="fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg"
+    >
+      <span class="leading-snug">{{ uiStore.aiError }}</span>
+      <button class="shrink-0 opacity-70 hover:opacity-100" @click="uiStore.clearAiError">✕</button>
+    </div>
+
     <!-- 主界面 -->
     <div v-if="!uiStore.showSettings && !uiStore.showPromptEditor && !uiStore.showVariableForm && !uiStore.showHelp && !uiStore.showSpaceEditor">
       <SearchBar />
@@ -146,7 +172,7 @@ onMounted(() => {
     </div>
 
     <!-- 空间编辑器 -->
-    <SpaceEditor v-if="uiStore.showSpaceEditor" @close="uiStore.closeSpaceEditor" />
+    <SpaceEditor v-if="uiStore.showSpaceEditor" :space="uiStore.editingSpace" @close="uiStore.closeSpaceEditor" />
 
     <!-- 帮助面板 -->
     <HelpPanel v-if="uiStore.showHelp" @close="uiStore.closeHelp" />

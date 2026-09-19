@@ -58,11 +58,9 @@
           :class="['prompt-item', { selected: index === selectedIndex }]"
           @click="selectPrompt(index)"
         >
-          <div class="prompt-title">
-            {{ prompt.title }}
+          <div class="prompt-title" v-html="highlightMatches(prompt.title, prompt.matches?.filter(m => m.key === 'title'))">
           </div>
-          <div class="prompt-content">
-            {{ truncate(prompt.content, 60) }}
+          <div class="prompt-content" v-html="highlightMatches(truncate(prompt.content, 60), prompt.matches?.filter(m => m.key === 'content'))">
           </div>
           <div class="prompt-tags">
             <span v-for="tag in prompt.tags" :key="tag" class="tag">
@@ -103,6 +101,25 @@
       @delete="onEditorDelete"
       @cancel="onEditorCancel"
     />
+
+    <!-- 空间编辑器 -->
+    <SpaceEditor
+      v-if="showSpaceEditor"
+      :spaces="spaces"
+      @save="onSpaceEditorSave"
+      @cancel="onSpaceEditorCancel"
+    />
+
+    <!-- 设置面板 -->
+    <SettingsPanel
+      v-if="showSettings"
+      @close="onSettingsClose"
+    />
+
+    <!-- 确认对话框 -->
+    <ConfirmDialog
+      v-if="showConfirmDialog"
+    />
   </div>
 </template>
 
@@ -111,8 +128,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePromptStore } from './stores/promptStore'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
+import { highlightMatches, truncate } from './composables/useSearch'
 import VariableForm from './components/VariableForm.vue'
 import PromptEditor from './components/PromptEditor.vue'
+import SpaceEditor from './components/SpaceEditor.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
+import ConfirmDialog from './components/ConfirmDialog.vue'
 
 const promptStore = usePromptStore()
 const uiStore = useUiStore()
@@ -135,8 +156,11 @@ const showVariableForm = computed(() => uiStore.showVariableForm)
 const customVariables = computed(() => uiStore.currentVariables)
 const showEditor = computed(() => uiStore.showEditor)
 const editingPrompt = computed(() => uiStore.editingPrompt)
+const showSpaceEditor = computed(() => uiStore.showSpaceEditor)
+const showSettings = computed(() => uiStore.showSettings)
+const showConfirmDialog = computed(() => uiStore.showConfirmDialog)
 
-// 键盘导航（新版本，直接与 store 同步）
+// 键盘导航
 useKeyboardNavigation()
 
 // 搜索处理
@@ -200,6 +224,22 @@ const onEditorDelete = async (id: string) => {
   uiStore.closeEditor()
 }
 
+// 空间编辑器保存
+const onSpaceEditorSave = async (spaceData: { name: string; icon: string; color: string }) => {
+  await promptStore.createSpace(spaceData.name, spaceData.icon, spaceData.color)
+  uiStore.closeSpaceEditor()
+}
+
+// 空间编辑器取消
+const onSpaceEditorCancel = () => {
+  uiStore.closeSpaceEditor()
+}
+
+// 设置面板关闭
+const onSettingsClose = () => {
+  uiStore.hideSettings()
+}
+
 // 变量确认
 const onVariableConfirm = async (values: Record<string, string>) => {
   const prompt = uiStore.currentPrompt
@@ -216,12 +256,6 @@ const onVariableConfirm = async (values: Record<string, string>) => {
 // 变量取消
 const onVariableCancel = () => {
   uiStore.closeVariableForm()
-}
-
-// 截断文本
-const truncate = (text: string, maxLength: number) => {
-  if (text.length <= maxLength) return text
-  return text.slice(0, maxLength) + '...'
 }
 
 // 初始化

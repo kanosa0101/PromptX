@@ -41,12 +41,13 @@ watch(() => props.prompt, (prompt) => {
 
 // 解析出的变量
 const parsedVariables = computed(() => {
-  const regex = /\{\{(\w+)\}\}/g
+  const regex = /\{\{([^{}]+)\}\}/g
   const variables: string[] = []
   let match
   while ((match = regex.exec(content.value)) !== null) {
-    if (!variables.includes(match[1])) {
-      variables.push(match[1])
+    const name = match[1].trim()
+    if (name && !variables.includes(name)) {
+      variables.push(name)
     }
   }
   return variables

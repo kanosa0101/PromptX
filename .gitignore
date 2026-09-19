@@ -34,6 +34,13 @@ src-tauri/WixTools/
 # Claude
 .claude/
 
+# ZCode 本地会话数据
+.zcode/
+
+# 密钥与本地配置（防泄漏，密钥只存于应用运行时配置，不入库）
+*.key
+secrets.json
+
 # Temp
 *.tmp
 *.temp

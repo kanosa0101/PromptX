@@ -8,11 +8,11 @@ import { useUiStore } from '../stores/uiStore'
 
 export function useKeyboardNavigation() {
   const promptStore = usePromptStore()
+  const uiStore = useUiStore()
 
   const handleKeyDown = (e: KeyboardEvent) => {
     // 如果在弹窗状态，不处理导航键
-    const uiStore = useUiStore()
-    if (uiStore.showPromptEditor || uiStore.showVariableForm) {
+    if (uiStore.showEditor || uiStore.showVariableForm || uiStore.showSpaceEditor || uiStore.showSettings) {
       return
     }
 

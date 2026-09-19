@@ -6,7 +6,6 @@ import type { Prompt, SearchResult } from '@/types'
  * 获取字符串的拼音首字母
  */
 function getPinyinInitials(text: string): string {
-  // 转换为拼音首字母数组，过滤非中文字符
   const py = pinyin(text, { pattern: 'first', toneType: 'none' })
   return py.toLowerCase().replace(/\s+/g, '')
 }
@@ -20,7 +19,46 @@ function getPinyinFull(text: string): string {
     .toLowerCase()
 }
 
-export function useSearch(prompts: Prompt[], query: string, spaceId?: string): SearchResult[] {
+// Fuse.js 配置
+const fuseOptions = {
+  keys: [
+    { name: 'title', weight: 0.4 },
+    { name: 'content', weight: 0.3 },
+    { name: 'tags', weight: 0.2 },
+  ],
+  threshold: 0.3,
+  includeMatches: true,
+  findAllMatches: true,
+}
+
+// Fuse 实例缓存（按空间 ID 缓存）
+const fuseCache = new Map<string, Fuse<Prompt>>()
+
+/**
+ * 获取或创建 Fuse 实例（按空间 ID 缓存）
+ */
+function getFuseInstance(prompts: Prompt[], spaceId?: string): Fuse<Prompt> {
+  const cacheKey = spaceId || '__all__'
+
+  const cached = fuseCache.get(cacheKey)
+  if (cached) {
+    // 检查数据是否变化（通过引用比较）
+    // Fuse 内部持有列表引用，如果列表没变则复用
+    const cachedItems = cached.getIndex().docs as Prompt[]
+    if (cachedItems === prompts || (cachedItems.length === prompts.length && cachedItems.every((item, i) => item.id === prompts[i]?.id))) {
+      return cached
+    }
+  }
+
+  const fuse = new Fuse(prompts, fuseOptions)
+  fuseCache.set(cacheKey, fuse)
+  return fuse
+}
+
+/**
+ * 搜索提示词（支持拼音匹配和模糊搜索）
+ */
+export function searchPrompts(prompts: Prompt[], query: string, spaceId?: string): SearchResult[] {
   // 先按空间过滤
   const filtered = spaceId ? prompts.filter((p) => p.spaceId === spaceId) : prompts
 
@@ -41,6 +79,7 @@ export function useSearch(prompts: Prompt[], query: string, spaceId?: string): S
         const titleInitials = getPinyinInitials(p.title)
         const titleFull = getPinyinFull(p.title)
         const contentInitials = getPinyinInitials(p.content)
+        const tagText = p.tags.join(' ')
 
         return (
           titleInitials.includes(queryLower) ||
@@ -48,25 +87,17 @@ export function useSearch(prompts: Prompt[], query: string, spaceId?: string): S
           contentInitials.includes(queryLower) ||
           // 也支持中文标题的英文部分匹配
           p.title.toLowerCase().includes(queryLower) ||
-          p.content.toLowerCase().includes(queryLower)
+          p.content.toLowerCase().includes(queryLower) ||
+          // 也搜索标签
+          getPinyinFull(tagText).includes(queryLower) ||
+          tagText.toLowerCase().includes(queryLower)
         )
       })
       .map((p) => ({ ...p }))
   }
 
-  // Fuse.js 配置（用于普通搜索）
-  const fuseOptions = {
-    keys: [
-      { name: 'title', weight: 0.4 },
-      { name: 'content', weight: 0.3 },
-      { name: 'tags', weight: 0.2 },
-    ],
-    threshold: 0.3,
-    includeMatches: true,
-    findAllMatches: true,
-  }
-
-  const fuse = new Fuse(filtered, fuseOptions)
+  // Fuse.js 模糊搜索（使用缓存实例）
+  const fuse = getFuseInstance(filtered, spaceId)
   const results = fuse.search(query)
 
   return results.map((r) => ({
@@ -79,14 +110,32 @@ export function useSearch(prompts: Prompt[], query: string, spaceId?: string): S
 }
 
 /**
+ * 向后兼容的别名（旧代码可能引用 useSearch）
+ */
+export const useSearch = searchPrompts
+
+/**
+ * HTML 特殊字符转义，防止 XSS
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+/**
  * 高亮匹配文本
  */
 export function highlightMatches(text: string, matches?: { indices: Array<[number, number]> }[]): string {
   if (!matches || matches.length === 0) {
-    return text
+    return escapeHtml(text)
   }
 
-  let result = text
+  // 先转义原始文本
+  const escaped = escapeHtml(text)
+  let result = escaped
   const positions: Array<[number, number]> = []
 
   matches.forEach((m) => {
@@ -108,12 +157,19 @@ export function highlightMatches(text: string, matches?: { indices: Array<[numbe
     }
   }
 
-  // 构建高亮文本
+  // 构建高亮文本（在转义后的文本上操作）
   let offset = 0
   for (const [start, end] of merged) {
-    const before = result.slice(0, start + offset)
-    const match = result.slice(start + offset, end + offset + 1)
-    const after = result.slice(end + offset + 1)
+    // 转义后字符数可能变化，需要映射原始索引到转义后索引
+    const beforeEscaped = escapeHtml(text.slice(0, start))
+    const matchEscaped = escapeHtml(text.slice(start, end + 1))
+
+    const beforeLength = beforeEscaped.length
+    const matchLength = matchEscaped.length
+
+    const before = result.slice(0, beforeLength + offset)
+    const match = result.slice(beforeLength + offset, beforeLength + offset + matchLength)
+    const after = result.slice(beforeLength + offset + matchLength)
 
     result = `${before}<span class="highlight-match">${match}</span>${after}`
     offset += '<span class="highlight-match">'.length + '</span>'.length

@@ -4,6 +4,9 @@ use crate::models::{Prompt, Settings, Space};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
+/// AI 优化历史空间的固定 ID（两端共用约定）
+pub const AI_HISTORY_SPACE_ID: &str = "space_ai_history";
+
 /// 应用数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppData {

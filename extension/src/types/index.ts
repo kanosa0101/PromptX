@@ -35,10 +35,22 @@ export interface Space {
   updatedAt: string
 }
 
+// AI 优化历史空间的固定 ID（与桌面端共用约定）
+export const AI_HISTORY_SPACE_ID = 'space_ai_history'
+
+// 默认优化指令模板
+export const DEFAULT_OPTIMIZE_TEMPLATE =
+  '你是提示词优化专家。将用户发来的内容改写为一条结构清晰、表达准确、上下文完整的提示词，保留原意，不新增无关要求。只输出优化后的提示词本身，不要任何解释、前言或 Markdown 代码块包裹。'
+
 // 设置模型
 export interface Settings {
   theme: 'light' | 'dark' | 'system'
   maxResults: number
+  // AI 优化（OpenAI 兼容 Chat Completions）
+  aiBaseUrl: string
+  aiApiKey: string
+  aiModel: string
+  optimizeTemplate: string
 }
 
 // 应用数据结构
@@ -66,7 +78,11 @@ export type SystemVariableName = 'clipboard' | 'date' | 'time' | 'timestamp'
 // 默认设置
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'system',
-  maxResults: 20
+  maxResults: 20,
+  aiBaseUrl: 'https://api.deepseek.com',
+  aiApiKey: '',
+  aiModel: 'deepseek-flash',
+  optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE
 }
 
 // 默认空间

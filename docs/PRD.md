@@ -518,7 +518,6 @@ promptx/
 │   │   ├── promptStore.ts
 │   │   └── settingsStore.ts
 │   ├── composables/             # 组合式函数
-│   │   ├── useHotkey.ts
 │   │   └── useSearch.ts
 │   ├── styles/                  # 全局样式
 │   │   └── main.css

@@ -24,7 +24,7 @@
         <button class="btn btn-secondary flex-1" @click="$emit('cancel')">
           取消
         </button>
-        <button class="btn btn-primary flex-1" @click="onConfirm">
+        <button class="btn btn-primary flex-1" :disabled="hasEmptyVariable" @click="onConfirm">
           确认输出
         </button>
       </div>
@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import type { Variable } from '@/types'
 
 const props = defineProps<{
@@ -51,6 +51,11 @@ const values = reactive<Record<string, string>>({})
 for (const v of props.variables) {
   values[v.name] = v.defaultValue || ''
 }
+
+// 检查是否有空的自定义变量
+const hasEmptyVariable = computed(() =>
+  props.variables.some((v) => !values[v.name]?.trim())
+)
 
 const onConfirm = () => {
   emit('confirm', { ...values })

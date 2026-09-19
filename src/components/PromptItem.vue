@@ -31,7 +31,7 @@ const formatContent = (prompt: SearchResult) => {
 
 // 格式化变量显示
 const formatVariables = (variables: { name: string }[]) => {
-  return variables.map(v => '\{\{' + v.name + '\}\}').join(' ')
+  return variables.map(v => '{{' + v.name + '}}').join(' ')
 }
 
 // 编辑
@@ -54,6 +54,8 @@ const handleDelete = () => {
 <template>
   <div
     class="prompt-item px-4 py-3 cursor-pointer transition-colors duration-100 relative"
+    role="option"
+    :aria-selected="selected"
     :class="[
       selected
         ? 'bg-[#3B82F6]/10 dark:bg-[#60A5FA]/20 border-l-2 border-[#3B82F6]'
@@ -65,6 +67,7 @@ const handleDelete = () => {
     <div v-if="selected" class="absolute right-2 top-2 flex gap-1">
       <button
         class="p-1 rounded hover:bg-[#3B82F6]/20 text-[#71717A] hover:text-[#3B82F6]"
+        aria-label="编辑"
         @click.stop="handleEdit"
         title="编辑 (Ctrl+E)"
       >
@@ -72,6 +75,7 @@ const handleDelete = () => {
       </button>
       <button
         class="p-1 rounded hover:bg-[#EF4444]/20 text-[#71717A] hover:text-[#EF4444]"
+        aria-label="删除"
         @click.stop="handleDelete"
         title="删除 (Ctrl+D)"
       >

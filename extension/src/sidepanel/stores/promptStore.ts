@@ -131,13 +131,13 @@ export const usePromptStore = defineStore('prompt', {
       const values = { ...systemValues, ...customValues }
       const outputText = replaceVariables(prompt.content, values)
 
-      // 尝试直接插入到页面
+      // 尝试直接插入到页面（不经过剪贴板）
       const inserted = await insertTextToActiveTab(outputText)
 
       if (inserted) {
         this.lastOutputMethod = 'success'
       } else {
-        // 写入剪贴板
+        // 插入失败，写入剪贴板供用户手动粘贴（保留在剪贴板，不做恢复）
         await navigator.clipboard.writeText(outputText)
         this.lastOutputMethod = 'clipboard'
       }
@@ -157,7 +157,7 @@ export const usePromptStore = defineStore('prompt', {
     async createPrompt(data: { title: string; content: string; tags: string[]; spaceId: string }) {
       const now = new Date().toISOString()
       const newPrompt: Prompt = {
-        id: `prompt_${Date.now()}`,
+        id: crypto.randomUUID(),
         title: data.title,
         content: data.content,
         tags: data.tags,
@@ -206,7 +206,7 @@ export const usePromptStore = defineStore('prompt', {
     async createSpace(data: { name: string; icon: string; color: string }) {
       const now = new Date().toISOString()
       const newSpace: Space = {
-        id: `space_${Date.now()}`,
+        id: `space_${crypto.randomUUID().slice(0, 8)}`,
         name: data.name,
         icon: data.icon,
         color: data.color,
@@ -220,12 +220,41 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     /**
+     * 更新空间
+     */
+    async updateSpace(id: string, data: { name?: string; icon?: string; color?: string }) {
+      const space = this.spaces.find(s => s.id === id)
+      if (space) {
+        if (data.name !== undefined) space.name = data.name
+        if (data.icon !== undefined) space.icon = data.icon
+        if (data.color !== undefined) space.color = data.color
+        space.updatedAt = new Date().toISOString()
+        await this.saveData()
+      }
+    },
+
+    /**
+     * 删除空间
+     */
+    async deleteSpace(id: string) {
+      if (id === 'space_default') return
+      // 将该空间下的提示词移到默认空间
+      this.prompts.forEach(p => {
+        if (p.spaceId === id) p.spaceId = 'space_default'
+      })
+      this.spaces = this.spaces.filter(s => s.id !== id)
+      if (this.currentSpaceId === id) this.currentSpaceId = 'space_default'
+      await this.saveData()
+    },
+
+    /**
      * 保存数据
      */
     async saveData() {
+      const data = await loadAppData()
       await saveAppData({
-        version: '1.0.0',
-        settings: { theme: 'system', maxResults: 20 },
+        version: data.version || '1.0.0',
+        settings: data.settings || { theme: 'system', maxResults: 20 },
         spaces: this.spaces,
         prompts: this.prompts
       })

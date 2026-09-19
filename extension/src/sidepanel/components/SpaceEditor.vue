@@ -100,6 +100,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
+import { useUiStore } from '../stores/uiStore'
 import type { Space } from '@/types'
 
 const emit = defineEmits<{
@@ -107,6 +108,7 @@ const emit = defineEmits<{
 }>()
 
 const promptStore = usePromptStore()
+const uiStore = useUiStore()
 
 const spaces = computed(() => promptStore.spaces)
 
@@ -130,21 +132,25 @@ const editSpace = (space: Space) => {
   showCreateForm.value = false
 }
 
-const deleteSpace = async (id: string) => {
-  if (confirm('确定删除此空间？其中的提示词将移至默认空间。')) {
-    // 将提示词移至默认空间
-    promptStore.prompts.forEach(p => {
-      if (p.spaceId === id) {
-        p.spaceId = 'space_default'
+const deleteSpace = (id: string) => {
+  uiStore.openConfirmDialog(
+    '确定删除此空间？其中的提示词将移至默认空间。',
+    async () => {
+      // 将提示词移至默认空间
+      promptStore.prompts.forEach(p => {
+        if (p.spaceId === id) {
+          p.spaceId = 'space_default'
+        }
+      })
+      // 删除空间
+      const index = promptStore.spaces.findIndex(s => s.id === id)
+      if (index !== -1) {
+        promptStore.spaces.splice(index, 1)
       }
-    })
-    // 删除空间
-    const index = promptStore.spaces.findIndex(s => s.id === id)
-    if (index !== -1) {
-      promptStore.spaces.splice(index, 1)
-    }
-    await promptStore.saveData()
-  }
+      await promptStore.saveData()
+    },
+    '删除空间'
+  )
 }
 
 const cancelEdit = () => {

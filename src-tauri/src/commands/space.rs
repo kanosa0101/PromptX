@@ -72,7 +72,7 @@ pub fn update_space(
 
 /// 删除空间
 #[tauri::command]
-pub fn delete_space(id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn delete_space(id: String, state: State<'_, AppState>) -> Result<u32, String> {
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 
@@ -81,10 +81,19 @@ pub fn delete_space(id: String, state: State<'_, AppState>) -> Result<(), String
         return Err("Cannot delete default space".to_string());
     }
 
-    // 删除空间及其下的提示词
+    // 将该空间下的提示词移至默认空间（而非级联删除）
+    let moved_count = data.prompts.iter_mut()
+        .filter(|p| p.space_id == id)
+        .count() as u32;
+    for p in data.prompts.iter_mut() {
+        if p.space_id == id {
+            p.space_id = "space_default".to_string();
+        }
+    }
+
+    // 删除空间
     data.spaces.retain(|s| s.id != id);
-    data.prompts.retain(|p| p.space_id != id);
 
     storage.save(data).map_err(|e| e.to_string())?;
-    Ok(())
+    Ok(moved_count)
 }
