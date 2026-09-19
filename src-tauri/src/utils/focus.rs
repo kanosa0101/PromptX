@@ -35,12 +35,10 @@ pub fn window_title(_hwnd: isize) -> String {
 #[cfg(windows)]
 pub fn restore_focus(hwnd: isize) -> bool {
     use windows::Win32::Foundation::HWND;
-    use windows::Win32::System::Threading::GetCurrentThreadId;
-    use windows::Win32::UI::Input::KeyboardAndMouse::{
-        keybd_event, AttachThreadInput, KEYEVENTF_KEYUP, VK_MENU,
-    };
+    use windows::Win32::System::Threading::{AttachThreadInput, GetCurrentThreadId};
+    use windows::Win32::UI::Input::KeyboardAndMouse::{keybd_event, KEYEVENTF_KEYUP, VK_MENU};
     use windows::Win32::UI::WindowsAndMessaging::{
-        GetForegroundWindow, GetWindowTextW, GetWindowThreadProcessId, SetForegroundWindow,
+        GetForegroundWindow, GetWindowThreadProcessId, SetForegroundWindow,
     };
     unsafe {
         let target = HWND(hwnd as _);
