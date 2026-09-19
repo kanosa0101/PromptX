@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { usePromptStore } from '@/stores/promptStore'
 import { testAiConnection } from '@/services/ai'
+import { DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
 
 const settingsStore = useSettingsStore()
 const uiStore = useUiStore()
@@ -115,6 +116,13 @@ const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemp
   settingsStore.updateSettings({ [field]: value }).catch((error) => {
     importStatus.value = 'AI 设置保存失败：' + (error instanceof Error ? error.message : String(error))
   })
+}
+
+// 恢复默认优化模板
+const resetTemplate = () => {
+  optimizeTemplate.value = DEFAULT_OPTIMIZE_TEMPLATE
+  saveAiField('optimizeTemplate', optimizeTemplate.value)
+  importStatus.value = '已恢复默认优化模板'
 }
 
 // 切换推理模式（即时保存）
@@ -366,7 +374,15 @@ onUnmounted(() => {
       </div>
 
       <div class="py-1.5">
-        <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
+        <div class="flex items-center justify-between">
+          <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
+          <button
+            class="text-xs text-[#3B82F6] hover:underline"
+            @click="resetTemplate"
+          >
+            恢复默认
+          </button>
+        </div>
         <textarea
           v-model="optimizeTemplate"
           rows="3"
