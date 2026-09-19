@@ -21,7 +21,9 @@ export const usePromptStore = defineStore('prompt', {
     filteredPrompts(): Prompt[] {
       const settingsStore = useSettingsStore()
       const maxResults = settingsStore.maxResults || 6
-      const results = useSearch(this.prompts, this.searchQuery, this.currentSpaceId)
+      // 按创建时间倒序展示：最新的提示词排在最前（搜索时仍按相关度排序）
+      const sorted = [...this.prompts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      const results = useSearch(sorted, this.searchQuery, this.currentSpaceId)
       return results.slice(0, maxResults)
     },
     selectedPrompt(): Prompt | undefined {

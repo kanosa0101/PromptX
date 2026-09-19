@@ -27,7 +27,9 @@ export const usePromptStore = defineStore('prompt', {
 
     // 使用 useSearch composable 进行搜索（支持拼音匹配）
     filteredPrompts(): SearchResult[] {
-      return useSearch(this.prompts, this.searchQuery, this.currentSpaceId)
+      // 按创建时间倒序展示：最新的提示词排在最前（搜索时仍按相关度排序）
+      const sorted = [...this.prompts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      return useSearch(sorted, this.searchQuery, this.currentSpaceId)
     },
 
     selectedPrompt: (state) => state.filteredPrompts[state.selectedIndex] || null

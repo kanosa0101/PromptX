@@ -169,3 +169,54 @@ describe('formatTime', () => {
     expect(result).toBe(expected)
   })
 })
+
+describe('filteredPrompts ordering', () => {
+  it('sorts prompts by createdAt descending (newest first)', () => {
+    const store = getStore()
+    store.spaces = [
+      {
+        id: 'space_default', name: '默认', icon: '📁', color: '#3B82F6', order: 0,
+        createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+    ]
+    store.prompts = [
+      {
+        id: 'old', title: '旧提示词', content: 'a', tags: [], spaceId: 'space_default',
+        variables: [], usageCount: 0, lastUsedAt: null,
+        createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'new', title: '新提示词', content: 'b', tags: [], spaceId: 'space_default',
+        variables: [], usageCount: 0, lastUsedAt: null,
+        createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    ]
+    expect(store.filteredPrompts.map((p) => p.id)).toEqual(['new', 'old'])
+  })
+
+  it('keeps relevance order when searching', () => {
+    const store = getStore()
+    store.spaces = [
+      {
+        id: 'space_default', name: '默认', icon: '📁', color: '#3B82F6', order: 0,
+        createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+    ]
+    store.prompts = [
+      {
+        id: 'a', title: '代码解释', content: 'x', tags: [], spaceId: 'space_default',
+        variables: [], usageCount: 0, lastUsedAt: null,
+        createdAt: '2024-01-01T00:00:00.000Z', updatedAt: '2024-01-01T00:00:00.000Z',
+      },
+      {
+        id: 'b', title: '代码重构', content: 'y', tags: [], spaceId: 'space_default',
+        variables: [], usageCount: 0, lastUsedAt: null,
+        createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z',
+      },
+    ]
+    store.setSearchQuery('代码')
+    const ids = store.filteredPrompts.map((p) => p.id)
+    expect(ids).toContain('a')
+    expect(ids).toContain('b')
+  })
+})
