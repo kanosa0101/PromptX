@@ -66,7 +66,7 @@ npm run tauri:build
 2. **使用**: 选中文本 → `Ctrl+Alt+O` → AI 优化结果直接替换原文
 3. **沉淀**: 优化结果自动保存到「AI 优化」空间，可搜索、可复制，好结果可手动收藏进常用库
 
-> 优化指令模板可在设置中自定义；未配置 API Key 或未截取到选中文本时会弹出提示。
+> 优化指令模板可在设置中自定义；默认关闭「推理模式」以获得最快速度，追求更高质量可开启深度思考；未配置 API Key 或未截取到选中文本时会弹出提示。
 
 ### 快捷键
 
@@ -222,7 +222,7 @@ Select text in any app (e.g., a draft prompt in a chat box), press the hotkey, a
 2. **Use**: Select text → `Ctrl+Alt+O` → the optimized prompt replaces the original in place
 3. **Keep**: Results are saved to the "AI Optimize" space automatically for later search and reuse
 
-> The optimization instruction template is customizable in Settings; a notification appears if the API Key is missing or no selection is captured.
+> The optimization instruction template is customizable in Settings; "Reasoning Mode" is off by default for speed (turn it on for deeper thinking); a notification appears if the API Key is missing or no selection is captured.
 
 ### Keyboard Shortcuts
 

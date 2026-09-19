@@ -51,6 +51,8 @@ export interface Settings {
   aiApiKey: string
   aiModel: string
   optimizeTemplate: string
+  // 推理模式（深度思考，更慢），默认关闭
+  optimizeThinking: boolean
 }
 
 // 应用数据结构
@@ -82,7 +84,8 @@ export const DEFAULT_SETTINGS: Settings = {
   aiBaseUrl: 'https://api.deepseek.com',
   aiApiKey: '',
   aiModel: 'deepseek-flash',
-  optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE
+  optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE,
+  optimizeThinking: false
 }
 
 // 默认空间

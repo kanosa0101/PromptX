@@ -46,6 +46,7 @@ const aiBaseUrl = ref(settingsStore.aiBaseUrl)
 const aiApiKey = ref(settingsStore.aiApiKey)
 const aiModel = ref(settingsStore.aiModel)
 const optimizeTemplate = ref(settingsStore.optimizeTemplate)
+const optimizeThinking = ref(settingsStore.optimizeThinking)
 const isTestingAi = ref(false)
 
 // 透明度防抖
@@ -116,12 +117,19 @@ const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemp
   })
 }
 
+// 切换推理模式（即时保存）
+const toggleThinking = () => {
+  settingsStore.updateSettings({ optimizeThinking: optimizeThinking.value }).catch((error) => {
+    importStatus.value = '保存失败：' + (error instanceof Error ? error.message : String(error))
+  })
+}
+
 // 测试 AI 连接（使用当前表单值，无需先保存）
 const handleTestAi = async () => {
   isTestingAi.value = true
   importStatus.value = '正在测试 AI 连接...'
   try {
-    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value)
+    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
     importStatus.value = '连接成功，模型回复：' + reply.slice(0, 30)
   } catch (error) {
     importStatus.value = '连接失败：' + (error instanceof Error ? error.message : String(error))
@@ -342,6 +350,19 @@ onUnmounted(() => {
         >
           取消
         </button>
+      </div>
+
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">推理模式</span>
+        <label class="flex items-center gap-1.5 text-xs text-[#71717A] cursor-pointer">
+          <input
+            v-model="optimizeThinking"
+            type="checkbox"
+            class="w-4 h-4"
+            @change="toggleThinking"
+          />
+          深度思考（更慢）
+        </label>
       </div>
 
       <div class="py-1.5">

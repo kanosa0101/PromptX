@@ -72,6 +72,8 @@ export interface Settings {
   optimizeTemplate: string
   // AI 优化全局快捷键（仅桌面端）
   optimizeHotkey: string
+  // 推理模式（深度思考，更慢），默认关闭
+  optimizeThinking: boolean
 }
 
 // 应用数据结构
@@ -126,6 +128,7 @@ export const DEFAULT_SETTINGS: Settings = {
   aiModel: 'deepseek-flash',
   optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE,
   optimizeHotkey: 'Ctrl+Alt+O',
+  optimizeThinking: false,
 }
 
 // 默认空间

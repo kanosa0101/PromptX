@@ -20,6 +20,7 @@ export const useSettingsStore = defineStore('settings', {
     aiModel: 'deepseek-chat',
     optimizeTemplate: DEFAULT_SETTINGS.optimizeTemplate,
     optimizeHotkey: 'Ctrl+Alt+O',
+    optimizeThinking: false,
   }),
 
   actions: {

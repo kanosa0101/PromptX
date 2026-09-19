@@ -83,6 +83,19 @@
         />
       </div>
 
+      <div class="setting-item flex items-center justify-between py-1.5">
+        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">推理模式</span>
+        <label class="flex items-center gap-1.5 text-xs text-[#71717A] cursor-pointer">
+          <input
+            v-model="optimizeThinking"
+            type="checkbox"
+            class="w-4 h-4"
+            @change="saveSettings"
+          />
+          深度思考（更慢）
+        </label>
+      </div>
+
       <div class="py-1.5">
         <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
         <textarea
@@ -150,6 +163,7 @@ const aiBaseUrl = ref(DEFAULT_SETTINGS.aiBaseUrl)
 const aiApiKey = ref('')
 const aiModel = ref(DEFAULT_SETTINGS.aiModel)
 const optimizeTemplate = ref(DEFAULT_SETTINGS.optimizeTemplate)
+const optimizeThinking = ref(false)
 const isTestingAi = ref(false)
 
 onMounted(async () => {
@@ -160,6 +174,7 @@ onMounted(async () => {
   aiApiKey.value = data.settings?.aiApiKey || ''
   aiModel.value = data.settings?.aiModel || DEFAULT_SETTINGS.aiModel
   optimizeTemplate.value = data.settings?.optimizeTemplate || DEFAULT_SETTINGS.optimizeTemplate
+  optimizeThinking.value = data.settings?.optimizeThinking ?? false
 })
 
 const saveTheme = () => {
@@ -187,7 +202,8 @@ const saveSettings = async () => {
       aiBaseUrl: aiBaseUrl.value,
       aiApiKey: aiApiKey.value,
       aiModel: aiModel.value,
-      optimizeTemplate: optimizeTemplate.value
+      optimizeTemplate: optimizeTemplate.value,
+      optimizeThinking: optimizeThinking.value
     },
     spaces: promptStore.spaces,
     prompts: promptStore.prompts
@@ -199,7 +215,7 @@ const handleTestAi = async () => {
   isTestingAi.value = true
   statusMessage.value = '正在测试 AI 连接...'
   try {
-    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value)
+    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
     statusMessage.value = '连接成功，模型回复：' + reply.slice(0, 30)
   } catch (err) {
     statusMessage.value = '连接失败：' + (err as Error).message

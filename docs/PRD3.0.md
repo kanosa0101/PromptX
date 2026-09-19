@@ -143,6 +143,7 @@
 | 成功反馈 | 无打扰（结果即反馈） | 徽标 `✓` / `C`（回退复制）/ `…`（进行中） |
 | 结果留存 | Rust 写入 `space_ai_history`（标题=原文前 30 字，标签 `AI优化`） | background 写入 `chrome.storage.local` |
 | 默认配置 | DeepSeek `https://api.deepseek.com` + `deepseek-flash`，两端一致 | 同左 |
+| 推理模式开关 | 设置可切换（默认关闭=快速；开启=深度思考更慢，请求不再携带 `thinking: disabled`） | 同左 |
 
 **设计要点**：
 - 优化指令模板（system prompt）可在设置中自定义，默认模板强约束"只输出提示词本身"；

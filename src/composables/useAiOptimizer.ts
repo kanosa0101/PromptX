@@ -43,6 +43,7 @@ export function useAiOptimizer() {
           aiApiKey: settingsStore.aiApiKey,
           aiModel: settingsStore.aiModel,
           optimizeTemplate: settingsStore.optimizeTemplate,
+          optimizeThinking: settingsStore.optimizeThinking,
         },
         text
       )

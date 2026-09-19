@@ -77,6 +77,9 @@ pub struct Settings {
     /// 触发 AI 优化的全局快捷键
     #[serde(rename = "optimizeHotkey", default = "default_optimize_hotkey")]
     pub optimize_hotkey: String,
+    /// 推理模式（深度思考）：开启更慢但质量更高，默认关闭
+    #[serde(rename = "optimizeThinking", default)]
+    pub optimize_thinking: bool,
 }
 
 impl Default for Settings {
@@ -97,6 +100,7 @@ impl Default for Settings {
             ai_model: DEFAULT_AI_MODEL.to_string(),
             optimize_template: DEFAULT_OPTIMIZE_TEMPLATE.to_string(),
             optimize_hotkey: "Ctrl+Alt+O".to_string(),
+            optimize_thinking: false,
         }
     }
 }
@@ -153,6 +157,7 @@ mod tests {
         assert_eq!(settings.ai_model, DEFAULT_AI_MODEL);
         assert!(settings.ai_api_key.is_empty());
         assert_eq!(settings.optimize_hotkey, "Ctrl+Alt+O");
+        assert!(!settings.optimize_thinking, "推理模式默认关闭");
         assert!(settings.optimize_template.contains("提示词优化专家"));
     }
 

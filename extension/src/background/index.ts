@@ -156,6 +156,7 @@ async function loadAiSettings(): Promise<{
       aiApiKey: data?.settings?.aiApiKey || '',
       aiModel: data?.settings?.aiModel || DEFAULT_SETTINGS.aiModel,
       optimizeTemplate: data?.settings?.optimizeTemplate || DEFAULT_SETTINGS.optimizeTemplate,
+      optimizeThinking: data?.settings?.optimizeThinking ?? false,
     }
   } catch {
     return {
@@ -163,6 +164,7 @@ async function loadAiSettings(): Promise<{
       aiApiKey: '',
       aiModel: DEFAULT_SETTINGS.aiModel,
       optimizeTemplate: DEFAULT_SETTINGS.optimizeTemplate,
+      optimizeThinking: false,
     }
   }
 }

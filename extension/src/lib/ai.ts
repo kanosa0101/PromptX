@@ -11,6 +11,19 @@ export interface AiConfig {
   aiApiKey: string
   aiModel: string
   optimizeTemplate: string
+  /** 推理模式（深度思考）：开启更慢，默认关闭 */
+  optimizeThinking: boolean
+}
+
+/** Chat Completions 请求体 */
+interface ChatRequestBody {
+  model: string
+  messages: ChatMessage[]
+  temperature: number
+  stream: boolean
+  max_tokens?: number
+  // 推理模式关闭时携带，向 DeepSeek 等混合推理模型请求跳过思考
+  thinking?: { type: 'disabled' }
 }
 
 /** 请求超时（AI 生成可能较慢，放宽到 60 秒） */
@@ -74,7 +87,9 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
         messages,
         temperature: 0.5,
         stream: false,
-      }),
+        // 推理模式关闭时请求跳过思考（DeepSeek 等混合推理模型）
+        ...(config.optimizeThinking ? {} : { thinking: { type: 'disabled' as const } }),
+      } satisfies ChatRequestBody),
       signal: controller.signal,
     })
   } catch (error) {
@@ -125,7 +140,8 @@ export async function optimizePrompt(config: AiConfig, text: string): Promise<st
 export async function testAiConnection(
   baseUrl: string,
   apiKey: string,
-  model: string
+  model: string,
+  optimizeThinking = false
 ): Promise<string> {
   return chat(
     {
@@ -133,6 +149,7 @@ export async function testAiConnection(
       aiApiKey: apiKey,
       aiModel: model,
       optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE,
+      optimizeThinking,
     },
     [{ role: 'user', content: '请只回复两个字符：OK' }]
   )
