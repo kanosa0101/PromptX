@@ -38,6 +38,8 @@ struct OptimizeSession {
     original_clipboard: Option<String>,
     selected_text: String,
     created_at: std::time::Instant,
+    /// 截取时刻的前台窗口（贴回前恢复焦点，防止 AI 等待期间焦点漂移）
+    foreground: Option<isize>,
 }
 
 /// 进行中的优化会话（同一时刻至多一个）
@@ -91,11 +93,12 @@ pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
 
     debug_log("快捷键触发: 开始截取选中文本");
     match capture_inner(&app).await {
-        Ok((selected, original)) => {
+        Ok((selected, original, foreground)) => {
             *OPTIMIZE_SESSION.lock() = Some(OptimizeSession {
                 original_clipboard: original,
                 selected_text: selected.clone(),
                 created_at: std::time::Instant::now(),
+                foreground,
             });
             debug_log(&format!(
                 "截取成功({} 字符)，通知前端调 AI",
@@ -133,11 +136,22 @@ fn preview(s: &str, max: usize) -> String {
     out
 }
 
-async fn capture_inner(app: &tauri::AppHandle) -> Result<(String, Option<String>), String> {
+async fn capture_inner(
+    app: &tauri::AppHandle,
+) -> Result<(String, Option<String>, Option<isize>), String> {
     // 0. 松开快捷键后稍作缓冲，确保用户物理按键已全部抬起
     tokio::time::sleep(Duration::from_millis(RELEASE_SETTLE_MS)).await;
 
-    // 1. 保存原剪贴板内容，用于结束后恢复
+    // 1. 记录当前前台窗口（贴回前恢复焦点用）
+    let foreground = crate::utils::focus::foreground_window();
+    if let Some(hwnd) = foreground {
+        debug_log(&format!(
+            "记录前台窗口: [{}]",
+            crate::utils::focus::window_title(hwnd)
+        ));
+    }
+
+    // 2. 保存原剪贴板内容，用于结束后恢复
     let original = app.clipboard().read_text().ok();
     debug_log(&format!(
         "原剪贴板: {}",
@@ -176,8 +190,8 @@ async fn capture_inner(app: &tauri::AppHandle) -> Result<(String, Option<String>
         return Err("未截取到选中文本，请先在目标应用中选中要优化的内容".to_string());
     }
 
-    // 返回（选中文本, 原剪贴板），会话由调用方登记
-    Ok((selected, original))
+    // 返回（选中文本, 原剪贴板, 前台窗口），会话由调用方登记
+    Ok((selected, original, foreground))
 }
 
 /// 前端 AI 优化成功后调用：贴回原位置并保存历史
@@ -201,6 +215,23 @@ pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Resul
             tokio::time::sleep(Duration::from_millis(150)).await;
         }
     }
+    // 贴回前把焦点恢复到截取时刻的前台窗口（AI 等待期间焦点可能漂移）
+    if let Some(hwnd) = session.foreground {
+        let current = crate::utils::focus::foreground_window();
+        if current != Some(hwnd) {
+            debug_log(&format!(
+                "前台窗口已漂移: 当前 [{}]",
+                crate::utils::focus::window_title(current.unwrap_or(0))
+            ));
+            let ok = crate::utils::focus::restore_focus(hwnd);
+            debug_log(&format!("恢复焦点: {}", if ok { "成功" } else { "失败" }));
+            tokio::time::sleep(Duration::from_millis(150)).await;
+        }
+    }
+    debug_log(&format!(
+        "贴回目标窗口: [{}]",
+        crate::utils::focus::window_title(crate::utils::focus::foreground_window().unwrap_or(0))
+    ));
     tokio::time::sleep(Duration::from_millis(PASTE_DELAY_MS)).await;
     simulate_paste().map_err(|e| {
         debug_log(&format!("模拟 Ctrl+V 失败: {}", e));
