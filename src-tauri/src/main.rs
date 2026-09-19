@@ -102,6 +102,8 @@ fn main() {
             commands::ai::optimize_apply_result,
             commands::ai::optimize_cancel,
             commands::ai::ai_debug_log,
+            commands::ai::clipboard_optimize_apply_result,
+            commands::ai::clipboard_optimize_cancel,
             // 设置
             commands::settings::get_settings,
             commands::settings::update_settings,
@@ -120,15 +122,20 @@ fn main() {
 pub fn apply_shortcuts(app: &tauri::AppHandle) {
     use commands::settings::parse_hotkey;
 
-    let (global_hotkey, optimize_hotkey) = {
+    let (global_hotkey, optimize_hotkey, clipboard_hotkey) = {
         let state = app.state::<AppState>();
         let storage = state.storage.read();
         match storage.load() {
             Ok(data) => (
                 data.settings.global_hotkey.clone(),
                 data.settings.optimize_hotkey.clone(),
+                data.settings.clipboard_optimize_hotkey.clone(),
             ),
-            Err(_) => ("Alt+Space".to_string(), "Ctrl+Alt+O".to_string()),
+            Err(_) => (
+                "Alt+Space".to_string(),
+                "Ctrl+Alt+O".to_string(),
+                "Ctrl+Shift+B".to_string(),
+            ),
         }
     };
 
@@ -168,6 +175,24 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
         match result {
             Ok(()) => eprintln!("已注册 AI 优化快捷键: {} (松开触发)", optimize_hotkey),
             Err(e) => eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e),
+        }
+    }
+
+    // 剪贴板优化快捷键（不模拟按键：优化剪贴板内容并写回，适用于终端等选区不可靠场景）
+    if let Ok(shortcut) = parse_hotkey(&clipboard_hotkey) {
+        let result = app
+            .global_shortcut()
+            .on_shortcut(shortcut, |app, _shortcut, event| {
+                if event.state == ShortcutState::Released {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        commands::ai::capture_clipboard_for_optimize(app).await;
+                    });
+                }
+            });
+        match result {
+            Ok(()) => eprintln!("已注册剪贴板优化快捷键: {} (松开触发)", clipboard_hotkey),
+            Err(e) => eprintln!("注册剪贴板优化快捷键 {} 失败: {}", clipboard_hotkey, e),
         }
     }
 }

@@ -92,6 +92,10 @@ fn default_optimize_hotkey() -> String {
     "Ctrl+Alt+O".to_string()
 }
 
+fn default_clipboard_optimize_hotkey() -> String {
+    "Ctrl+Shift+B".to_string()
+}
+
 /// 设置模型
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
@@ -131,6 +135,12 @@ pub struct Settings {
     /// 推理模式（深度思考）：开启更慢但质量更高，默认关闭
     #[serde(rename = "optimizeThinking", default)]
     pub optimize_thinking: bool,
+    /// 剪贴板优化快捷键：优化剪贴板内容并写回剪贴板（不模拟按键）
+    #[serde(
+        rename = "clipboardOptimizeHotkey",
+        default = "default_clipboard_optimize_hotkey"
+    )]
+    pub clipboard_optimize_hotkey: String,
 }
 
 impl Default for Settings {
@@ -155,6 +165,7 @@ impl Default for Settings {
             optimize_template: DEFAULT_OPTIMIZE_TEMPLATE.to_string(),
             optimize_hotkey: "Ctrl+Alt+O".to_string(),
             optimize_thinking: false,
+            clipboard_optimize_hotkey: "Ctrl+Shift+B".to_string(),
         }
     }
 }
@@ -218,6 +229,7 @@ mod tests {
         assert!(settings.ai_api_key.is_empty());
         assert_eq!(settings.optimize_hotkey, "Ctrl+Alt+O");
         assert!(!settings.optimize_thinking, "推理模式默认关闭");
+        assert_eq!(settings.clipboard_optimize_hotkey, "Ctrl+Shift+B");
         assert!(settings.optimize_template.contains("提示词优化器"));
         assert!(settings
             .optimize_template

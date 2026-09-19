@@ -139,7 +139,7 @@
 | 触发方式 | 全局快捷键（默认 `Ctrl+Alt+O`，设置可改） | `chrome.commands`（默认 `Alt+Shift+O`，浏览器快捷键页可改） |
 | 选区截取 | enigo 模拟 Ctrl+C（窗口不显示、焦点不转移） | content script `window.getSelection()` |
 | 选区上下文保持 | 不适用（截取后立即使用） | 缓存元素引用 + 选区边界 / contenteditable Range，跨 AI 等待期原位替换 |
-| 替换前校验 | 剪贴板无变化/与原内容相同即中止 | input 路径校验原文片段未被改动，不匹配回退复制 |
+| 替换前校验 | 截取前写入哨兵清空剪贴板，Ctrl+C 后读到非哨兵内容才继续 —— 既防陈旧剪贴板误替换，也支持「选中的内容恰为已复制内容」的场景 | input 路径校验原文片段未被改动，不匹配回退复制 |
 | AI 请求发起 | 前端 webview fetch（CSP 已放开 `connect-src https:`，Rust 零新增依赖） | background service worker fetch（`host_permissions` http/https） |
 | 失败反馈 | 唤起主窗口 + 错误横幅 | 徽标 `!`（红） |
 | 成功反馈 | 无打扰（结果即反馈） | 徽标 `✓` / `C`（回退复制）/ `…`（进行中） |

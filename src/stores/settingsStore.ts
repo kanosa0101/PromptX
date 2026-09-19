@@ -21,6 +21,7 @@ export const useSettingsStore = defineStore('settings', {
     optimizeTemplate: DEFAULT_SETTINGS.optimizeTemplate,
     optimizeHotkey: 'Ctrl+Alt+O',
     optimizeThinking: false,
+    clipboardOptimizeHotkey: 'Ctrl+Shift+B',
   }),
 
   actions: {

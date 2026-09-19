@@ -126,6 +126,8 @@ export interface Settings {
   optimizeHotkey: string
   // 推理模式（深度思考，更慢），默认关闭
   optimizeThinking: boolean
+  // 剪贴板优化快捷键（优化剪贴板内容并写回）
+  clipboardOptimizeHotkey: string
 }
 
 // 应用数据结构
@@ -181,6 +183,7 @@ export const DEFAULT_SETTINGS: Settings = {
   optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE,
   optimizeHotkey: 'Ctrl+Alt+O',
   optimizeThinking: false,
+  clipboardOptimizeHotkey: 'Ctrl+Shift+B',
 }
 
 // 默认空间
