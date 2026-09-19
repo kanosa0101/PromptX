@@ -141,7 +141,10 @@ impl Default for Settings {
             language: "zh-CN".to_string(),
             window_opacity: 0.95,
             window_position: None,
-            window_size: Size { width: 600, height: 400 },
+            window_size: Size {
+                width: 600,
+                height: 400,
+            },
             search_debounce: 300,
             max_results: 6,
             auto_hide: true,
@@ -185,7 +188,10 @@ mod tests {
         assert_eq!(deserialized.theme, settings.theme);
         assert_eq!(deserialized.language, settings.language);
         assert!((deserialized.window_opacity - settings.window_opacity).abs() < f32::EPSILON);
-        assert!(deserialized.window_position.is_none(), "window_position should still be None");
+        assert!(
+            deserialized.window_position.is_none(),
+            "window_position should still be None"
+        );
         assert_eq!(deserialized.window_size.width, settings.window_size.width);
         assert_eq!(deserialized.window_size.height, settings.window_size.height);
         assert_eq!(deserialized.search_debounce, settings.search_debounce);
@@ -198,7 +204,10 @@ mod tests {
     fn test_settings_camel_case() {
         let settings = Settings::default();
         let json = serde_json::to_string(&settings).unwrap();
-        assert!(json.contains("\"globalHotkey\""), "global_hotkey should serialize as globalHotkey");
+        assert!(
+            json.contains("\"globalHotkey\""),
+            "global_hotkey should serialize as globalHotkey"
+        );
     }
 
     #[test]
@@ -210,7 +219,9 @@ mod tests {
         assert_eq!(settings.optimize_hotkey, "Ctrl+Alt+O");
         assert!(!settings.optimize_thinking, "推理模式默认关闭");
         assert!(settings.optimize_template.contains("提示词优化器"));
-        assert!(settings.optimize_template.contains("只输出优化后的提示词本身"));
+        assert!(settings
+            .optimize_template
+            .contains("只输出优化后的提示词本身"));
     }
 
     /// 旧版本 data.json（无 AI 字段）反序列化时应使用默认值

@@ -70,8 +70,15 @@ const handleClose = () => {
 <template>
   <div class="p-4 bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium">{{ isEditing ? '编辑空间' : '新建空间' }}</h3>
-      <button class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A]" @click="handleClose">✕</button>
+      <h3 class="text-base font-medium">
+        {{ isEditing ? '编辑空间' : '新建空间' }}
+      </h3>
+      <button
+        class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A]"
+        @click="handleClose"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 名称 -->
@@ -82,7 +89,7 @@ const handleClose = () => {
         type="text"
         placeholder="空间名称"
         class="w-full px-3 py-2 rounded border border-[#E4E4E7] dark:border-[#27272A] bg-transparent focus:outline-none focus:border-[#3B82F6] text-sm"
-      />
+      >
     </div>
 
     <!-- 图标 -->
@@ -117,7 +124,10 @@ const handleClose = () => {
           :style="{ backgroundColor: c }"
           @click="color = c"
         >
-          <span v-if="color === c" class="text-white">✓</span>
+          <span
+            v-if="color === c"
+            class="text-white"
+          >✓</span>
         </button>
       </div>
     </div>

@@ -53,7 +53,10 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="search-bar group bg-white dark:bg-[#1A1A2E] border-b border-black/5 dark:border-white/5" role="search">
+  <div
+    class="search-bar group bg-white dark:bg-[#1A1A2E] border-b border-black/5 dark:border-white/5"
+    role="search"
+  >
     <div class="flex items-center gap-3 px-4 py-3">
       <!-- 搜索图标（可拖拽） -->
       <span
@@ -65,19 +68,27 @@ onMounted(() => {
       <input
         ref="inputRef"
         v-model="localQuery"
-        @input="onInput"
         type="text"
         placeholder="搜索提示词..."
         aria-label="搜索提示词"
         class="flex-1 bg-transparent outline-none text-base placeholder:text-[#71717A] text-[#1A1A2E] dark:text-[#E4E4E7]"
-      />
+        @input="onInput"
+      >
 
       <!-- 操作按钮 -->
       <div class="flex items-center gap-1">
-        <button class="p-1.5 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#71717A] hover:text-[#1A1A2E] dark:hover:text-[#E4E4E7]" aria-label="帮助" @click="showHelp">
+        <button
+          class="p-1.5 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#71717A] hover:text-[#1A1A2E] dark:hover:text-[#E4E4E7]"
+          aria-label="帮助"
+          @click="showHelp"
+        >
           ?
         </button>
-        <button class="p-1.5 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#71717A] hover:text-[#1A1A2E] dark:hover:text-[#E4E4E7]" aria-label="设置" @click="showSettings">
+        <button
+          class="p-1.5 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#71717A] hover:text-[#1A1A2E] dark:hover:text-[#E4E4E7]"
+          aria-label="设置"
+          @click="showSettings"
+        >
           ⚙️
         </button>
       </div>

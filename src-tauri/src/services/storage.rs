@@ -63,9 +63,8 @@ impl StorageService {
                 eprintln!("数据文件解析失败，尝试从备份恢复...");
                 if self.backup_path.exists() {
                     let backup_content = fs::read_to_string(&self.backup_path)?;
-                    let data: AppData = serde_json::from_str(&backup_content).map_err(|e| {
-                        StorageError::Json(e)
-                    })?;
+                    let data: AppData =
+                        serde_json::from_str(&backup_content).map_err(StorageError::Json)?;
                     // 恢复成功，保存到主文件
                     if let Err(e) = self.save(data.clone()) {
                         eprintln!("备份恢复后保存失败: {}", e);
@@ -158,7 +157,8 @@ mod tests {
         }
         fs::rename(&temp_path, &data_path).unwrap();
 
-        let loaded: AppData = serde_json::from_str(&fs::read_to_string(&data_path).unwrap()).unwrap();
+        let loaded: AppData =
+            serde_json::from_str(&fs::read_to_string(&data_path).unwrap()).unwrap();
         assert_eq!(loaded.version, data.version);
         assert_eq!(loaded.settings.global_hotkey, data.settings.global_hotkey);
     }
@@ -179,7 +179,10 @@ mod tests {
         let old_content = fs::read_to_string(&data_path).unwrap();
         fs::write(&backup_path, &old_content).unwrap();
 
-        let data2 = AppData { version: "2.0.0".to_string(), ..AppData::default() };
+        let data2 = AppData {
+            version: "2.0.0".to_string(),
+            ..AppData::default()
+        };
         let content2 = serde_json::to_string(&data2).unwrap();
         {
             let mut file = fs::File::create(&temp_path).unwrap();
@@ -189,11 +192,13 @@ mod tests {
         fs::rename(&temp_path, &data_path).unwrap();
 
         // Verify backup contains old data
-        let backup_data: AppData = serde_json::from_str(&fs::read_to_string(&backup_path).unwrap()).unwrap();
+        let backup_data: AppData =
+            serde_json::from_str(&fs::read_to_string(&backup_path).unwrap()).unwrap();
         assert_eq!(backup_data.version, "1.0.0");
 
         // Verify main file contains new data
-        let main_data: AppData = serde_json::from_str(&fs::read_to_string(&data_path).unwrap()).unwrap();
+        let main_data: AppData =
+            serde_json::from_str(&fs::read_to_string(&data_path).unwrap()).unwrap();
         assert_eq!(main_data.version, "2.0.0");
     }
 }

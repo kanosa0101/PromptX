@@ -149,7 +149,7 @@ onUnmounted(() => {
   <div
     data-tauri-drag-region
     class="fixed top-0 left-0 right-0 h-8 z-50"
-  ></div>
+  />
 
   <div
     class="app-container min-h-screen bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]"
@@ -160,7 +160,12 @@ onUnmounted(() => {
       class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg"
     >
       <span class="leading-snug">{{ uiStore.aiError }}</span>
-      <button class="shrink-0 opacity-70 hover:opacity-100" @click="uiStore.clearAiError">✕</button>
+      <button
+        class="shrink-0 opacity-70 hover:opacity-100"
+        @click="uiStore.clearAiError"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 主界面 -->
@@ -172,10 +177,17 @@ onUnmounted(() => {
     </div>
 
     <!-- 空间编辑器 -->
-    <SpaceEditor v-if="uiStore.showSpaceEditor" :space="uiStore.editingSpace" @close="uiStore.closeSpaceEditor" />
+    <SpaceEditor
+      v-if="uiStore.showSpaceEditor"
+      :space="uiStore.editingSpace"
+      @close="uiStore.closeSpaceEditor"
+    />
 
     <!-- 帮助面板 -->
-    <HelpPanel v-if="uiStore.showHelp" @close="uiStore.closeHelp" />
+    <HelpPanel
+      v-if="uiStore.showHelp"
+      @close="uiStore.closeHelp"
+    />
 
     <!-- 变量表单 -->
     <VariableForm
@@ -186,7 +198,10 @@ onUnmounted(() => {
     />
 
     <!-- 设置面板 -->
-    <SettingsPanel v-if="uiStore.showSettings" @close="uiStore.hideSettings" />
+    <SettingsPanel
+      v-if="uiStore.showSettings"
+      @close="uiStore.hideSettings"
+    />
 
     <!-- 提示词编辑器 -->
     <PromptEditor

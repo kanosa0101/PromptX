@@ -8,7 +8,10 @@ const hotkey = computed(() => settingsStore.globalHotkey || 'Alt+Space')
 </script>
 
 <template>
-  <div class="status-bar flex items-center justify-center gap-3 px-4 py-2 text-xs text-[#71717A] border-t border-[#E4E4E7] dark:border-[#27272A] bg-white dark:bg-[#1A1A2E]" role="status">
+  <div
+    class="status-bar flex items-center justify-center gap-3 px-4 py-2 text-xs text-[#71717A] border-t border-[#E4E4E7] dark:border-[#27272A] bg-white dark:bg-[#1A1A2E]"
+    role="status"
+  >
     <span>{{ hotkey }} 唤醒</span>
     <span>|</span>
     <span>Ctrl+N 新建</span>

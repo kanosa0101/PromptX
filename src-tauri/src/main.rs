@@ -43,9 +43,7 @@ fn main() {
             // 初始化应用状态（必须在注册快捷键之前）
             let storage = Arc::new(RwLock::new(StorageService::new(app)));
 
-            app.manage(AppState {
-                storage,
-            });
+            app.manage(AppState { storage });
 
             // 按设置注册全部全局快捷键（窗口呼出 + AI 优化）
             let app_handle = app.handle().clone();
@@ -139,12 +137,14 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
 
     // 窗口呼出快捷键
     if let Ok(shortcut) = parse_hotkey(&global_hotkey) {
-        let result = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
-                // 切换窗口显示/隐藏（带剪贴板捕获）
-                toggle_window_with_clipboard_capture(app);
-            }
-        });
+        let result = app
+            .global_shortcut()
+            .on_shortcut(shortcut, |app, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    // 切换窗口显示/隐藏（带剪贴板捕获）
+                    toggle_window_with_clipboard_capture(app);
+                }
+            });
         match result {
             Ok(()) => eprintln!("已注册窗口快捷键: {}", global_hotkey),
             Err(e) => eprintln!("注册窗口快捷键 {} 失败: {}", global_hotkey, e),
@@ -155,14 +155,16 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
     // 关键：监听松开（Released）而非按下 —— 若在按下瞬间模拟 Ctrl+C，用户手指
     // 仍按着 Ctrl/Shift，目标应用实际收到 Ctrl+Shift+C，复制会静默失败
     if let Ok(shortcut) = parse_hotkey(&optimize_hotkey) {
-        let result = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
-            if event.state == ShortcutState::Released {
-                let app = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    commands::ai::capture_selection_for_optimize(app).await;
-                });
-            }
-        });
+        let result = app
+            .global_shortcut()
+            .on_shortcut(shortcut, |app, _shortcut, event| {
+                if event.state == ShortcutState::Released {
+                    let app = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        commands::ai::capture_selection_for_optimize(app).await;
+                    });
+                }
+            });
         match result {
             Ok(()) => eprintln!("已注册 AI 优化快捷键: {} (松开触发)", optimize_hotkey),
             Err(e) => eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e),
@@ -186,7 +188,8 @@ pub fn toggle_window_with_clipboard_capture(app: &tauri::AppHandle) {
             use tauri::Position;
             let state = app.state::<AppState>();
             let storage = state.storage.read();
-            let saved_position = storage.load()
+            let saved_position = storage
+                .load()
                 .ok()
                 .and_then(|data| data.settings.window_position);
             drop(storage); // 释放读锁

@@ -106,7 +106,12 @@ const handleClose = () => {
       <h3 class="text-base font-medium">
         {{ prompt ? '编辑提示词' : '新建提示词' }}
       </h3>
-      <button class="icon-btn" @click="handleClose">✕</button>
+      <button
+        class="icon-btn"
+        @click="handleClose"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 标题 -->
@@ -117,7 +122,7 @@ const handleClose = () => {
         type="text"
         placeholder="提示词标题"
         class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary"
-      />
+      >
     </div>
 
     <!-- 内容 -->
@@ -130,7 +135,10 @@ const handleClose = () => {
         class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary resize-none"
       />
       <!-- 变量提示 -->
-      <div v-if="parsedVariables.length > 0" class="text-xs text-muted mt-2">
+      <div
+        v-if="parsedVariables.length > 0"
+        class="text-xs text-muted mt-2"
+      >
         已识别变量:
         <span class="text-primary">
           {{ formattedVariables }}
@@ -157,7 +165,7 @@ const handleClose = () => {
         placeholder="输入标签后按 Enter 添加"
         class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary"
         @keyup.enter="addTag"
-      />
+      >
     </div>
 
     <!-- 空间选择 -->
@@ -167,7 +175,11 @@ const handleClose = () => {
         v-model="spaceId"
         class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary"
       >
-        <option v-for="space in spaces" :key="space.id" :value="space.id">
+        <option
+          v-for="space in spaces"
+          :key="space.id"
+          :value="space.id"
+        >
           {{ space.icon }} {{ space.name }}
         </option>
       </select>
@@ -175,10 +187,17 @@ const handleClose = () => {
 
     <!-- 操作按钮 -->
     <div class="flex justify-end gap-2">
-      <button class="btn btn-secondary" @click="handleClose">
+      <button
+        class="btn btn-secondary"
+        @click="handleClose"
+      >
         取消
       </button>
-      <button class="btn btn-primary" :disabled="!title.trim()" @click="handleSave">
+      <button
+        class="btn btn-primary"
+        :disabled="!title.trim()"
+        @click="handleSave"
+      >
         {{ prompt ? '保存' : '创建' }}
       </button>
     </div>

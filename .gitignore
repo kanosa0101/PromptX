@@ -28,8 +28,8 @@ yarn-error.log*
 .env.*.local
 
 # Tauri
-src-tauri/Cargo.lock
 src-tauri/WixTools/
+# Cargo.lock 对应用（非库）应入库，保证 CI 构建可复现
 
 # Claude
 .claude/

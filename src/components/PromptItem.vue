@@ -67,30 +67,39 @@ const handleDelete = () => {
     @click="$emit('click')"
   >
     <!-- 操作按钮（选中时显示） -->
-    <div v-if="selected" class="absolute right-2 top-2 flex gap-1">
+    <div
+      v-if="selected"
+      class="absolute right-2 top-2 flex gap-1"
+    >
       <button
         class="p-1 rounded transition-colors hover:bg-[#3B82F6]/20 text-[#71717A] hover:text-[#3B82F6]"
         aria-label="编辑"
-        @click.stop="handleEdit"
         title="编辑 (Ctrl+E)"
+        @click.stop="handleEdit"
       >
         ✏️
       </button>
       <button
         class="p-1 rounded transition-colors hover:bg-[#EF4444]/20 text-[#71717A] hover:text-[#EF4444]"
         aria-label="删除"
-        @click.stop="handleDelete"
         title="删除 (Ctrl+D)"
+        @click.stop="handleDelete"
       >
         🗑️
       </button>
     </div>
 
     <!-- 标题 -->
-    <div class="font-medium text-sm text-[#1A1A2E] dark:text-[#E4E4E7]" v-html="formatTitle(prompt)" />
+    <div
+      class="font-medium text-sm text-[#1A1A2E] dark:text-[#E4E4E7]"
+      v-html="formatTitle(prompt)"
+    />
 
     <!-- 内容摘要 -->
-    <div class="text-xs text-[#71717A] mt-1 line-clamp-1" v-html="formatContent(prompt)" />
+    <div
+      class="text-xs text-[#71717A] mt-1 line-clamp-1"
+      v-html="formatContent(prompt)"
+    />
 
     <!-- 标签 + 创建日期 -->
     <div class="flex items-center justify-between gap-2 mt-2">
@@ -110,7 +119,10 @@ const handleDelete = () => {
     </div>
 
     <!-- 变量提示 -->
-    <div v-if="prompt.variables.length > 0" class="text-xs text-[#3B82F6] mt-1">
+    <div
+      v-if="prompt.variables.length > 0"
+      class="text-xs text-[#3B82F6] mt-1"
+    >
       {{ formatVariables(prompt.variables) }}
     </div>
   </div>

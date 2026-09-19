@@ -1,6 +1,6 @@
 //! 变量解析与替换工具
 
-use crate::models::{Variable, VarType};
+use crate::models::{VarType, Variable};
 use chrono::Local;
 use regex::Regex;
 use std::collections::HashMap;
@@ -10,9 +10,7 @@ use std::sync::LazyLock;
 const SYSTEM_VARIABLES: [&str; 4] = ["clipboard", "date", "time", "timestamp"];
 
 /// 预编译变量匹配正则（支持中文等 Unicode 变量名）
-static VARIABLE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\{\{([^{}]+)\}\}").unwrap()
-});
+static VARIABLE_REGEX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\{\{([^{}]+)\}\}").unwrap());
 
 /// 解析提示词中的变量
 pub fn parse_variables(content: &str) -> Vec<Variable> {

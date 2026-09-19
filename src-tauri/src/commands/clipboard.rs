@@ -11,17 +11,13 @@ pub static WAKEUP_CLIPBOARD: Mutex<Option<String>> = Mutex::new(None);
 /// 获取剪贴板文本
 #[tauri::command]
 pub fn get_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
-    app.clipboard()
-        .read_text()
-        .map_err(|e| e.to_string())
+    app.clipboard().read_text().map_err(|e| e.to_string())
 }
 
 /// 设置剪贴板文本
 #[tauri::command]
 pub fn set_clipboard_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
-    app.clipboard()
-        .write_text(&text)
-        .map_err(|e| e.to_string())
+    app.clipboard().write_text(&text).map_err(|e| e.to_string())
 }
 
 /// 获取唤醒时保存的剪贴板内容（用于 {{clipboard}} 变量）
@@ -51,9 +47,7 @@ pub async fn cut_selection(app: tauri::AppHandle) -> Result<String, String> {
     tokio::time::sleep(Duration::from_millis(200)).await;
 
     // 读取新的剪贴板内容
-    let new_content = app.clipboard()
-        .read_text()
-        .unwrap_or_default();
+    let new_content = app.clipboard().read_text().unwrap_or_default();
 
     Ok(new_content)
 }
@@ -62,9 +56,7 @@ pub async fn cut_selection(app: tauri::AppHandle) -> Result<String, String> {
 #[tauri::command]
 pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<(), String> {
     // 保存原始剪贴板内容
-    let original = app.clipboard()
-        .read_text()
-        .ok();
+    let original = app.clipboard().read_text().ok();
 
     // 设置剪贴板内容
     app.clipboard()

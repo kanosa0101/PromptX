@@ -41,7 +41,10 @@ const deleteSpace = (spaceId: string) => {
 </script>
 
 <template>
-  <div class="space-tabs flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1A1A2E]" role="tablist">
+  <div
+    class="space-tabs flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1A1A2E]"
+    role="tablist"
+  >
     <!-- 空间标签 -->
     <button
       v-for="space in spaces"
@@ -62,15 +65,15 @@ const deleteSpace = (spaceId: string) => {
       <!-- 编辑按钮（悬停时显示） -->
       <span
         class="ml-1 opacity-0 group-hover:opacity-100 hover:text-[#3B82F6] transition-opacity"
-        @click.stop="editSpace(space.id)"
         title="编辑空间"
+        @click.stop="editSpace(space.id)"
       >✎</span>
       <!-- 删除按钮（悬停时显示，默认空间不可删除） -->
       <span
         v-if="space.id !== 'space_default'"
         class="ml-1 opacity-0 group-hover:opacity-100 hover:text-[#EF4444] transition-opacity"
-        @click.stop="deleteSpace(space.id)"
         title="删除空间"
+        @click.stop="deleteSpace(space.id)"
       >✕</span>
     </button>
 

@@ -1,17 +1,14 @@
 //! 窗口命令
 
+use crate::models::Position;
 use crate::AppState;
 use tauri::{AppHandle, Manager, State};
-use crate::models::Position;
 
 /// 应用窗口透明度（通过 CSS 控制 webview 透明度）
 pub fn apply_opacity(app: &AppHandle, opacity: f32) {
     if let Some(window) = app.get_webview_window("main") {
         // 通过 eval 注入 CSS opacity 控制整个页面的透明度
-        let css = format!(
-            "document.documentElement.style.opacity = '{}'",
-            opacity
-        );
+        let css = format!("document.documentElement.style.opacity = '{}'", opacity);
         let _ = window.eval(&css);
     }
 }
@@ -29,7 +26,8 @@ pub fn toggle_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), S
         use tauri::Position;
 
         let storage = state.storage.read();
-        let saved_position = storage.load()
+        let saved_position = storage
+            .load()
             .ok()
             .and_then(|data| data.settings.window_position);
 
@@ -84,10 +82,7 @@ fn save_window_position_inner(window: &tauri::WebviewWindow, state: &State<'_, A
     if let Ok(pos) = window.outer_position() {
         let storage = state.storage.write();
         if let Ok(mut data) = storage.load() {
-            data.settings.window_position = Some(Position {
-                x: pos.x,
-                y: pos.y,
-            });
+            data.settings.window_position = Some(Position { x: pos.x, y: pos.y });
             storage.save(data).unwrap_or_default();
         }
     }

@@ -11,13 +11,22 @@ const handleClose = () => {
 <template>
   <div class="help-panel p-4 bg-white dark:bg-[#1A1A2E] overflow-y-auto max-h-[400px] text-[#1A1A2E] dark:text-[#E4E4E7]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium">使用说明</h3>
-      <button class="icon-btn p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" @click="handleClose">✕</button>
+      <h3 class="text-base font-medium">
+        使用说明
+      </h3>
+      <button
+        class="icon-btn p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+        @click="handleClose"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- 快捷键 -->
     <div class="mb-4">
-      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">快捷键</h4>
+      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">
+        快捷键
+      </h4>
       <div class="space-y-1 text-sm">
         <div class="flex justify-between">
           <span class="text-[#71717A]">唤醒/隐藏面板</span>
@@ -52,34 +61,58 @@ const handleClose = () => {
 
     <!-- 变量语法 -->
     <div class="mb-4">
-      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">变量语法</h4>
-      <p v-pre class="text-xs text-[#71717A] mb-2">在提示词内容中使用 <code class="bg-[#E4E4E7] dark:bg-[#27272A] px-1 rounded">{{变量名}}</code> 格式</p>
+      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">
+        变量语法
+      </h4>
+      <p
+        v-pre
+        class="text-xs text-[#71717A] mb-2"
+      >
+        在提示词内容中使用 <code class="bg-[#E4E4E7] dark:bg-[#27272A] px-1 rounded">{{变量名}}</code> 格式
+      </p>
       <div class="space-y-1 text-sm">
         <div class="flex justify-between items-center">
           <span class="text-[#71717A]">当前剪贴板内容</span>
-          <code v-pre class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs">{{clipboard}}</code>
+          <code
+            v-pre
+            class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs"
+          >{{clipboard}}</code>
         </div>
         <div class="flex justify-between items-center">
           <span class="text-[#71717A]">当前日期</span>
-          <code v-pre class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs">{{date}}</code>
+          <code
+            v-pre
+            class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs"
+          >{{date}}</code>
         </div>
         <div class="flex justify-between items-center">
           <span class="text-[#71717A]">当前时间</span>
-          <code v-pre class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs">{{time}}</code>
+          <code
+            v-pre
+            class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs"
+          >{{time}}</code>
         </div>
         <div class="flex justify-between items-center">
           <span class="text-[#71717A]">时间戳</span>
-          <code v-pre class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs">{{timestamp}}</code>
+          <code
+            v-pre
+            class="bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded text-xs"
+          >{{timestamp}}</code>
         </div>
       </div>
-      <p v-pre class="text-xs text-[#71717A] mt-2">
+      <p
+        v-pre
+        class="text-xs text-[#71717A] mt-2"
+      >
         其他变量名会弹出表单让你填写，如 <code class="bg-[#E4E4E7] dark:bg-[#27272A] px-1 rounded">{{项目名}}</code>
       </p>
     </div>
 
     <!-- 使用流程 -->
     <div class="mb-4">
-      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">基本流程</h4>
+      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">
+        基本流程
+      </h4>
       <div class="space-y-2 text-sm">
         <div class="flex gap-2 items-start">
           <span class="bg-[#3B82F6] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0">1</span>
@@ -102,18 +135,30 @@ const handleClose = () => {
 
     <!-- 示例 -->
     <div class="mb-4">
-      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">示例提示词</h4>
+      <h4 class="text-sm font-medium mb-2 text-[#3B82F6]">
+        示例提示词
+      </h4>
       <div class="bg-[#F4F4F5] dark:bg-[#27272A] rounded p-3 text-sm">
-        <p class="font-medium mb-1">代码解释</p>
-        <p v-pre class="text-[#71717A] text-xs leading-relaxed">
-          请用简洁的语言解释以下代码的功能和逻辑：<br/>
+        <p class="font-medium mb-1">
+          代码解释
+        </p>
+        <p
+          v-pre
+          class="text-[#71717A] text-xs leading-relaxed"
+        >
+          请用简洁的语言解释以下代码的功能和逻辑：<br>
           <code class="bg-[#E4E4E7] dark:bg-[#3A3A3E] px-1 rounded mt-1 inline-block">{{clipboard}}</code>
         </p>
       </div>
       <div class="bg-[#F4F4F5] dark:bg-[#27272A] rounded p-3 text-sm mt-2">
-        <p class="font-medium mb-1">翻译助手</p>
-        <p v-pre class="text-[#71717A] text-xs leading-relaxed">
-          将以下内容翻译成{{目标语言}}，保持原文语气：<br/>
+        <p class="font-medium mb-1">
+          翻译助手
+        </p>
+        <p
+          v-pre
+          class="text-[#71717A] text-xs leading-relaxed"
+        >
+          将以下内容翻译成{{目标语言}}，保持原文语气：<br>
           <code class="bg-[#E4E4E7] dark:bg-[#3A3A3E] px-1 rounded mt-1 inline-block">{{clipboard}}</code>
         </p>
       </div>

@@ -7,7 +7,7 @@
 //! → 结果存入「AI 优化」历史空间。
 
 use crate::commands::clipboard::{simulate_copy, simulate_paste};
-use crate::models::{AI_HISTORY_SPACE_ID, Prompt, Space};
+use crate::models::{Prompt, Space, AI_HISTORY_SPACE_ID};
 use crate::AppState;
 use chrono::Utc;
 use parking_lot::Mutex;
@@ -41,7 +41,11 @@ pub fn debug_log(msg: &str) {
     let ts = chrono::Local::now().format("%m-%d %H:%M:%S%.3f");
     let line = format!("[{}] {}\n", ts, msg);
     let path = std::env::temp_dir().join("promptx-ai.log");
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
         use std::io::Write;
         let _ = f.write_all(line.as_bytes());
     }
@@ -73,7 +77,11 @@ pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
         // 截取失败：清理会话，弹出主窗口由前端展示错误
         debug_log(&format!("截取失败: {}", err));
         *OPTIMIZE_SESSION.lock() = None;
-        match emit_to_main(&app, "promptx-ai-error", serde_json::json!({ "message": err })) {
+        match emit_to_main(
+            &app,
+            "promptx-ai-error",
+            serde_json::json!({ "message": err }),
+        ) {
             Ok(()) => debug_log("已通知前端展示错误"),
             Err(e) => debug_log(&format!("前端错误通知发送失败: {}", e)),
         }
@@ -237,7 +245,11 @@ fn save_ai_history(app: &tauri::AppHandle, original: &str, optimized: &str) {
 }
 
 /// 向主窗口前端发送事件
-fn emit_to_main(app: &tauri::AppHandle, event: &str, payload: serde_json::Value) -> Result<(), String> {
+fn emit_to_main(
+    app: &tauri::AppHandle,
+    event: &str,
+    payload: serde_json::Value,
+) -> Result<(), String> {
     let window = app
         .get_webview_window("main")
         .ok_or_else(|| "主窗口不存在".to_string())?;
@@ -248,10 +260,11 @@ fn emit_to_main(app: &tauri::AppHandle, event: &str, payload: serde_json::Value)
 mod tests {
     #[test]
     fn test_title_truncation() {
-        let flattened: String = "这是一段很长很长很长很长很长很长很长很长很长很长很长很长很长很长的选中文本"
-            .split_whitespace()
-            .collect::<Vec<_>>()
-            .join(" ");
+        let flattened: String =
+            "这是一段很长很长很长很长很长很长很长很长很长很长很长很长很长很长的选中文本"
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ");
         let mut title: String = flattened.chars().take(30).collect();
         if flattened.chars().count() > 30 {
             title.push('…');

@@ -15,12 +15,19 @@ pub fn get_app_data(state: State<'_, AppState>) -> Result<AppData, String> {
 
 /// 获取所有提示词
 #[tauri::command]
-pub fn get_all_prompts(space_id: Option<String>, state: State<'_, AppState>) -> Result<Vec<Prompt>, String> {
+pub fn get_all_prompts(
+    space_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Prompt>, String> {
     let storage = state.storage.read();
     let data = storage.load().map_err(|e| e.to_string())?;
 
     if let Some(sid) = space_id {
-        Ok(data.prompts.into_iter().filter(|p| p.space_id == sid).collect())
+        Ok(data
+            .prompts
+            .into_iter()
+            .filter(|p| p.space_id == sid)
+            .collect())
     } else {
         Ok(data.prompts)
     }
@@ -28,7 +35,11 @@ pub fn get_all_prompts(space_id: Option<String>, state: State<'_, AppState>) -> 
 
 /// 搜索提示词
 #[tauri::command]
-pub fn search_prompts(query: String, space_id: Option<String>, state: State<'_, AppState>) -> Result<Vec<Prompt>, String> {
+pub fn search_prompts(
+    query: String,
+    space_id: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Prompt>, String> {
     let storage = state.storage.read();
     let data = storage.load().map_err(|e| e.to_string())?;
 
@@ -36,20 +47,19 @@ pub fn search_prompts(query: String, space_id: Option<String>, state: State<'_, 
 
     // 按空间过滤
     if let Some(sid) = space_id {
-        prompts = prompts.into_iter().filter(|p| p.space_id == sid).collect();
+        prompts.retain(|p| p.space_id == sid);
     }
 
     // 搜索过滤
     if !query.is_empty() {
         let query_lower = query.to_lowercase();
-        prompts = prompts
-            .into_iter()
-            .filter(|p| {
-                p.title.to_lowercase().contains(&query_lower)
-                    || p.content.to_lowercase().contains(&query_lower)
-                    || p.tags.iter().any(|t| t.to_lowercase().contains(&query_lower))
-            })
-            .collect();
+        prompts.retain(|p| {
+            p.title.to_lowercase().contains(&query_lower)
+                || p.content.to_lowercase().contains(&query_lower)
+                || p.tags
+                    .iter()
+                    .any(|t| t.to_lowercase().contains(&query_lower))
+        });
     }
 
     Ok(prompts)
@@ -84,7 +94,11 @@ pub fn create_prompt(prompt: PromptInput, state: State<'_, AppState>) -> Result<
 
 /// 更新提示词
 #[tauri::command]
-pub fn update_prompt(id: String, updates: PromptUpdate, state: State<'_, AppState>) -> Result<Prompt, String> {
+pub fn update_prompt(
+    id: String,
+    updates: PromptUpdate,
+    state: State<'_, AppState>,
+) -> Result<Prompt, String> {
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 
@@ -187,7 +201,9 @@ pub fn import_data(
                 *existing = space;
                 result.imported_spaces += 1;
             } else {
-                result.conflicts.push(format!("Space ID {} already exists", space.id));
+                result
+                    .conflicts
+                    .push(format!("Space ID {} already exists", space.id));
                 result.skipped += 1;
             }
         } else {
@@ -204,7 +220,9 @@ pub fn import_data(
                 *existing = prompt;
                 result.imported_prompts += 1;
             } else {
-                result.conflicts.push(format!("Prompt ID {} already exists", prompt.id));
+                result
+                    .conflicts
+                    .push(format!("Prompt ID {} already exists", prompt.id));
                 result.skipped += 1;
             }
         } else {

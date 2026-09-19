@@ -82,9 +82,7 @@ pub fn delete_space(id: String, state: State<'_, AppState>) -> Result<u32, Strin
     }
 
     // 将该空间下的提示词移至默认空间（而非级联删除）
-    let moved_count = data.prompts.iter_mut()
-        .filter(|p| p.space_id == id)
-        .count() as u32;
+    let moved_count = data.prompts.iter_mut().filter(|p| p.space_id == id).count() as u32;
     for p in data.prompts.iter_mut() {
         if p.space_id == id {
             p.space_id = "space_default".to_string();

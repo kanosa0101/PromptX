@@ -50,11 +50,20 @@ const handleCancel = () => {
 </script>
 
 <template>
-  <div v-if="prompt" class="variable-form p-4 bg-background-light dark:bg-background-dark">
-    <h3 class="text-base font-medium mb-4">填写变量值</h3>
+  <div
+    v-if="prompt"
+    class="variable-form p-4 bg-background-light dark:bg-background-dark"
+  >
+    <h3 class="text-base font-medium mb-4">
+      填写变量值
+    </h3>
 
     <!-- 变量输入 -->
-    <div v-for="variable in customVariables" :key="variable.name" class="variable-input mb-4">
+    <div
+      v-for="variable in customVariables"
+      :key="variable.name"
+      class="variable-input mb-4"
+    >
       <label class="block text-sm font-medium mb-2">
         {{ variable.name }}
       </label>
@@ -63,7 +72,7 @@ const handleCancel = () => {
         :placeholder="variable.defaultValue"
         type="text"
         class="w-full px-3 py-2 rounded border border-border-light dark:border-border-dark bg-transparent focus:outline-none focus:border-primary"
-      />
+      >
     </div>
 
     <!-- 系统变量提示 -->
@@ -76,10 +85,17 @@ const handleCancel = () => {
 
     <!-- 操作按钮 -->
     <div class="flex justify-end gap-2">
-      <button class="btn btn-secondary" @click="handleCancel">
+      <button
+        class="btn btn-secondary"
+        @click="handleCancel"
+      >
         取消
       </button>
-      <button class="btn btn-primary" :disabled="hasEmptyVariable" @click="handleConfirm">
+      <button
+        class="btn btn-primary"
+        :disabled="hasEmptyVariable"
+        @click="handleConfirm"
+      >
         确认输出
       </button>
     </div>

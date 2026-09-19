@@ -220,7 +220,9 @@ onUnmounted(() => {
 <template>
   <div class="settings-panel p-4 bg-white dark:bg-[#1A1A2E]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">设置</h3>
+      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+        设置
+      </h3>
       <button
         class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
         @click="handleClose"
@@ -236,7 +238,11 @@ onUnmounted(() => {
         v-model="theme"
         class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
       >
-        <option v-for="opt in themeOptions" :key="opt.value" :value="opt.value">
+        <option
+          v-for="opt in themeOptions"
+          :key="opt.value"
+          :value="opt.value"
+        >
           {{ opt.label }}
         </option>
       </select>
@@ -272,7 +278,7 @@ onUnmounted(() => {
         step="0.05"
         class="w-24"
         @input="updateOpacity"
-      />
+      >
       <span class="text-xs text-[#71717A] w-12">{{ Math.round(windowOpacity * 100) }}%</span>
     </div>
 
@@ -283,7 +289,7 @@ onUnmounted(() => {
         v-model="autoHide"
         type="checkbox"
         class="w-4 h-4"
-      />
+      >
     </div>
 
     <!-- 开机自启动 -->
@@ -293,13 +299,15 @@ onUnmounted(() => {
         v-model="launchAtLogin"
         type="checkbox"
         class="w-4 h-4"
-      />
+      >
     </div>
 
     <!-- AI 优化设置 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-3 mt-3">
       <div class="flex items-center justify-between mb-2">
-        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">AI 快捷优化</h4>
+        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          AI 快捷优化
+        </h4>
         <button
           class="px-3 py-1 rounded text-xs border border-[#E4E4E7] dark:border-[#27272A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
           :disabled="isTestingAi"
@@ -317,7 +325,7 @@ onUnmounted(() => {
           placeholder="sk-..."
           class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
           @blur="saveAiField('aiApiKey', aiApiKey)"
-        />
+        >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
@@ -328,7 +336,7 @@ onUnmounted(() => {
           placeholder="https://api.deepseek.com"
           class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
           @blur="saveAiField('aiBaseUrl', aiBaseUrl)"
-        />
+        >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
@@ -339,7 +347,7 @@ onUnmounted(() => {
           placeholder="deepseek-flash"
           class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
           @blur="saveAiField('aiModel', aiModel)"
-        />
+        >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
@@ -368,7 +376,7 @@ onUnmounted(() => {
             type="checkbox"
             class="w-4 h-4"
             @change="toggleThinking"
-          />
+          >
           深度思考（更慢）
         </label>
       </div>
@@ -388,7 +396,7 @@ onUnmounted(() => {
           rows="3"
           class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
           @blur="saveAiField('optimizeTemplate', optimizeTemplate)"
-        ></textarea>
+        />
       </div>
     </div>
 
@@ -409,7 +417,10 @@ onUnmounted(() => {
         </button>
       </div>
       <!-- 状态提示 -->
-      <div v-if="importStatus" class="text-xs text-[#71717A] mb-2 text-center">
+      <div
+        v-if="importStatus"
+        class="text-xs text-[#71717A] mb-2 text-center"
+      >
         {{ importStatus }}
       </div>
       <button

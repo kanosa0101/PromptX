@@ -5,9 +5,9 @@ use crate::models::Settings;
 use crate::AppState;
 use tauri::State;
 use tauri_plugin_autostart::ManagerExt;
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
-use tauri_plugin_global_shortcut::Modifiers;
 use tauri_plugin_global_shortcut::Code;
+use tauri_plugin_global_shortcut::Modifiers;
+use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 
 /// 解析快捷键字符串为 Shortcut 对象
 /// 格式: "Alt+Space", "Ctrl+K", "Shift+F1" 等
@@ -34,7 +34,10 @@ pub fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
     }
 
     if modifiers.is_empty() {
-        return Err(format!("快捷键至少需要一个修饰键 (Alt/Ctrl/Shift/Cmd): {}", hotkey));
+        return Err(format!(
+            "快捷键至少需要一个修饰键 (Alt/Ctrl/Shift/Cmd): {}",
+            hotkey
+        ));
     }
 
     Ok(Shortcut::new(Some(modifiers), code.unwrap()))
@@ -44,23 +47,54 @@ pub fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
 fn parse_key_code(key: &str) -> Result<Code, String> {
     match key.to_lowercase().as_str() {
         "space" => Ok(Code::Space),
-        "a" => Ok(Code::KeyA), "b" => Ok(Code::KeyB), "c" => Ok(Code::KeyC),
-        "d" => Ok(Code::KeyD), "e" => Ok(Code::KeyE), "f" => Ok(Code::KeyF),
-        "g" => Ok(Code::KeyG), "h" => Ok(Code::KeyH), "i" => Ok(Code::KeyI),
-        "j" => Ok(Code::KeyJ), "k" => Ok(Code::KeyK), "l" => Ok(Code::KeyL),
-        "m" => Ok(Code::KeyM), "n" => Ok(Code::KeyN), "o" => Ok(Code::KeyO),
-        "p" => Ok(Code::KeyP), "q" => Ok(Code::KeyQ), "r" => Ok(Code::KeyR),
-        "s" => Ok(Code::KeyS), "t" => Ok(Code::KeyT), "u" => Ok(Code::KeyU),
-        "v" => Ok(Code::KeyV), "w" => Ok(Code::KeyW), "x" => Ok(Code::KeyX),
-        "y" => Ok(Code::KeyY), "z" => Ok(Code::KeyZ),
-        "0" => Ok(Code::Digit0), "1" => Ok(Code::Digit1), "2" => Ok(Code::Digit2),
-        "3" => Ok(Code::Digit3), "4" => Ok(Code::Digit4), "5" => Ok(Code::Digit5),
-        "6" => Ok(Code::Digit6), "7" => Ok(Code::Digit7), "8" => Ok(Code::Digit8),
+        "a" => Ok(Code::KeyA),
+        "b" => Ok(Code::KeyB),
+        "c" => Ok(Code::KeyC),
+        "d" => Ok(Code::KeyD),
+        "e" => Ok(Code::KeyE),
+        "f" => Ok(Code::KeyF),
+        "g" => Ok(Code::KeyG),
+        "h" => Ok(Code::KeyH),
+        "i" => Ok(Code::KeyI),
+        "j" => Ok(Code::KeyJ),
+        "k" => Ok(Code::KeyK),
+        "l" => Ok(Code::KeyL),
+        "m" => Ok(Code::KeyM),
+        "n" => Ok(Code::KeyN),
+        "o" => Ok(Code::KeyO),
+        "p" => Ok(Code::KeyP),
+        "q" => Ok(Code::KeyQ),
+        "r" => Ok(Code::KeyR),
+        "s" => Ok(Code::KeyS),
+        "t" => Ok(Code::KeyT),
+        "u" => Ok(Code::KeyU),
+        "v" => Ok(Code::KeyV),
+        "w" => Ok(Code::KeyW),
+        "x" => Ok(Code::KeyX),
+        "y" => Ok(Code::KeyY),
+        "z" => Ok(Code::KeyZ),
+        "0" => Ok(Code::Digit0),
+        "1" => Ok(Code::Digit1),
+        "2" => Ok(Code::Digit2),
+        "3" => Ok(Code::Digit3),
+        "4" => Ok(Code::Digit4),
+        "5" => Ok(Code::Digit5),
+        "6" => Ok(Code::Digit6),
+        "7" => Ok(Code::Digit7),
+        "8" => Ok(Code::Digit8),
         "9" => Ok(Code::Digit9),
-        "f1" => Ok(Code::F1), "f2" => Ok(Code::F2), "f3" => Ok(Code::F3),
-        "f4" => Ok(Code::F4), "f5" => Ok(Code::F5), "f6" => Ok(Code::F6),
-        "f7" => Ok(Code::F7), "f8" => Ok(Code::F8), "f9" => Ok(Code::F9),
-        "f10" => Ok(Code::F10), "f11" => Ok(Code::F11), "f12" => Ok(Code::F12),
+        "f1" => Ok(Code::F1),
+        "f2" => Ok(Code::F2),
+        "f3" => Ok(Code::F3),
+        "f4" => Ok(Code::F4),
+        "f5" => Ok(Code::F5),
+        "f6" => Ok(Code::F6),
+        "f7" => Ok(Code::F7),
+        "f8" => Ok(Code::F8),
+        "f9" => Ok(Code::F9),
+        "f10" => Ok(Code::F10),
+        "f11" => Ok(Code::F11),
+        "f12" => Ok(Code::F12),
         "tab" => Ok(Code::Tab),
         "enter" | "return" => Ok(Code::Enter),
         "escape" | "esc" => Ok(Code::Escape),
@@ -89,7 +123,11 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
 
 /// 更新设置
 #[tauri::command]
-pub fn update_settings(settings: Settings, app: tauri::AppHandle, state: State<'_, AppState>) -> Result<Settings, String> {
+pub fn update_settings(
+    settings: Settings,
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Settings, String> {
     // 写锁作用域：必须在 apply_shortcuts 之前释放（其内部要拿读锁）
     {
         let storage = state.storage.write();
@@ -117,7 +155,11 @@ pub fn update_settings(settings: Settings, app: tauri::AppHandle, state: State<'
 
 /// 注册全局快捷键
 #[tauri::command]
-pub fn register_hotkey(app: tauri::AppHandle, hotkey: String, state: State<'_, AppState>) -> Result<(), String> {
+pub fn register_hotkey(
+    app: tauri::AppHandle,
+    hotkey: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let new_shortcut = parse_hotkey(&hotkey)?;
 
     // 先注销旧快捷键
@@ -130,11 +172,13 @@ pub fn register_hotkey(app: tauri::AppHandle, hotkey: String, state: State<'_, A
     drop(storage); // 释放读锁
 
     // 注册新快捷键
-    app.global_shortcut().on_shortcut(new_shortcut, |app, _shortcut, event| {
-        if event.state == ShortcutState::Pressed {
-            crate::toggle_window_with_clipboard_capture(app);
-        }
-    }).map_err(|e| format!("注册快捷键失败: {}", e))?;
+    app.global_shortcut()
+        .on_shortcut(new_shortcut, |app, _shortcut, event| {
+            if event.state == ShortcutState::Pressed {
+                crate::toggle_window_with_clipboard_capture(app);
+            }
+        })
+        .map_err(|e| format!("注册快捷键失败: {}", e))?;
 
     Ok(())
 }
