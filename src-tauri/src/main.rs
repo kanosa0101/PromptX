@@ -103,6 +103,7 @@ fn main() {
             // AI 优化
             commands::ai::optimize_apply_result,
             commands::ai::optimize_cancel,
+            commands::ai::ai_debug_log,
             // 设置
             commands::settings::get_settings,
             commands::settings::update_settings,

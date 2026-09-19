@@ -16,24 +16,28 @@ use tauri::{Emitter, Manager, State};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use uuid::Uuid;
 
-/// 优化会话：截取到的选中文本与截取前的剪贴板内容
-struct OptimizeSession {
-    original_clipboard: Option<String>,
-    selected_text: String,
-}
-
-/// 进行中的优化会话（同一时刻至多一个）
-static OPTIMIZE_SESSION: Mutex<Option<OptimizeSession>> = Mutex::new(None);
-
 /// 模拟按键后等待系统/应用响应的间隔
 const COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
 const RESTORE_DELAY_MS: u64 = 150;
 /// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
 const RELEASE_SETTLE_MS: u64 = 120;
+/// 会话有效期：超时的残留会话视为已失败，允许新触发覆盖
+const SESSION_STALE_MS: u64 = 90_000;
+
+/// 优化会话：截取到的选中文本与截取前的剪贴板内容
+struct OptimizeSession {
+    original_clipboard: Option<String>,
+    selected_text: String,
+    created_at: std::time::Instant,
+}
+
+/// 进行中的优化会话（同一时刻至多一个）
+static OPTIMIZE_SESSION: Mutex<Option<OptimizeSession>> = Mutex::new(None);
 
 /// 轻量诊断日志（后台全自动流程无 UI，故障时需要可追溯）
-fn debug_log(msg: &str) {
+/// Rust 侧直接写；前端通过 ai_debug_log 命令写入（带 [FE] 前缀）
+pub fn debug_log(msg: &str) {
     let ts = chrono::Local::now().format("%m-%d %H:%M:%S%.3f");
     let line = format!("[{}] {}\n", ts, msg);
     let path = std::env::temp_dir().join("promptx-ai.log");
@@ -43,9 +47,27 @@ fn debug_log(msg: &str) {
     }
 }
 
+/// 前端诊断日志入口（与 Rust 日志写同一文件，便于对齐时间线）
+#[tauri::command]
+pub fn ai_debug_log(message: String) -> Result<(), String> {
+    debug_log(&format!("[FE] {}", message));
+    Ok(())
+}
+
 /// 快捷键入口：截取选中文本并通知前端开始 AI 优化
 /// 全程不显示主窗口，焦点始终停留在目标应用
 pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
+    // 已有进行中的会话：忽略本次触发（AI 优化通常 10~40 秒，连按会打断流程）
+    let in_flight = OPTIMIZE_SESSION
+        .lock()
+        .as_ref()
+        .map(|s| s.created_at.elapsed().as_millis() < SESSION_STALE_MS as u128)
+        .unwrap_or(false);
+    if in_flight {
+        debug_log("已有优化进行中，忽略本次触发");
+        return;
+    }
+
     debug_log("快捷键触发: 开始截取选中文本");
     if let Err(err) = capture_inner(&app).await {
         // 截取失败：清理会话，弹出主窗口由前端展示错误
@@ -100,6 +122,7 @@ async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
     *OPTIMIZE_SESSION.lock() = Some(OptimizeSession {
         original_clipboard: original,
         selected_text: selected.clone(),
+        created_at: std::time::Instant::now(),
     });
 
     // 4. 通知前端执行 AI 优化（前端完成后回调 optimize_apply_result）
