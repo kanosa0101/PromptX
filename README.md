@@ -138,9 +138,9 @@ PromptX/
 
 ### 数据存储
 
-- Windows: `%APPDATA%/PromptX/data.json`
-- macOS: `~/Library/Application Support/PromptX/data.json`
-- Linux: `~/.config/promptx/data.json`
+- Windows: `%APPDATA%/com.promptx.app/data.json`
+- macOS: `~/Library/Application Support/com.promptx.app/data.json`
+- Linux: `~/.config/com.promptx.app/data.json`
 
 ### 开发命令
 
@@ -294,9 +294,9 @@ PromptX/
 
 ### Data Storage
 
-- Windows: `%APPDATA%/PromptX/data.json`
-- macOS: `~/Library/Application Support/PromptX/data.json`
-- Linux: `~/.config/promptx/data.json`
+- Windows: `%APPDATA%/com.promptx.app/data.json`
+- macOS: `~/Library/Application Support/com.promptx.app/data.json`
+- Linux: `~/.config/com.promptx.app/data.json`
 
 ### Development Commands
 
