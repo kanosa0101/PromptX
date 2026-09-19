@@ -29,6 +29,8 @@ static OPTIMIZE_SESSION: Mutex<Option<OptimizeSession>> = Mutex::new(None);
 const COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
 const RESTORE_DELAY_MS: u64 = 150;
+/// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
+const RELEASE_SETTLE_MS: u64 = 120;
 
 /// 轻量诊断日志（后台全自动流程无 UI，故障时需要可追溯）
 fn debug_log(msg: &str) {
@@ -66,6 +68,9 @@ fn preview(s: &str, max: usize) -> String {
 }
 
 async fn capture_inner(app: &tauri::AppHandle) -> Result<(), String> {
+    // 0. 松开快捷键后稍作缓冲，确保用户物理按键已全部抬起
+    tokio::time::sleep(Duration::from_millis(RELEASE_SETTLE_MS)).await;
+
     // 1. 保存原剪贴板内容，用于结束后恢复
     let original = app.clipboard().read_text().ok();
     debug_log(&format!(

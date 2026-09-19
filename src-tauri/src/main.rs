@@ -151,9 +151,11 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
     }
 
     // AI 优化快捷键（后台全自动流程：截取选中文本 → 前端调 AI → 贴回原位，不显示窗口）
+    // 关键：监听松开（Released）而非按下 —— 若在按下瞬间模拟 Ctrl+C，用户手指
+    // 仍按着 Ctrl/Shift，目标应用实际收到 Ctrl+Shift+C，复制会静默失败
     if let Ok(shortcut) = parse_hotkey(&optimize_hotkey) {
         let result = app.global_shortcut().on_shortcut(shortcut, |app, _shortcut, event| {
-            if event.state == ShortcutState::Pressed {
+            if event.state == ShortcutState::Released {
                 let app = app.clone();
                 tauri::async_runtime::spawn(async move {
                     commands::ai::capture_selection_for_optimize(app).await;
@@ -161,7 +163,7 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
             }
         });
         match result {
-            Ok(()) => eprintln!("已注册 AI 优化快捷键: {}", optimize_hotkey),
+            Ok(()) => eprintln!("已注册 AI 优化快捷键: {} (松开触发)", optimize_hotkey),
             Err(e) => eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e),
         }
     }
