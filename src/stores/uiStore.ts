@@ -17,9 +17,18 @@ export const useUiStore = defineStore('ui', {
     editingSpace: null as Space | null,
     windowVisible: true,
     aiError: '',
+    systemNotice: '',
   }),
 
   actions: {
+    showSystemNotice(message: string) {
+      this.systemNotice = message
+    },
+
+    clearSystemNotice() {
+      this.systemNotice = ''
+    },
+
     showAiError(message: string) {
       this.aiError = message
     },

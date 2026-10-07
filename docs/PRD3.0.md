@@ -146,6 +146,8 @@
 | 结果留存 | Rust 写入 `space_ai_history`（标题=原文前 30 字，标签 `AI优化`） | background 写入 `chrome.storage.local` |
 | 默认配置 | DeepSeek `https://api.deepseek.com` + `deepseek-flash`，两端一致 | 同左 |
 | 推理模式开关 | 设置可切换（默认关闭=快速；开启=深度思考更慢，请求不再携带 `thinking: disabled`） | 同左 |
+| 历史上限 | 「AI 优化」空间最多保留 200 条，超出自动清理最旧 | 同左 |
+| 自动重试 | 超时/网络故障/5xx/429 自动重试一次（1 秒间隔） | 同左 |
 
 **设计要点**：
 - 优化指令模板（system prompt）可在设置中自定义，默认模板强约束"只输出提示词本身"；
@@ -166,9 +168,7 @@
 | 扩展端 HelpPanel 未实现 | 低 | `uiStore` 有 stub 但无组件 |
 | 扩展端 Settings 类型与桌面端不同 | 低 | AI 字段已对齐（v3.2），窗口相关字段仍仅桌面端持有，导入导出时按默认值补齐 |
 | 桌面端 `import_data` merge=false 不是"全量替换" | 低 | 实际行为是"跳过冲突保留本地"，PRD P0-4 原始描述"全量替换"未实现 |
-| 键盘模拟 (enigo) 初始化失败静默忽略 | 中 | `simulate_paste`/`simulate_cut` 无错误反馈 |
 | `paste_and_restore` 依赖硬编码延迟 | 低 | 慢系统上可能不可靠 |
-| 扩展端 `saveData()` 非原子操作 | 低 | 中途崩溃可能丢数据 |
 | 桌面端 AI 请求依赖服务端 CORS | 低 | AI 请求由 webview fetch 发起，个别自建服务（如 Ollama）需配置允许跨域；如成为问题可引入 Tauri HTTP 插件改为 Rust 侧请求 |
 | 推理类模型（deepseek-flash 等）响应较慢 | 低 | 思考过程计入总耗时，60s 超时对长文本可能偏紧 |
 
@@ -189,6 +189,11 @@
 | `toggle_window`/`hide_window` 静默吞错误 | 改为返回 `Result<(), String>` |
 | `maxResults` 前端未接入 | 类型+store+filteredPrompts 均已补齐 |
 | `searchDebounce` 前端未接入 | 类型+store+SearchBar 均已补齐 |
+| 快捷键注册冲突无感知（静默失败） | 注册状态入静态表 + `get_hotkey_status` 命令，启动/保存后前端横幅提示（v3.2） |
+| 失焦自动隐藏无视 `autoHide` 设置 | 失焦事件读取设置后再决定隐藏（v3.2） |
+| 窗口位置记忆不生效 | Esc/失焦隐藏前自动保存位置（v3.2） |
+| enigo 初始化失败静默忽略 | 模拟按键返回 `Result` + 诊断日志（v3.2） |
+| 扩展端写覆盖竞态 | storage 写队列串行化 + `onChanged` 跨上下文刷新（v3.2） |
 
 ---
 

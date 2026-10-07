@@ -153,6 +153,28 @@ pub fn update_settings(
     Ok(settings)
 }
 
+/// 快捷键注册状态（供前端提示冲突）
+#[derive(serde::Serialize)]
+pub struct HotkeyStatus {
+    pub name: String,
+    pub hotkey: String,
+    pub ok: bool,
+}
+
+/// 查询全局快捷键注册状态（启动时与保存设置后由前端调用）
+#[tauri::command]
+pub fn get_hotkey_status() -> Result<Vec<HotkeyStatus>, String> {
+    let guard = crate::HOTKEY_STATUS.lock();
+    Ok(guard
+        .iter()
+        .map(|(name, hotkey, ok)| HotkeyStatus {
+            name: name.clone(),
+            hotkey: hotkey.clone(),
+            ok: *ok,
+        })
+        .collect())
+}
+
 /// 注册全局快捷键
 #[tauri::command]
 pub fn register_hotkey(

@@ -59,11 +59,21 @@ pub fn toggle_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), S
     Ok(())
 }
 
-/// 隐藏窗口
+/// 隐藏窗口（隐藏前保存位置，供位置记忆恢复）
 #[tauri::command]
 pub fn hide_window(app: AppHandle) -> Result<(), String> {
+    save_position(&app);
     let window = app.get_webview_window("main").ok_or("Window not found")?;
     window.hide().map_err(|e| e.to_string())
+}
+
+/// 保存当前窗口位置（不依赖前端触发；失焦自动隐藏等内部路径共用）
+pub fn save_position(app: &AppHandle) {
+    use tauri::Manager;
+    if let Some(window) = app.get_webview_window("main") {
+        let state = app.state::<AppState>();
+        save_window_position_inner(&window, &state);
+    }
 }
 
 /// 保存窗口位置

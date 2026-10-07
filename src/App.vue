@@ -128,10 +128,28 @@ const handleSystemThemeChange = () => {
   }
 }
 
+// 检查全局快捷键注册状态（启动时提示冲突，例如被其他程序占用）
+const checkHotkeyStatus = async () => {
+  try {
+    const status = await invoke<{ name: string; hotkey: string; ok: boolean }[]>('get_hotkey_status')
+    const failed = status.filter((s) => !s.ok)
+    if (failed.length > 0) {
+      uiStore.showSystemNotice(
+        failed.map((s) => `「${s.name}」快捷键 ${s.hotkey} 注册失败（可能被其他程序占用），请在设置中更换`).join('；')
+      )
+    } else {
+      uiStore.clearSystemNotice()
+    }
+  } catch {
+    // 查询失败不打扰用户
+  }
+}
+
 // 初始化应用并注册键盘监听
 onMounted(async () => {
   await promptStore.loadPrompts()
   await settingsStore.loadSettings()
+  await checkHotkeyStatus()
   await aiOptimizer.start()
   window.addEventListener('keydown', handleKeyDown)
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange)
@@ -154,6 +172,20 @@ onUnmounted(() => {
   <div
     class="app-container min-h-screen bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]"
   >
+    <!-- 系统通知横幅（快捷键冲突等，需手动关闭） -->
+    <div
+      v-if="uiStore.systemNotice"
+      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 text-xs shadow-lg"
+    >
+      <span class="leading-snug">{{ uiStore.systemNotice }}</span>
+      <button
+        class="shrink-0 opacity-70 hover:opacity-100"
+        @click="uiStore.clearSystemNotice"
+      >
+        ✕
+      </button>
+    </div>
+
     <!-- AI 优化错误横幅 -->
     <div
       v-if="uiStore.aiError"

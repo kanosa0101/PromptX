@@ -53,6 +53,15 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     /**
+     * 从存储刷新数据（其他上下文写入后由 onChanged 触发，保持两端视图一致）
+     */
+    async refreshFromStorage() {
+      const data = await loadAppData()
+      this.spaces = data.spaces
+      this.prompts = data.prompts
+    },
+
+    /**
      * 刷新选区
      */
     async refreshSelection() {

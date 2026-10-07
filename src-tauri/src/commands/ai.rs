@@ -27,6 +27,8 @@ const RELEASE_SETTLE_MS: u64 = 120;
 const SESSION_STALE_MS: u64 = 90_000;
 /// 截取哨兵：模拟 Ctrl+C 前写入剪贴板，用于确定性判定是否复制到了新内容
 const SENTINEL: &str = " ";
+/// 「AI 优化」历史空间条数上限（防止数据文件无限膨胀）
+const MAX_AI_HISTORY: usize = 200;
 
 /// 剪贴板优化进行中的标记（同一时刻至多一个）
 static CLIPBOARD_IN_FLIGHT: Mutex<Option<std::time::Instant>> = Mutex::new(None);
@@ -336,6 +338,31 @@ pub fn optimize_cancel(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 超出上限时清理「AI 优化」空间中最旧的条目（不影响其他空间）
+fn trim_ai_history(prompts: &mut Vec<Prompt>) {
+    let mut idx: Vec<(chrono::DateTime<Utc>, usize)> = prompts
+        .iter()
+        .enumerate()
+        .filter(|(_, p)| p.space_id == AI_HISTORY_SPACE_ID)
+        .map(|(i, p)| (p.created_at, i))
+        .collect();
+    if idx.len() <= MAX_AI_HISTORY {
+        return;
+    }
+    idx.sort_by_key(|(t, _)| *t);
+    let remove: std::collections::HashSet<usize> = idx[..idx.len() - MAX_AI_HISTORY]
+        .iter()
+        .map(|(_, i)| *i)
+        .collect();
+    let mut keep = Vec::with_capacity(prompts.len() - remove.len());
+    for (i, prompt) in prompts.drain(..).enumerate() {
+        if !remove.contains(&i) {
+            keep.push(prompt);
+        }
+    }
+    *prompts = keep;
+}
+
 /// 保存优化结果到「AI 优化」历史空间（空间不存在则自动创建）
 fn save_ai_history(app: &tauri::AppHandle, original: &str, optimized: &str) {
     if let Err(err) = (|| -> Result<(), String> {
@@ -383,6 +410,9 @@ fn save_ai_history(app: &tauri::AppHandle, original: &str, optimized: &str) {
             updated_at: now,
         });
 
+        // 条数超限时清理最旧条目
+        trim_ai_history(&mut data.prompts);
+
         storage.save(data).map_err(|e| e.to_string())?;
         Ok(())
     })() {
@@ -404,6 +434,55 @@ fn emit_to_main(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use crate::models::AI_HISTORY_SPACE_ID;
+
+    #[test]
+    fn test_trim_ai_history_keeps_newest_200() {
+        let base = Utc::now();
+        let mut prompts: Vec<Prompt> = (0..202)
+            .map(|i| Prompt {
+                id: format!("ai_{}", i),
+                title: format!("t{}", i),
+                content: String::new(),
+                tags: vec!["AI优化".to_string()],
+                space_id: AI_HISTORY_SPACE_ID.to_string(),
+                variables: Vec::new(),
+                usage_count: 0,
+                last_used_at: None,
+                created_at: base - chrono::Duration::seconds(1000 - i as i64),
+                updated_at: base,
+            })
+            .collect();
+        // 其他空间的条目不受影响
+        prompts.push(Prompt {
+            id: "other".to_string(),
+            title: "其他空间".to_string(),
+            content: String::new(),
+            tags: vec![],
+            space_id: "space_work".to_string(),
+            variables: Vec::new(),
+            usage_count: 0,
+            last_used_at: None,
+            created_at: base - chrono::Duration::seconds(2000),
+            updated_at: base,
+        });
+
+        trim_ai_history(&mut prompts);
+
+        let ai: Vec<&Prompt> = prompts
+            .iter()
+            .filter(|p| p.space_id == AI_HISTORY_SPACE_ID)
+            .collect();
+        assert_eq!(ai.len(), MAX_AI_HISTORY);
+        // 保留的是最新的（id 数字更大）
+        assert!(
+            prompts.iter().any(|p| p.id == "other"),
+            "其他空间条目不应被清理"
+        );
+        assert!(!prompts.iter().any(|p| p.id == "ai_0"), "最旧条目应被清理");
+    }
+
     #[test]
     fn test_title_truncation() {
         let flattened: String =

@@ -27,8 +27,20 @@ export async function loadAppData(): Promise<AppData> {
 /**
  * 保存应用数据
  */
+/** 写队列：串行化本上下文内的读改写，避免并发互相覆盖 */
+let writeChain: Promise<unknown> = Promise.resolve()
+
+export function enqueueWrite<T>(task: () => Promise<T>): Promise<T> {
+  const run = writeChain.then(task, task)
+  writeChain = run.then(
+    () => undefined,
+    () => undefined,
+  )
+  return run
+}
+
 export async function saveAppData(data: AppData): Promise<void> {
-  await chrome.storage.local.set({ [STORAGE_KEY]: data })
+  await enqueueWrite(() => chrome.storage.local.set({ [STORAGE_KEY]: data }))
 }
 
 /**

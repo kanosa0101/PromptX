@@ -62,7 +62,16 @@ export function stripCodeFence(text: string): string {
   return trimmed
 }
 
-/** 调用 OpenAI 兼容 Chat Completions 接口 */
+/** 可重试错误：超时、网络故障、服务端临时错误（5xx/429） */
+class RetryableError extends Error {}
+
+/** 重试参数 */
+const MAX_ATTEMPTS = 2
+const RETRY_DELAY_MS = 1_000
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** 调用 OpenAI 兼容 Chat Completions 接口（超时/网络/5xx/429 自动重试一次） */
 async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> {
   if (!config.aiApiKey.trim()) {
     throw new Error('未配置 API Key，请先在设置中填写')
@@ -71,59 +80,81 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
     throw new Error('未配置 AI 服务地址（Base URL），请先在设置中填写')
   }
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  let lastError: Error = new Error('AI 请求失败')
 
-  let response: Response
-  try {
-    response = await fetch(chatEndpoint(config.aiBaseUrl), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.aiApiKey.trim()}`,
-      },
-      body: JSON.stringify({
-        model: config.aiModel.trim(),
-        messages,
-        temperature: 0.5,
-        stream: false,
-        // 推理模式关闭时请求跳过思考（DeepSeek 等混合推理模型）
-        ...(config.optimizeThinking ? {} : { thinking: { type: 'disabled' as const } }),
-      } satisfies ChatRequestBody),
-      signal: controller.signal,
-    })
-  } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error(`AI 请求超时（${REQUEST_TIMEOUT_MS / 1000}秒）`)
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+
+    try {
+      let response: Response
+      try {
+        response = await fetch(chatEndpoint(config.aiBaseUrl), {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${config.aiApiKey.trim()}`,
+          },
+          body: JSON.stringify({
+            model: config.aiModel.trim(),
+            messages,
+            temperature: 0.5,
+            stream: false,
+            // 推理模式关闭时请求跳过思考（DeepSeek 等混合推理模型）
+            ...(config.optimizeThinking ? {} : { thinking: { type: 'disabled' as const } }),
+          } satisfies ChatRequestBody),
+          signal: controller.signal,
+        })
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          throw new RetryableError(`AI 请求超时（${REQUEST_TIMEOUT_MS / 1000}秒）`)
+        }
+        throw new RetryableError(
+          `无法连接到 AI 服务: ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
+
+      if (!response.ok) {
+        const errBody = await response.text().catch(() => '')
+        const hint =
+          response.status === 401 || response.status === 403
+            ? '（请检查 API Key 是否正确）'
+            : response.status === 404
+              ? '（请检查 Base URL 与模型名，多数服务需要以 /v1 结尾）'
+              : response.status === 429
+                ? '（请求过于频繁或额度不足）'
+                : ''
+        const detail = errBody.trim().slice(0, 200)
+        const message = `AI 接口返回 ${response.status}: ${hint} ${detail}`.trim()
+        // 服务端临时性错误可重试；客户端错误（Key 错、参数错）重试无意义
+        if (response.status >= 500 || response.status === 429) {
+          throw new RetryableError(message)
+        }
+        throw new Error(message)
+      }
+
+      const data = await response.json().catch(() => {
+        throw new Error('AI 响应解析失败')
+      })
+      const content: string = data?.choices?.[0]?.message?.content ?? ''
+      const optimized = stripCodeFence(content)
+      if (!optimized) {
+        throw new Error('AI 返回了空内容')
+      }
+      return optimized
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      if (lastError instanceof RetryableError && attempt < MAX_ATTEMPTS) {
+        await sleep(RETRY_DELAY_MS)
+        continue
+      }
+      throw lastError
+    } finally {
+      clearTimeout(timer)
     }
-    throw new Error(`无法连接到 AI 服务: ${error instanceof Error ? error.message : String(error)}`)
-  } finally {
-    clearTimeout(timer)
   }
 
-  if (!response.ok) {
-    const errBody = await response.text().catch(() => '')
-    const hint =
-      response.status === 401 || response.status === 403
-        ? '（请检查 API Key 是否正确）'
-        : response.status === 404
-          ? '（请检查 Base URL 与模型名，多数服务需要以 /v1 结尾）'
-          : response.status === 429
-            ? '（请求过于频繁或额度不足）'
-            : ''
-    const detail = errBody.trim().slice(0, 200)
-    throw new Error(`AI 接口返回 ${response.status}: ${hint} ${detail}`.trim())
-  }
-
-  const data = await response.json().catch(() => {
-    throw new Error('AI 响应解析失败')
-  })
-  const content: string = data?.choices?.[0]?.message?.content ?? ''
-  const optimized = stripCodeFence(content)
-  if (!optimized) {
-    throw new Error('AI 返回了空内容')
-  }
-  return optimized
+  throw lastError
 }
 
 /** 用模板优化文本（system=优化模板，user=选中的原文） */

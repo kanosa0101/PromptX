@@ -138,6 +138,13 @@ export interface AppData {
   prompts: Prompt[]
 }
 
+// 快捷键注册状态
+export interface HotkeyStatus {
+  name: string
+  hotkey: string
+  ok: boolean
+}
+
 // 搜索匹配结果
 export interface MatchResult {
   key: string

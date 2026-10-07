@@ -10,7 +10,7 @@ mod utils;
 
 use commands::clipboard::capture_selection_on_wakeup;
 use commands::window;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use services::storage::StorageService;
 use std::sync::Arc;
 use tauri::Manager;
@@ -21,6 +21,9 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 pub struct AppState {
     pub storage: Arc<RwLock<StorageService>>,
 }
+
+/// 全局快捷键注册状态：(名称, 键, 是否成功)，供前端提示冲突
+pub static HOTKEY_STATUS: Mutex<Vec<(String, String, bool)>> = Mutex::new(Vec::new());
 
 fn main() {
     tauri::Builder::default()
@@ -43,19 +46,30 @@ fn main() {
             // 初始化应用状态（必须在注册快捷键之前）
             let storage = Arc::new(RwLock::new(StorageService::new(app)));
 
+            // 供失焦事件闭包使用（storage 本体将移入 AppState）
+            let storage_for_events = storage.clone();
+
             app.manage(AppState { storage });
 
             // 按设置注册全部全局快捷键（窗口呼出 + AI 优化）
             let app_handle = app.handle().clone();
             apply_shortcuts(&app_handle);
 
-            // 监听窗口失去焦点事件，自动隐藏
+            // 监听窗口失去焦点事件：按 autoHide 设置决定是否隐藏（隐藏前保存位置）
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
+                let app_for_events = app_handle.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::Focused(false) = event {
-                        // 失去焦点时隐藏窗口
-                        window_clone.hide().unwrap_or_default();
+                        let auto_hide = storage_for_events
+                            .read()
+                            .load()
+                            .map(|d| d.settings.auto_hide)
+                            .unwrap_or(true);
+                        if auto_hide {
+                            window::save_position(&app_for_events);
+                            window_clone.hide().unwrap_or_default();
+                        }
                     }
                 });
             }
@@ -108,6 +122,7 @@ fn main() {
             commands::settings::get_settings,
             commands::settings::update_settings,
             commands::settings::register_hotkey,
+            commands::settings::get_hotkey_status,
             // 窗口
             commands::window::toggle_window,
             commands::window::hide_window,
@@ -141,21 +156,27 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
 
     // 先注销全部已注册快捷键，避免残留旧绑定
     let _ = app.global_shortcut().unregister_all();
+    let mut status: Vec<(String, String, bool)> = Vec::new();
 
     // 窗口呼出快捷键
-    if let Ok(shortcut) = parse_hotkey(&global_hotkey) {
-        let result = app
-            .global_shortcut()
-            .on_shortcut(shortcut, |app, _shortcut, event| {
-                if event.state == ShortcutState::Pressed {
-                    // 切换窗口显示/隐藏（带剪贴板捕获）
-                    toggle_window_with_clipboard_capture(app);
-                }
-            });
-        match result {
-            Ok(()) => eprintln!("已注册窗口快捷键: {}", global_hotkey),
-            Err(e) => eprintln!("注册窗口快捷键 {} 失败: {}", global_hotkey, e),
+    match parse_hotkey(&global_hotkey) {
+        Ok(shortcut) => {
+            let result = app
+                .global_shortcut()
+                .on_shortcut(shortcut, |app, _shortcut, event| {
+                    if event.state == ShortcutState::Pressed {
+                        // 切换窗口显示/隐藏（带剪贴板捕获）
+                        toggle_window_with_clipboard_capture(app);
+                    }
+                });
+            let ok = result.is_ok();
+            match result {
+                Ok(()) => eprintln!("已注册窗口快捷键: {}", global_hotkey),
+                Err(e) => eprintln!("注册窗口快捷键 {} 失败: {}", global_hotkey, e),
+            }
+            status.push(("窗口呼出".to_string(), global_hotkey.clone(), ok));
         }
+        Err(_) => status.push(("窗口呼出".to_string(), global_hotkey.clone(), false)),
     }
 
     // AI 优化快捷键（后台全自动流程：截取选中文本 → 前端调 AI → 贴回原位，不显示窗口）
@@ -172,10 +193,12 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
                     });
                 }
             });
+        let ok = result.is_ok();
         match result {
             Ok(()) => eprintln!("已注册 AI 优化快捷键: {} (松开触发)", optimize_hotkey),
             Err(e) => eprintln!("注册 AI 优化快捷键 {} 失败: {}", optimize_hotkey, e),
         }
+        status.push(("AI 优化".to_string(), optimize_hotkey.clone(), ok));
     }
 
     // 剪贴板优化快捷键（不模拟按键：优化剪贴板内容并写回，适用于终端等选区不可靠场景）
@@ -190,11 +213,15 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
                     });
                 }
             });
+        let ok = result.is_ok();
         match result {
             Ok(()) => eprintln!("已注册剪贴板优化快捷键: {} (松开触发)", clipboard_hotkey),
             Err(e) => eprintln!("注册剪贴板优化快捷键 {} 失败: {}", clipboard_hotkey, e),
         }
+        status.push(("剪贴板优化".to_string(), clipboard_hotkey.clone(), ok));
     }
+
+    *HOTKEY_STATUS.lock() = status;
 }
 
 /// 切换窗口显示/隐藏（带剪贴板捕获，用于快捷键回调）

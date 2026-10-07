@@ -91,6 +91,7 @@ const handleHotkeyCapture = async (e: KeyboardEvent) => {
         await settingsStore.updateSettings({ optimizeHotkey: fullHotkey })
       }
       importStatus.value = '快捷键已更新为 ' + fullHotkey
+      await refreshHotkeyStatus()
     } catch (error) {
       importStatus.value = '快捷键注册失败：' + (error instanceof Error ? error.message : String(error))
     }
@@ -116,6 +117,19 @@ const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemp
   settingsStore.updateSettings({ [field]: value }).catch((error) => {
     importStatus.value = 'AI 设置保存失败：' + (error instanceof Error ? error.message : String(error))
   })
+}
+
+// 保存快捷键后刷新注册状态，冲突立即提示
+const refreshHotkeyStatus = async () => {
+  try {
+    const status = await invoke<{ name: string; hotkey: string; ok: boolean }[]>('get_hotkey_status')
+    const failed = status.filter((s) => !s.ok)
+    importStatus.value = failed.length
+      ? failed.map((s) => `「${s.name}」${s.hotkey} 注册失败（可能被占用）`).join('；')
+      : '全部快捷键注册正常'
+  } catch {
+    // 查询失败忽略
+  }
 }
 
 // 恢复默认优化模板

@@ -4,7 +4,7 @@
  */
 
 import { optimizePrompt } from '@/lib/ai'
-import { STORAGE_KEY } from '@/lib/storage'
+import { enqueueWrite, STORAGE_KEY } from '@/lib/storage'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
 
 // 点击扩展图标时打开 Side Panel
@@ -217,7 +217,24 @@ async function saveOptimizeHistory(original: string, optimized: string): Promise
       updatedAt: now,
     })
 
-    await chrome.storage.local.set({ [STORAGE_KEY]: data })
+    // 「AI 优化」空间条数上限：保留最新 MAX_AI_HISTORY 条，防止数据膨胀
+    const MAX_AI_HISTORY = 200
+    const hist = data.prompts.filter(
+      (p: { spaceId: string }) => p.spaceId === AI_HISTORY_SPACE_ID
+    )
+    if (hist.length > MAX_AI_HISTORY) {
+      const sorted = [...hist].sort((a: { createdAt: string }, b: { createdAt: string }) =>
+        a.createdAt < b.createdAt ? -1 : 1
+      )
+      const removeIds = new Set(
+        sorted.slice(0, sorted.length - MAX_AI_HISTORY).map((p: { id: string }) => p.id)
+      )
+      data.prompts = data.prompts.filter((p: { id: string }) => !removeIds.has(p.id))
+    }
+
+    await enqueueWrite(async () => {
+      await chrome.storage.local.set({ [STORAGE_KEY]: data })
+    })
   } catch (error) {
     console.error('[PromptX] Failed to save optimize history:', error)
   }

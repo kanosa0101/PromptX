@@ -133,6 +133,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { usePromptStore } from './stores/promptStore'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
+import { STORAGE_KEY } from '@/lib/storage'
 import { highlightMatches, truncate } from './composables/useSearch'
 import VariableForm from './components/VariableForm.vue'
 import PromptEditor from './components/PromptEditor.vue'
@@ -270,6 +271,12 @@ const onVariableCancel = () => {
 onMounted(async () => {
   await promptStore.loadData()
   searchInputRef.value?.focus()
+  // 其他上下文（如 background 写入 AI 优化历史）改动存储时刷新列表
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes[STORAGE_KEY]) {
+      promptStore.refreshFromStorage()
+    }
+  })
 })
 </script>
 
