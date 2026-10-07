@@ -115,6 +115,7 @@ npm run tauri:build
 
 ```
 PromptX/
+├── shared/                 # 双端共享代码（类型/AI 客户端/搜索/变量）
 ├── src/                    # Vue 前端
 │   ├── components/         # UI 组件
 │   ├── stores/             # Pinia 状态管理
@@ -271,6 +272,7 @@ Rewrite in {{style}} style
 
 ```
 PromptX/
+├── shared/                 # Shared code (types / AI client / search / variables)
 ├── src/                    # Vue frontend
 │   ├── components/         # UI components
 │   ├── stores/             # Pinia state management

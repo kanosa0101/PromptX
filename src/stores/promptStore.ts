@@ -1,5 +1,9 @@
 import { defineStore } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
+import {
+  parseVariables as sharedParseVariables,
+  replaceVariables as sharedReplaceVariables,
+} from '@shared/variable'
 import type { Prompt, Space, Variable, AppData, ImportResult, PromptInput } from '@/types'
 import { DEFAULT_SPACES, DEFAULT_PROMPTS } from '@/types'
 import { useSearch } from '@/composables/useSearch'
@@ -156,34 +160,13 @@ export const usePromptStore = defineStore('prompt', {
       }
     },
 
+    // 变量解析/替换委托共享实现（shared/variable.ts）
     parseVariables(content: string): Variable[] {
-      const regex = /\{\{([^{}]+)\}\}/g
-      const variables: Variable[] = []
-      const systemVariables = ['clipboard', 'date', 'time', 'timestamp']
-
-      let match
-      while ((match = regex.exec(content)) !== null) {
-        const name = match[1].trim()
-        if (!name) continue
-        if (!variables.find((v) => v.name === name)) {
-          variables.push({
-            name,
-            type: systemVariables.includes(name) ? 'system' : 'custom',
-          })
-        }
-      }
-
-      return variables
+      return sharedParseVariables(content)
     },
 
     replaceVariables(content: string, values: Record<string, string>): string {
-      let result = content
-      for (const [name, value] of Object.entries(values)) {
-        // 使用字符串替换而非正则，避免变量名中的特殊字符导致正则注入
-        const pattern = '{{' + name + '}}'
-        result = result.split(pattern).join(value)
-      }
-      return result
+      return sharedReplaceVariables(content, values)
     },
 
     formatDate(date: Date): string {

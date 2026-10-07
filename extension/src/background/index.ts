@@ -3,7 +3,7 @@
  * 处理快捷键 + 打开 Side Panel + 消息转发 + AI 快捷优化编排
  */
 
-import { optimizePrompt } from '@/lib/ai'
+import { optimizeText } from '@/lib/ai'
 import { enqueueWrite, STORAGE_KEY } from '@/lib/storage'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
 
@@ -103,7 +103,7 @@ async function runOptimizeFlow(): Promise<void> {
     // 2. 调 AI 优化（background 发起请求，绕开页面 CSP/CORS）
     await setBadge('…')
     const settings = await loadAiSettings()
-    const optimized = await optimizePrompt(settings, text)
+    const optimized = await optimizeText(settings, text)
 
     // 3. 应用结果
     let applied = false

@@ -8,7 +8,7 @@ import { getSelectionFromActiveTab, insertTextToActiveTab } from '@/lib/messagin
 import { parseVariables, replaceVariables, getCustomVariables, getSystemVariableValue } from '@/utils/variable'
 import { useSearch } from '@/sidepanel/composables/useSearch'
 import { useUiStore } from './uiStore'
-import type { Prompt, Space, Variable, SearchResult } from '@/types'
+import type { Prompt, Space, SearchResult } from '@/types'
 
 export const usePromptStore = defineStore('prompt', {
   state: () => ({
