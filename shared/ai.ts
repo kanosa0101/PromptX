@@ -63,8 +63,13 @@ const RETRY_DELAY_MS = 1_000
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** 调用 OpenAI 兼容 Chat Completions 接口（超时/网络/5xx/429 自动重试一次） */
-async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> {
+/** 调用 OpenAI 兼容 Chat Completions 接口（超时/网络/5xx/429 自动重试一次）
+ * @param signal 外部取消信号（用户主动取消）：中止后抛出「已取消」且不重试 */
+async function chat(
+  config: AiConfig,
+  messages: ChatMessage[],
+  signal?: AbortSignal,
+): Promise<string> {
   if (!config.aiApiKey.trim()) {
     throw new Error('未配置 API Key，请先在设置中填写')
   }
@@ -75,7 +80,13 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
   let lastError: Error = new Error('AI 请求失败')
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    if (signal?.aborted) {
+      throw new Error('已取消')
+    }
+
     const controller = new AbortController()
+    const onExternalAbort = () => controller.abort()
+    signal?.addEventListener('abort', onExternalAbort, { once: true })
     const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
     try {
@@ -98,6 +109,10 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
           signal: controller.signal,
         })
       } catch (error) {
+        // 用户取消：不重试、不当错误展示
+        if (signal?.aborted) {
+          throw new Error('已取消')
+        }
         if (error instanceof DOMException && error.name === 'AbortError') {
           throw new RetryableError(`AI 请求超时（${REQUEST_TIMEOUT_MS / 1000}秒）`)
         }
@@ -136,6 +151,10 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
       return optimized
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
+      // 用户取消不参与重试
+      if (lastError.message === '已取消') {
+        throw lastError
+      }
       if (lastError instanceof RetryableError && attempt < MAX_ATTEMPTS) {
         await sleep(RETRY_DELAY_MS)
         continue
@@ -143,6 +162,7 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
       throw lastError
     } finally {
       clearTimeout(timer)
+      signal?.removeEventListener('abort', onExternalAbort)
     }
   }
 
@@ -150,13 +170,17 @@ async function chat(config: AiConfig, messages: ChatMessage[]): Promise<string> 
 }
 
 /** 用模板优化文本（system=优化模板，user=选中的原文） */
-export async function optimizeText(config: AiConfig, text: string): Promise<string> {
+export async function optimizeText(
+  config: AiConfig,
+  text: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const userText =
     text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text
   return chat(config, [
     { role: 'system', content: config.optimizeTemplate || DEFAULT_OPTIMIZE_TEMPLATE },
     { role: 'user', content: userText },
-  ])
+  ], signal)
 }
 
 /** 测试连接：发送一条最小请求，返回模型回复 */

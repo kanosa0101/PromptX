@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { useSettingsStore } from '@/stores/settingsStore'
+
 const emit = defineEmits<{
   close: []
 }>()
+
+// 快捷键可自定义，帮助文案从设置读取（与状态栏一致）
+const settingsStore = useSettingsStore()
 
 const handleClose = () => {
   emit('close')
@@ -30,7 +35,7 @@ const handleClose = () => {
       <div class="space-y-1 text-sm">
         <div class="flex justify-between">
           <span class="text-[#71717A]">唤醒/隐藏面板</span>
-          <span class="font-mono bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded">Alt + Space</span>
+          <span class="font-mono bg-[#E4E4E7] dark:bg-[#27272A] px-2 py-0.5 rounded">{{ settingsStore.globalHotkey }}</span>
         </div>
         <div class="flex justify-between">
           <span class="text-[#71717A]">新建提示词</span>
@@ -116,7 +121,7 @@ const handleClose = () => {
       <div class="space-y-2 text-sm">
         <div class="flex gap-2 items-start">
           <span class="bg-[#3B82F6] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0">1</span>
-          <span class="text-[#71717A]">按 <code class="bg-[#E4E4E7] dark:bg-[#27272A] px-1 rounded">Alt+Space</code> 呼出面板</span>
+          <span class="text-[#71717A]">按 <code class="bg-[#E4E4E7] dark:bg-[#27272A] px-1 rounded">{{ settingsStore.globalHotkey }}</code> 呼出面板</span>
         </div>
         <div class="flex gap-2 items-start">
           <span class="bg-[#3B82F6] text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shrink-0">2</span>

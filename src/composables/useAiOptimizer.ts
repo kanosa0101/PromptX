@@ -13,16 +13,23 @@ import { optimizeText } from '@/services/ai'
 /** 错误横幅自动消失时长 */
 const ERROR_DISMISS_MS = 8000
 
+/** 成功提示自动消失时长 */
+const NOTICE_DISMISS_MS = 3000
+
 export function useAiOptimizer() {
   const settingsStore = useSettingsStore()
   const uiStore = useUiStore()
 
   let errorTimer: ReturnType<typeof setTimeout> | undefined
+  let noticeTimer: ReturnType<typeof setTimeout> | undefined
   let unlistenFns: UnlistenFn[] = []
   // 并发防护：AI 请求最长约 2 分钟（60s 超时 × 2 次尝试），
   // 期间重复触发快捷键会启动第二条流水线，交错贴回会互相践踏剪贴板
   let optimizeRunning = false
   let clipboardOptimizeRunning = false
+  // 每次运行的取消控制器（用户在主窗口点击「取消」时中止请求）
+  let optimizeController: AbortController | null = null
+  let clipboardOptimizeController: AbortController | null = null
 
   /** 前端诊断日志：与 Rust 侧写同一文件，便于对齐时间线 */
   const log = (message: string) => {
@@ -35,6 +42,12 @@ export function useAiOptimizer() {
     uiStore.showAiError(message)
     if (errorTimer) clearTimeout(errorTimer)
     errorTimer = setTimeout(() => uiStore.clearAiError(), ERROR_DISMISS_MS)
+  }
+
+  const showNotice = (message: string) => {
+    uiStore.showAiNotice(message)
+    if (noticeTimer) clearTimeout(noticeTimer)
+    noticeTimer = setTimeout(() => uiStore.clearAiNotice(), NOTICE_DISMISS_MS)
   }
 
   /** AI 优化并回调 Rust 贴回原位置 */
@@ -52,20 +65,31 @@ export function useAiOptimizer() {
       return
     }
     optimizeRunning = true
+    optimizeController = new AbortController()
+    uiStore.startAiOptimizing()
     try {
       log(`收到优化事件(${text.length} 字符)，开始调用 AI`)
-      const optimized = await optimizeText(aiSettings(), text)
+      const optimized = await optimizeText(aiSettings(), text, optimizeController.signal)
       log(`AI 返回 ${optimized.length} 字符，回调 Rust 贴回`)
       await invoke('optimize_apply_result', { text: optimized })
+      showNotice('✨ AI 优化完成，已贴回原位置')
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       log(`AI 流程失败: ${message}`)
-      // 结束会话并恢复剪贴板，唤起主窗口展示错误
+      // 结束会话并恢复剪贴板
       invoke('optimize_cancel').catch(() => {})
+      if (message === '已取消') {
+        // 用户主动取消：不弹错误、不动窗口
+        showNotice('已取消本次 AI 优化')
+        return
+      }
+      // 唤起主窗口展示错误
       invoke('show_window').catch(() => {})
       showError(message)
     } finally {
       optimizeRunning = false
+      optimizeController = null
+      uiStore.stopAiOptimizing()
     }
   }
 
@@ -76,21 +100,37 @@ export function useAiOptimizer() {
       return
     }
     clipboardOptimizeRunning = true
+    clipboardOptimizeController = new AbortController()
+    uiStore.startAiOptimizing()
     try {
       log(`收到剪贴板优化事件(${text.length} 字符)，开始调用 AI`)
-      const optimized = await optimizeText(aiSettings(), text)
+      const optimized = await optimizeText(aiSettings(), text, clipboardOptimizeController.signal)
       log(`AI 返回 ${optimized.length} 字符，写回剪贴板`)
       await invoke('clipboard_optimize_apply_result', { text: optimized })
+      showNotice('✨ 优化完成，结果已在剪贴板，可直接 Ctrl+V')
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       log(`剪贴板优化失败: ${message}`)
-      // 结束会话（原剪贴板未被修改，无需恢复），唤起主窗口展示错误
+      // 结束会话（原剪贴板未被修改，无需恢复）
       invoke('clipboard_optimize_cancel').catch(() => {})
+      if (message === '已取消') {
+        showNotice('已取消本次 AI 优化')
+        return
+      }
+      // 唤起主窗口展示错误
       invoke('show_window').catch(() => {})
       showError(message)
     } finally {
       clipboardOptimizeRunning = false
+      clipboardOptimizeController = null
+      uiStore.stopAiOptimizing()
     }
+  }
+
+  /** 用户在主窗口点击「取消」：中止进行中的 AI 请求（后续清理走各自的取消路径） */
+  const cancelOptimize = () => {
+    optimizeController?.abort()
+    clipboardOptimizeController?.abort()
   }
 
   /** 注册事件监听（在 App 挂载时调用一次） */
@@ -121,7 +161,8 @@ export function useAiOptimizer() {
     unlistenFns.forEach((fn) => fn())
     unlistenFns = []
     if (errorTimer) clearTimeout(errorTimer)
+    if (noticeTimer) clearTimeout(noticeTimer)
   }
 
-  return { start, stop }
+  return { start, stop, cancelOptimize }
 }

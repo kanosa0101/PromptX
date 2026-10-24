@@ -23,7 +23,7 @@
     "storage",
     "activeTab",
     "sidePanel",
-    "clipboardRead",
+    "notifications",
     "clipboardWrite"
   ],
   "host_permissions": [

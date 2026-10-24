@@ -17,6 +17,10 @@ export const useUiStore = defineStore('ui', {
     editingSpace: null as Space | null,
     aiError: '',
     systemNotice: '',
+    // AI 优化进行中（用户中途唤起窗口时展示进度条 + 取消按钮）
+    aiOptimizing: false,
+    // AI 优化成功的短暂提示
+    aiNotice: '',
   }),
 
   actions: {
@@ -34,6 +38,22 @@ export const useUiStore = defineStore('ui', {
 
     clearAiError() {
       this.aiError = ''
+    },
+
+    startAiOptimizing() {
+      this.aiOptimizing = true
+    },
+
+    stopAiOptimizing() {
+      this.aiOptimizing = false
+    },
+
+    showAiNotice(message: string) {
+      this.aiNotice = message
+    },
+
+    clearAiNotice() {
+      this.aiNotice = ''
     },
 
     showSettingsPanel() {

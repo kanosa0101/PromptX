@@ -70,6 +70,20 @@ function clearBadgeLater(delayMs = 2000): void {
   }, delayMs)
 }
 
+/** 失败时弹系统通知（红叹号徽标不足以传达失败原因，如「未配置 API Key」） */
+async function notifyFailure(message: string): Promise<void> {
+  try {
+    await chrome.notifications.create({
+      type: 'basic',
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+      title: 'PromptX AI 优化失败',
+      message: message.slice(0, 180),
+    })
+  } catch {
+    // 通知不可用时静默（保留徽标与控制台日志）
+  }
+}
+
 /**
  * AI 快捷优化全流程：
  * 截取选中文本 → 调 AI 优化 → 原位替换 → 存入「AI 优化」历史空间
@@ -138,6 +152,8 @@ async function runOptimizeFlow(): Promise<void> {
     console.error('[PromptX] AI optimize failed:', error)
     await setBadge('!', '#DC2626')
     clearBadgeLater(3000)
+    // 系统通知展示失败原因（Key 未配置 / 接口报错 / 网络故障等）
+    await notifyFailure(error instanceof Error ? error.message : String(error))
   }
 }
 

@@ -176,6 +176,34 @@ describe('optimizeText', () => {
   })
 })
 
+describe('optimizeText 取消（外部 AbortSignal）', () => {
+  it('调用前已中止：直接抛「已取消」且不发起请求', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    await expect(optimizeText(CONFIG, '原文', controller.signal)).rejects.toThrow('已取消')
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it('请求进行中中止：抛「已取消」且不重试', async () => {
+    // fetch 永不完成，模拟慢请求；外部 abort 应立刻结束且不触发第二次尝试
+    vi.mocked(fetch).mockImplementation(
+      (_url: RequestInfo | URL, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new DOMException('Aborted', 'AbortError'))
+          )
+        })
+    )
+    const controller = new AbortController()
+    const pending = optimizeText(CONFIG, '原文', controller.signal)
+    // 让 optimizeText 先发起 fetch
+    await Promise.resolve()
+    controller.abort()
+    await expect(pending).rejects.toThrow('已取消')
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+})
+
 describe('testAiConnection', () => {
   it('发送最小用户消息并返回回复', async () => {
     vi.mocked(fetch).mockResolvedValue(okResponse('OK'))

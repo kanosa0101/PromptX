@@ -218,6 +218,34 @@ onUnmounted(() => {
       </button>
     </div>
 
+    <!-- AI 优化成功提示（自动消失） -->
+    <div
+      v-if="uiStore.aiNotice"
+      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-800 text-green-700 dark:text-green-300 text-xs shadow-lg"
+    >
+      <span class="leading-snug">{{ uiStore.aiNotice }}</span>
+      <button
+        class="shrink-0 opacity-70 hover:opacity-100"
+        @click="uiStore.clearAiNotice"
+      >
+        ✕
+      </button>
+    </div>
+
+    <!-- AI 优化进行中（用户中途唤起窗口时可见，可取消） -->
+    <div
+      v-if="uiStore.aiOptimizing"
+      class="animate-fade-in fixed bottom-2 left-2 right-2 z-50 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs shadow-lg"
+    >
+      <span class="leading-snug">✨ AI 优化进行中，完成后自动贴回原位置…</span>
+      <button
+        class="shrink-0 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
+        @click="aiOptimizer.cancelOptimize()"
+      >
+        取消
+      </button>
+    </div>
+
     <!-- 主界面 -->
     <div v-if="!uiStore.showSettings && !uiStore.showPromptEditor && !uiStore.showVariableForm && !uiStore.showHelp && !uiStore.showSpaceEditor">
       <SearchBar />
