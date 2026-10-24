@@ -105,5 +105,4 @@ mod tests {
         assert_eq!(vars[0].name, "日本語");
         assert_eq!(vars[1].name, "한국어");
     }
-
 }
