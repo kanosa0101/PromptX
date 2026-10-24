@@ -80,8 +80,9 @@ impl StorageService {
                         });
                     match backup_result {
                         Ok(data) => {
-                            // 恢复成功，保存到主文件
-                            if let Err(e) = self.save(data.clone()) {
+                            // 恢复成功，保存到主文件。不走备份轮转：
+                            // 当前主文件是损坏内容，轮转会把它覆盖到刚读出的好备份上
+                            if let Err(e) = self.save_without_backup(data.clone()) {
                                 eprintln!("备份恢复后保存失败: {}", e);
                             }
                             Ok(data)
@@ -92,15 +93,15 @@ impl StorageService {
                             eprintln!("备份也无法读取({}), 隔离损坏文件并使用默认数据", e);
                             self.quarantine_corrupt_files();
                             let default_data = AppData::default();
-                            let _ = self.save(default_data.clone());
+                            let _ = self.save_without_backup(default_data.clone());
                             Ok(default_data)
                         }
                     }
                 } else {
-                    // 没有备份，返回默认数据
+                    // 没有备份，返回默认数据（主文件已损坏，不把坏内容轮转进备份槽）
                     eprintln!("无备份文件，使用默认数据");
                     let default_data = AppData::default();
-                    let _ = self.save(default_data.clone());
+                    let _ = self.save_without_backup(default_data.clone());
                     Ok(default_data)
                 }
             }
@@ -120,7 +121,7 @@ impl StorageService {
         quarantine(&self.backup_path);
     }
 
-    /// 保存应用数据（原子写入，成功后更新内存缓存）
+    /// 保存应用数据（先轮转备份，再原子写入主文件）
     pub fn save(&self, data: AppData) -> Result<(), StorageError> {
         // 备份旧数据（同样走临时文件+重命名，避免崩溃留下半截备份）
         if self.data_path.exists() {
@@ -132,11 +133,21 @@ impl StorageService {
                 fs::write(&self.backup_path, old_content)?;
             }
         }
+        self.write_atomic(data)
+    }
 
+    /// 恢复/重建场景专用保存：跳过备份轮转。
+    /// 主文件已损坏时若照常轮转，会把坏内容覆盖到唯一完好的备份上；
+    /// 一旦本次主文件写入再失败，下次启动将主备皆坏、只能重置默认数据
+    pub fn save_without_backup(&self, data: AppData) -> Result<(), StorageError> {
+        self.write_atomic(data)
+    }
+
+    /// 原子写入主文件：临时文件 + fsync + 重命名；成功后更新内存缓存
+    fn write_atomic(&self, data: AppData) -> Result<(), StorageError> {
         // 序列化数据
         let content = serde_json::to_string(&data)?;
 
-        // 原子写入：先写临时文件，再重命名
         // 1. 写入临时文件
         {
             let mut file = fs::File::create(&self.temp_path)?;
@@ -210,6 +221,33 @@ mod tests {
         assert!(dir.path().join("data.json.corrupt").exists());
         assert!(dir.path().join("data.json.backup.corrupt").exists());
         assert!(dir.path().join("data.json").exists()); // 已用默认数据重建
+    }
+
+    #[test]
+    fn test_recovery_preserves_good_backup() {
+        let dir = tempfile::tempdir().unwrap();
+        let data_path = dir.path().join("data.json");
+        let backup_path = dir.path().join("data.json.backup");
+
+        // 备份是完好的旧数据，主文件损坏
+        let good = serde_json::to_string(&AppData::default()).unwrap();
+        std::fs::write(&backup_path, &good).unwrap();
+        std::fs::write(&data_path, "{corrupt").unwrap();
+
+        let svc = make_service(dir.path());
+        let data = svc.load().unwrap();
+        assert_eq!(data.version, "1.0.0"); // 从备份恢复
+
+        // 恢复保存不得把损坏的主文件内容轮转覆盖到好备份上
+        let backup_content = std::fs::read_to_string(&backup_path).unwrap();
+        assert_ne!(backup_content, "{corrupt");
+        let backup_data: AppData = serde_json::from_str(&backup_content).unwrap();
+        assert_eq!(backup_data.version, "1.0.0");
+
+        // 主文件已用恢复出的数据重建
+        let main_data: AppData =
+            serde_json::from_str(&fs::read_to_string(&data_path).unwrap()).unwrap();
+        assert_eq!(main_data.version, "1.0.0");
     }
 
     #[test]

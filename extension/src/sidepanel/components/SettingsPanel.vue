@@ -174,7 +174,7 @@ const promptStore = usePromptStore()
 const appVersion = chrome.runtime.getManifest().version
 
 const theme = ref('system')
-const maxResults = ref(20)
+const maxResults = ref(DEFAULT_SETTINGS.maxResults)
 const statusMessage = ref<string | null>(null)
 
 // AI 优化设置（本地编辑，失焦保存）
@@ -188,7 +188,7 @@ const isTestingAi = ref(false)
 onMounted(async () => {
   const data = await loadAppData()
   theme.value = data.settings?.theme || 'system'
-  maxResults.value = data.settings?.maxResults || 20
+  maxResults.value = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
   aiBaseUrl.value = data.settings?.aiBaseUrl || DEFAULT_SETTINGS.aiBaseUrl
   aiApiKey.value = data.settings?.aiApiKey || ''
   aiModel.value = data.settings?.aiModel || DEFAULT_SETTINGS.aiModel

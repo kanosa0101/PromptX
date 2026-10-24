@@ -116,10 +116,14 @@ fn parse_key_code(key: &str) -> Result<Code, String> {
 /// 获取设置（API Key 从系统钥匙串附加，data.json 中不落明文）
 #[tauri::command]
 pub async fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
-    let storage = state.storage.read();
-    let data = storage.load().map_err(|e| e.to_string())?;
+    // 先拷贝出设置并释放读锁，再做钥匙串系统调用：
+    // 域环境下 Credential Manager 读取可达秒级，持锁期间会阻塞所有写者
+    let settings = {
+        let storage = state.storage.read();
+        storage.load().map_err(|e| e.to_string())?.settings
+    };
     Ok(crate::services::secret::attach_api_key(
-        data.settings,
+        settings,
         &crate::services::secret::keychain(),
     ))
 }

@@ -7,6 +7,7 @@ import { loadAppData, mutateAppData } from '@/lib/storage'
 import { getSelectionFromActiveTab, insertTextToActiveTab } from '@/lib/messaging'
 import { parseVariables, replaceVariables, getCustomVariables, getSystemVariableValue } from '@/utils/variable'
 import { useSearch } from '@/sidepanel/composables/useSearch'
+import { DEFAULT_SETTINGS } from '@/types'
 import { useUiStore } from './uiStore'
 import type { Prompt, Space, SearchResult } from '@/types'
 
@@ -19,6 +20,7 @@ export const usePromptStore = defineStore('prompt', {
     selectedIndex: 0,
     isLoading: true,
     pageSelection: '',
+    maxResults: DEFAULT_SETTINGS.maxResults,
     lastOutputMethod: null as 'success' | 'clipboard' | null
   }),
 
@@ -32,8 +34,10 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     // 使用 useSearch composable 进行搜索（支持拼音匹配；搜索时按相关度排序）
+    // 与桌面端一致：结果始终按设置里的 maxResults 截断
     filteredPrompts(): SearchResult[] {
-      return useSearch(this.sortedByCreated, this.searchQuery, this.currentSpaceId)
+      const results = useSearch(this.sortedByCreated, this.searchQuery, this.currentSpaceId)
+      return results.slice(0, this.maxResults)
     },
 
     selectedPrompt(): SearchResult | null {
@@ -51,6 +55,7 @@ export const usePromptStore = defineStore('prompt', {
         const data = await loadAppData()
         this.spaces = data.spaces
         this.prompts = data.prompts
+        this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
         this.pageSelection = await getSelectionFromActiveTab()
       } catch {
         // 使用默认数据
@@ -65,6 +70,7 @@ export const usePromptStore = defineStore('prompt', {
       const data = await loadAppData()
       this.spaces = data.spaces
       this.prompts = data.prompts
+      this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
     },
 
     /**

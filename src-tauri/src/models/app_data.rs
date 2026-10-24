@@ -7,13 +7,27 @@ use serde::{Deserialize, Serialize};
 /// AI 优化历史空间的固定 ID（两端共用约定）
 pub const AI_HISTORY_SPACE_ID: &str = "space_ai_history";
 
-/// 应用数据结构
+/// 应用数据结构（字段级 default：半截文件不整体报废，逐字段回退；
+/// prompts 缺失回退空列表，不注入示例数据）
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppData {
+    #[serde(default = "default_version")]
     pub version: String,
+    #[serde(default)]
     pub settings: Settings,
+    #[serde(default = "default_spaces")]
     pub spaces: Vec<Space>,
+    #[serde(default)]
     pub prompts: Vec<Prompt>,
+}
+
+fn default_version() -> String {
+    "1.0.0".to_string()
+}
+
+fn default_spaces() -> Vec<Space> {
+    // 空间缺失回退默认三空间：空列表会让 Tab 空间切换（取模）崩溃
+    AppData::default().spaces
 }
 
 impl Default for AppData {
@@ -87,5 +101,21 @@ impl Default for AppData {
                 },
             ],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 半截 data.json（仅 settings）也能解析：version/prompts/spaces 逐字段回退
+    #[test]
+    fn test_partial_app_data_deserialization() {
+        let json = r#"{"settings": {"maxResults": 12}}"#;
+        let data: AppData = serde_json::from_str(json).unwrap();
+        assert_eq!(data.version, "1.0.0");
+        assert_eq!(data.settings.max_results, 12);
+        assert!(data.prompts.is_empty());
+        assert_eq!(data.spaces.len(), 3); // 空间回退默认三空间
     }
 }

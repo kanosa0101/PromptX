@@ -48,8 +48,10 @@ fn default_clipboard_optimize_hotkey() -> String {
     "Ctrl+Shift+B".to_string()
 }
 
-/// 设置模型
+/// 设置模型（容器级 default：data.json 缺任何字段时取 Default 的对应值，
+/// 避免个别字段缺失导致整个文件解析失败、主备双双被隔离重置）
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     #[serde(rename = "globalHotkey")]
     pub global_hotkey: String,
@@ -207,5 +209,18 @@ mod tests {
         assert!(settings.ai_api_key.is_empty());
         assert_eq!(settings.optimize_hotkey, "Ctrl+Alt+O");
         assert!(settings.optimize_template.is_empty());
+    }
+
+    /// 字段大面积缺失（手写/半截文件）也不得解析失败：逐字段回退 Default
+    #[test]
+    fn test_settings_empty_json_uses_defaults() {
+        let settings: Settings = serde_json::from_str("{}").unwrap();
+        let default = Settings::default();
+        assert_eq!(settings.global_hotkey, default.global_hotkey);
+        assert_eq!(settings.theme, default.theme);
+        assert_eq!(settings.max_results, default.max_results);
+        assert_eq!(settings.search_debounce, default.search_debounce);
+        assert_eq!(settings.window_opacity, default.window_opacity);
+        assert!(settings.auto_hide);
     }
 }

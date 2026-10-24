@@ -240,7 +240,7 @@ interface Settings {
 
 | 问题 | 严重度 | 说明 |
 |------|--------|------|
-| `searchDebounce`/`maxResults` 桌面端无 UI 控件 | 低 | 扩展端有 maxResults 控件但列表截断未生效 |
+| `searchDebounce`/`maxResults` 桌面端无 UI 控件 | 低 | 扩展端截断已生效（默认 6，与桌面端一致） |
 | Space 拖拽排序无 UI | 低 | `order` 字段存在 |
 | PromptEditor 无草稿保存 | 低 | 意外关闭丢失编辑 |
 | 扩展端 HelpPanel 未实现 | 低 | uiStore 有 stub 无组件 |
@@ -265,7 +265,7 @@ interface Settings {
 ## 8. 版本规划
 
 - **v1.2.0（当前）**：全面复查修复（自启静默、剪贴板恢复时序、并发防护、跨上下文存储原子化等）、AI 优化进度与取消、发布与安全扫描自动化
-- **v1.3 润色**：设置面板补 `searchDebounce`/`maxResults` 控件并使扩展端生效；扩展 HelpPanel；Space 排序 UI；PromptEditor 草稿
+- **v1.3 润色**：设置面板补 `searchDebounce`/`maxResults` 控件；扩展 HelpPanel；Space 排序 UI；PromptEditor 草稿
 - **v1.5 体验增强**：自动更新 + 签名；提示词收藏/置顶；使用统计；i18n
 - **v2.0 智能化与打通**：双端数据打通（Native Messaging）与 UI 层合并（见 [design.md](design.md)）；优化预览确认 / 流式输出 / 多风格预设；模板市场；云端同步（可选）
 

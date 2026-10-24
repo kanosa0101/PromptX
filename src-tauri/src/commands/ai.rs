@@ -80,26 +80,36 @@ pub fn ai_debug_log(message: String) -> Result<(), String> {
 /// 快捷键入口：截取选中文本并通知前端开始 AI 优化
 /// 全程不显示主窗口，焦点始终停留在目标应用
 pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
-    // 已有进行中的会话：忽略本次触发（AI 优化通常 10~40 秒，连按会打断流程）
-    let in_flight = OPTIMIZE_SESSION
-        .lock()
-        .as_ref()
-        .map(|s| s.created_at.elapsed().as_millis() < SESSION_STALE_MS as u128)
-        .unwrap_or(false);
-    if in_flight {
-        debug_log("已有优化进行中，忽略本次触发");
-        return;
+    // 检查与占位必须在同一次加锁内完成：capture_inner 含约 370ms 的等待，
+    // 若先检查后登记，连按快捷键时两次触发都会通过检查，截取动作
+    // （哨兵写入/模拟 Ctrl+C/读剪贴板）会交错执行、互相污染
+    {
+        let mut session = OPTIMIZE_SESSION.lock();
+        let in_flight = session
+            .as_ref()
+            .map(|s| s.created_at.elapsed().as_millis() < SESSION_STALE_MS as u128)
+            .unwrap_or(false);
+        if in_flight {
+            debug_log("已有优化进行中，忽略本次触发");
+            return;
+        }
+        *session = Some(OptimizeSession {
+            original_clipboard: None,
+            selected_text: String::new(),
+            created_at: std::time::Instant::now(),
+            foreground: None,
+        });
     }
 
     debug_log("快捷键触发: 开始截取选中文本");
     match capture_inner(&app).await {
         Ok((selected, original, foreground)) => {
-            *OPTIMIZE_SESSION.lock() = Some(OptimizeSession {
-                original_clipboard: original,
-                selected_text: selected.clone(),
-                created_at: std::time::Instant::now(),
-                foreground,
-            });
+            // 截取成功：把占位会话填充为真实内容（会话必然存在，除非超时被清）
+            if let Some(session) = OPTIMIZE_SESSION.lock().as_mut() {
+                session.original_clipboard = original;
+                session.selected_text = selected.clone();
+                session.foreground = foreground;
+            }
             debug_log(&format!(
                 "截取成功({} 字符)，通知前端调 AI",
                 selected.chars().count()
@@ -113,7 +123,8 @@ pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
             }
         }
         Err(err) => {
-            // 截取失败：弹出主窗口由前端展示错误
+            // 截取失败：清除占位会话，弹出主窗口由前端展示错误
+            *OPTIMIZE_SESSION.lock() = None;
             debug_log(&format!("截取失败: {}", err));
             match emit_to_main(
                 &app,

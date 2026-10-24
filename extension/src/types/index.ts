@@ -17,11 +17,11 @@ export interface Settings extends AiSettings {
 // 应用数据结构（settings 为扩展端 Settings）
 export type ExtensionAppData = SharedAppData<Settings>
 
-// 默认设置
+// 默认设置（maxResults 与桌面端一致，默认 6）
 export const DEFAULT_SETTINGS: Settings = {
   ...DEFAULT_AI_SETTINGS,
   theme: 'system',
-  maxResults: 20
+  maxResults: 6
 }
 
 // 默认空间
