@@ -20,6 +20,8 @@ jobs:
       - run: npm run typecheck
 
   # 浏览器扩展：类型检查 + 构建（独立 npm 工作区）
+  # shared/ 代码向上解析到根 node_modules（fuse.js/pinyin-pro 等在根声明），
+  # 因此需要先安装根依赖
   check-extension:
     runs-on: ubuntu-latest
     steps:
@@ -28,7 +30,10 @@ jobs:
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: extension/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            extension/package-lock.json
+      - run: npm ci
       - working-directory: extension
         run: npm ci
       - working-directory: extension
