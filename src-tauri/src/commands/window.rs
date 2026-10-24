@@ -22,41 +22,85 @@ pub fn toggle_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), S
         save_window_position_inner(&window, &state);
         window.hide().map_err(|e| e.to_string())?;
     } else {
-        // 读取保存的位置或居中显示
-        use tauri::Position;
-
-        let storage = state.storage.read();
-        let saved_position = storage
-            .load()
-            .ok()
-            .and_then(|data| data.settings.window_position);
-
-        if let Some(pos) = saved_position {
-            window
-                .set_position(Position::Physical(tauri::PhysicalPosition {
-                    x: pos.x,
-                    y: pos.y,
-                }))
-                .map_err(|e| e.to_string())?;
-        } else if let Some(monitor) = window.current_monitor().ok().flatten() {
-            let monitor_size = monitor.size();
-            let window_size = window.outer_size().unwrap_or_default();
-
-            let x = (monitor_size.width.saturating_sub(window_size.width)) / 2;
-            let y = (monitor_size.height.saturating_sub(window_size.height)) / 3;
-
-            window
-                .set_position(Position::Physical(tauri::PhysicalPosition {
-                    x: x as i32,
-                    y: y as i32,
-                }))
-                .map_err(|e| e.to_string())?;
-        }
-
+        restore_window_position(&window, state.inner());
         window.show().map_err(|e| e.to_string())?;
         window.set_focus().map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// 显示并聚焦主窗口（错误横幅等场景专用：与 toggle 不同，已可见时不会隐藏）
+#[tauri::command]
+pub fn show_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    let window = app.get_webview_window("main").ok_or("Window not found")?;
+    if !window.is_visible().unwrap_or(false) {
+        restore_window_position(&window, state.inner());
+    }
+    window.show().map_err(|e| e.to_string())?;
+    window.set_focus().map_err(|e| e.to_string())
+}
+
+/// 恢复保存的窗口位置；无保存位置、或位置所在显示器已断开
+/// （拔显示器/改分辨率导致窗口在屏幕外，快捷键看起来“失灵”）时居中当前显示器
+pub fn restore_window_position(window: &tauri::WebviewWindow, state: &AppState) {
+    use tauri::Position;
+
+    let saved_position = state
+        .storage
+        .read()
+        .load()
+        .ok()
+        .and_then(|data| data.settings.window_position);
+
+    let Some(pos) = saved_position else {
+        center_on_monitor(window);
+        return;
+    };
+
+    // 位置仍落在某个已连接显示器内：直接恢复（保留多显示器布局）
+    if monitor_containing(window, pos.x, pos.y).is_some() {
+        window
+            .set_position(Position::Physical(tauri::PhysicalPosition {
+                x: pos.x,
+                y: pos.y,
+            }))
+            .unwrap_or_default();
+        return;
+    }
+
+    // 目标显示器已不存在：居中到当前显示器
+    center_on_monitor(window);
+}
+
+/// 位置是否落在某个已连接显示器的范围内
+fn monitor_containing(window: &tauri::WebviewWindow, x: i32, y: i32) -> Option<tauri::Monitor> {
+    let Ok(monitors) = window.available_monitors() else {
+        return None;
+    };
+    monitors.into_iter().find(|m| {
+        let p = m.position();
+        let s = m.size();
+        x >= p.x && y >= p.y && x < p.x + s.width as i32 && y < p.y + s.height as i32
+    })
+}
+
+/// 在当前显示器上居中（偏上 1/3，符合呼出式面板习惯）
+fn center_on_monitor(window: &tauri::WebviewWindow) {
+    use tauri::Position;
+    if let Some(monitor) = window.current_monitor().ok().flatten() {
+        let monitor_size = monitor.size();
+        let window_size = window.outer_size().unwrap_or_default();
+
+        let x = (monitor_size.width.saturating_sub(window_size.width)) / 2;
+        let y = (monitor_size.height.saturating_sub(window_size.height)) / 3;
+
+        window
+            .set_position(Position::Physical(tauri::PhysicalPosition {
+                x: x as i32,
+                y: y as i32,
+            }))
+            .unwrap_or_default();
+    }
 }
 
 /// 隐藏窗口（隐藏前保存位置，供位置记忆恢复）

@@ -33,13 +33,31 @@ const handleSavePrompt = async (prompt: Prompt) => {
     uiStore.closePromptEditor()
   } catch (error) {
     console.error('Failed to save prompt:', error)
+    // 保持编辑器打开并提示，避免失败看起来像“保存按钮没反应”
+    uiStore.showSystemNotice('保存失败：' + (error instanceof Error ? error.message : String(error)))
   }
 }
 
 // 处理键盘事件
 const handleKeyDown = async (e: KeyboardEvent) => {
-  // 如果在弹窗状态，不处理导航键
+  // 如果在弹窗状态，不处理导航键；Escape 逐层关闭（否则是键盘陷阱）
   if (uiStore.showSettings || uiStore.showPromptEditor || uiStore.showVariableForm || uiStore.showHelp || uiStore.showSpaceEditor || uiStore.showConfirmDialog) {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      if (uiStore.showConfirmDialog) {
+        uiStore.closeConfirmDialog()
+      } else if (uiStore.showVariableForm) {
+        uiStore.closeVariableForm()
+      } else if (uiStore.showPromptEditor) {
+        uiStore.closePromptEditor()
+      } else if (uiStore.showSpaceEditor) {
+        uiStore.closeSpaceEditor()
+      } else if (uiStore.showSettings) {
+        uiStore.hideSettings()
+      } else if (uiStore.showHelp) {
+        uiStore.closeHelp()
+      }
+    }
     return
   }
 

@@ -3,7 +3,7 @@
  */
 
 import { defineStore } from 'pinia'
-import { loadAppData, saveAppData } from '@/lib/storage'
+import { loadAppData, mutateAppData } from '@/lib/storage'
 import { getSelectionFromActiveTab, insertTextToActiveTab } from '@/lib/messaging'
 import { parseVariables, replaceVariables, getCustomVariables, getSystemVariableValue } from '@/utils/variable'
 import { useSearch } from '@/sidepanel/composables/useSearch'
@@ -155,9 +155,12 @@ export const usePromptStore = defineStore('prompt', {
         this.lastOutputMethod = 'clipboard'
       }
 
-      // 更新使用计数
-      prompt.usageCount++
-      prompt.lastUsedAt = new Date().toISOString()
+      // 更新使用计数：filteredPrompts 给出的是拷贝，须回写 store 内的原始对象
+      const target = this.prompts.find((p) => p.id === prompt.id)
+      if (target) {
+        target.usageCount++
+        target.lastUsedAt = new Date().toISOString()
+      }
       await this.saveData()
 
       // 刷新选区
@@ -261,15 +264,13 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     /**
-     * 保存数据
+     * 保存数据（原子化读改写：只更新本 store 管辖的空间/提示词，
+     * settings 等字段保留锁内最新快照，避免覆盖其他上下文的并发修改）
      */
     async saveData() {
-      const data = await loadAppData()
-      await saveAppData({
-        version: data.version || '1.0.0',
-        settings: data.settings || { theme: 'system', maxResults: 20 },
-        spaces: this.spaces,
-        prompts: this.prompts
+      await mutateAppData((data) => {
+        data.spaces = this.spaces
+        data.prompts = this.prompts
       })
     }
   }

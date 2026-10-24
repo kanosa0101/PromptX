@@ -51,6 +51,15 @@ fn main() {
 
             app.manage(AppState { storage });
 
+            // 窗口在配置中默认不可见，由这里统一决定是否显示：
+            // 开机自启带 --hidden 参数 → 仅驻留后台（快捷键唤出），避免登录时弹窗
+            if let Some(window) = app.get_webview_window("main") {
+                if !std::env::args().any(|a| a == "--hidden") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
+            }
+
             // 旧版本兼容：把 data.json 中的明文 API Key 迁移到系统钥匙串
             // （仅钥匙串可用的平台生效；迁移后 data.json 不再含明文 key）
             {
@@ -136,6 +145,7 @@ fn main() {
             // 窗口
             commands::window::toggle_window,
             commands::window::hide_window,
+            commands::window::show_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -245,37 +255,9 @@ pub fn toggle_window_with_clipboard_capture(app: &tauri::AppHandle) {
             // 关键步骤：在窗口显示前捕获选中内容
             capture_selection_on_wakeup(app);
 
-            // 尝试恢复保存的位置，无保存位置则居中
-            use tauri::Position;
+            // 恢复保存的位置（显示器已断开时自动居中），无保存位置则居中
             let state = app.state::<AppState>();
-            let storage = state.storage.read();
-            let saved_position = storage
-                .load()
-                .ok()
-                .and_then(|data| data.settings.window_position);
-            drop(storage); // 释放读锁
-
-            if let Some(pos) = saved_position {
-                window
-                    .set_position(Position::Physical(tauri::PhysicalPosition {
-                        x: pos.x,
-                        y: pos.y,
-                    }))
-                    .unwrap_or_default();
-            } else if let Some(monitor) = window.current_monitor().ok().flatten() {
-                let monitor_size = monitor.size();
-                let window_size = window.outer_size().unwrap_or_default();
-
-                let x = (monitor_size.width.saturating_sub(window_size.width)) / 2;
-                let y = (monitor_size.height.saturating_sub(window_size.height)) / 3;
-
-                window
-                    .set_position(Position::Physical(tauri::PhysicalPosition {
-                        x: x as i32,
-                        y: y as i32,
-                    }))
-                    .unwrap_or_default();
-            }
+            window::restore_window_position(&window, &state);
 
             // 显示窗口并获取焦点
             window.show().unwrap_or_default();

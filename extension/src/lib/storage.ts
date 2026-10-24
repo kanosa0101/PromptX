@@ -44,6 +44,34 @@ export async function saveAppData(data: ExtensionAppData): Promise<void> {
 }
 
 /**
+ * 跨上下文互斥（Web Locks API）：background 与 sidepanel 是两个独立 JS 上下文，
+ * 各自的写队列感知不到对方。用同名锁把「读取-修改-写入」整体串行，
+ * 避免 sidepanel 保存提示词时覆盖掉 background 刚写入的 AI 历史（或反之）
+ */
+async function withStorageLock<T>(task: () => Promise<T>): Promise<T> {
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    return navigator.locks.request('promptx-storage', { mode: 'exclusive' }, () => task())
+  }
+  return task()
+}
+
+/**
+ * 原子化「读取-修改-写入」：锁内读取最新数据，交给 mutate 修改后整体写回。
+ * 所有跨字段写入（AI 历史、提示词编辑、设置保存）都应经由这里，
+ * 且只修改自己负责的字段——其余字段保留锁内最新快照，不会被过期状态覆盖
+ */
+export function mutateAppData<T>(mutate: (data: ExtensionAppData) => T | Promise<T>): Promise<T> {
+  return enqueueWrite(() =>
+    withStorageLock(async () => {
+      const data = await loadAppData()
+      const result = await mutate(data)
+      await chrome.storage.local.set({ [STORAGE_KEY]: data })
+      return result
+    }),
+  )
+}
+
+/**
  * 导出数据为 JSON 字符串
  */
 export async function exportData(): Promise<string> {

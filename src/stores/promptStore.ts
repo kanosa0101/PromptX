@@ -5,7 +5,6 @@ import {
   replaceVariables as sharedReplaceVariables,
 } from '@shared/variable'
 import type { Prompt, Space, Variable, AppData, ImportResult, PromptInput } from '@/types'
-import { DEFAULT_SPACES, DEFAULT_PROMPTS } from '@/types'
 import { useSearch } from '@/composables/useSearch'
 import { useSettingsStore } from './settingsStore'
 import { useUiStore } from './uiStore'
@@ -46,9 +45,14 @@ export const usePromptStore = defineStore('prompt', {
         this.prompts = data.prompts || []
       } catch (error) {
         console.error('Failed to load prompts:', error)
-        // 使用默认数据
-        this.spaces = DEFAULT_SPACES
-        this.prompts = DEFAULT_PROMPTS
+        // 加载失败保持空列表并提示用户；绝不注入演示数据冒充用户数据
+        // （首次运行的默认数据由后端 data.json 初始化提供，不走这个分支）
+        this.spaces = []
+        this.prompts = []
+        const uiStore = useUiStore()
+        uiStore.showSystemNotice(
+          '数据加载失败：' + (error instanceof Error ? error.message : String(error))
+        )
       } finally {
         this.isLoading = false
       }

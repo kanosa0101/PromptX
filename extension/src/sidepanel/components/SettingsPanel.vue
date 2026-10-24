@@ -152,7 +152,7 @@
 
     <!-- 关于 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4 text-center">
-      <p class="text-xs text-[#71717A]">PromptX 浏览器插件 v1.0.0</p>
+      <p class="text-xs text-[#71717A]">PromptX 浏览器插件 v{{ appVersion }}</p>
       <p class="text-xs text-[#71717A] mt-1">AI 提示词剪贴板管理工具</p>
     </div>
   </div>
@@ -161,7 +161,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
-import { loadAppData, saveAppData } from '@/lib/storage'
+import { loadAppData, mutateAppData, saveAppData } from '@/lib/storage'
+import { applyTheme, type ThemeSetting } from '@/lib/theme'
 import { testAiConnection } from '@/lib/ai'
 import { DEFAULT_SETTINGS, DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
 
@@ -170,6 +171,7 @@ defineEmits<{
 }>()
 
 const promptStore = usePromptStore()
+const appVersion = chrome.runtime.getManifest().version
 
 const theme = ref('system')
 const maxResults = ref(20)
@@ -195,35 +197,24 @@ onMounted(async () => {
 })
 
 const saveTheme = () => {
-  applyTheme(theme.value)
+  applyTheme(theme.value as ThemeSetting)
   saveSettings()
 }
 
-const applyTheme = (themeValue: string) => {
-  if (themeValue === 'dark' || (themeValue === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-    document.documentElement.classList.add('dark')
-  } else {
-    document.documentElement.classList.remove('dark')
-  }
-}
-
 const saveSettings = async () => {
-  // 先读取现有数据，合并保存（避免覆盖其他设置字段）
-  const data = await loadAppData()
-  await saveAppData({
-    version: '1.0.0',
-    settings: {
+  // 原子化读改写：只更新设置字段，空间/提示词保留锁内最新快照，
+  // 避免覆盖 background 正在写入的 AI 优化历史
+  await mutateAppData((data) => {
+    data.settings = {
       ...data.settings,
-      theme: theme.value as 'light' | 'dark' | 'system',
+      theme: theme.value as ThemeSetting,
       maxResults: maxResults.value,
       aiBaseUrl: aiBaseUrl.value,
       aiApiKey: aiApiKey.value,
       aiModel: aiModel.value,
       optimizeTemplate: optimizeTemplate.value,
       optimizeThinking: optimizeThinking.value
-    },
-    spaces: promptStore.spaces,
-    prompts: promptStore.prompts
+    }
   })
 }
 

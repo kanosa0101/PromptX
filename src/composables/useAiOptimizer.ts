@@ -19,6 +19,10 @@ export function useAiOptimizer() {
 
   let errorTimer: ReturnType<typeof setTimeout> | undefined
   let unlistenFns: UnlistenFn[] = []
+  // 并发防护：AI 请求最长约 2 分钟（60s 超时 × 2 次尝试），
+  // 期间重复触发快捷键会启动第二条流水线，交错贴回会互相践踏剪贴板
+  let optimizeRunning = false
+  let clipboardOptimizeRunning = false
 
   /** 前端诊断日志：与 Rust 侧写同一文件，便于对齐时间线 */
   const log = (message: string) => {
@@ -43,6 +47,11 @@ export function useAiOptimizer() {
   })
 
   const runOptimize = async (text: string) => {
+    if (optimizeRunning) {
+      log('优化进行中，忽略本次触发')
+      return
+    }
+    optimizeRunning = true
     try {
       log(`收到优化事件(${text.length} 字符)，开始调用 AI`)
       const optimized = await optimizeText(aiSettings(), text)
@@ -53,13 +62,20 @@ export function useAiOptimizer() {
       log(`AI 流程失败: ${message}`)
       // 结束会话并恢复剪贴板，唤起主窗口展示错误
       invoke('optimize_cancel').catch(() => {})
-      invoke('toggle_window').catch(() => {})
+      invoke('show_window').catch(() => {})
       showError(message)
+    } finally {
+      optimizeRunning = false
     }
   }
 
   /** 剪贴板模式：优化剪贴板内容并写回（不模拟按键，用户自行粘贴） */
   const runClipboardOptimize = async (text: string) => {
+    if (clipboardOptimizeRunning) {
+      log('剪贴板优化进行中，忽略本次触发')
+      return
+    }
+    clipboardOptimizeRunning = true
     try {
       log(`收到剪贴板优化事件(${text.length} 字符)，开始调用 AI`)
       const optimized = await optimizeText(aiSettings(), text)
@@ -70,8 +86,10 @@ export function useAiOptimizer() {
       log(`剪贴板优化失败: ${message}`)
       // 结束会话（原剪贴板未被修改，无需恢复），唤起主窗口展示错误
       invoke('clipboard_optimize_cancel').catch(() => {})
-      invoke('toggle_window').catch(() => {})
+      invoke('show_window').catch(() => {})
       showError(message)
+    } finally {
+      clipboardOptimizeRunning = false
     }
   }
 
@@ -88,7 +106,8 @@ export function useAiOptimizer() {
         listen<{ message: string }>('promptx-ai-error', (event) => {
           log('收到错误事件: ' + event.payload.message)
           // Rust 截取失败时主窗口仍隐藏，唤起窗口展示错误
-          invoke('toggle_window').catch(() => {})
+          // （show 而非 toggle：用户中途唤起的窗口不应被藏掉）
+          invoke('show_window').catch(() => {})
           showError(event.payload.message)
         }),
       ])

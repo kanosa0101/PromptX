@@ -8,6 +8,11 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 /// 全局保存唤醒时的剪贴板内容（在窗口显示前复制）
 pub static WAKEUP_CLIPBOARD: Mutex<Option<String>> = Mutex::new(None);
 
+/// 模拟粘贴后等待目标应用读取剪贴板的时长，之后才恢复原剪贴板。
+/// 过短会导致慢速应用（IDE/终端/远程会话）粘到恢复后的旧内容。
+/// ai.rs 的 AI 贴回链路与本文件共用同一取值
+pub const RESTORE_DELAY_MS: u64 = 500;
+
 /// 获取唤醒时保存的剪贴板内容（用于 {{clipboard}} 变量）
 #[tauri::command]
 pub fn get_wakeup_clipboard() -> Result<String, String> {
@@ -47,8 +52,8 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
     // 模拟粘贴
     simulate_paste().map_err(|e| format!("模拟按键失败: {}", e))?;
 
-    // 等待粘贴完成后恢复原剪贴板
-    tokio::time::sleep(Duration::from_millis(150)).await;
+    // 等待粘贴完成后恢复原剪贴板（慢速应用需要足够的读取窗口）
+    tokio::time::sleep(Duration::from_millis(RESTORE_DELAY_MS)).await;
     if let Some(orig) = original {
         app.clipboard()
             .write_text(&orig)

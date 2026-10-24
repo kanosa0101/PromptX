@@ -6,7 +6,7 @@
 //! → invoke 写回剪贴板并模拟 Ctrl+V 贴回原位 → 恢复原剪贴板
 //! → 结果存入「AI 优化」历史空间。
 
-use crate::commands::clipboard::{simulate_copy, simulate_paste};
+use crate::commands::clipboard::{simulate_copy, simulate_paste, RESTORE_DELAY_MS};
 use crate::models::{Prompt, Space, AI_HISTORY_SPACE_ID};
 use crate::AppState;
 use chrono::Utc;
@@ -19,8 +19,6 @@ use uuid::Uuid;
 /// 模拟按键后等待系统/应用响应的间隔
 const COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
-/// 贴回后等待目标应用读取剪贴板的时长，过长会导致慢应用粘到旧内容
-const RESTORE_DELAY_MS: u64 = 500;
 /// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
 const RELEASE_SETTLE_MS: u64 = 120;
 /// 会话有效期：超时的残留会话视为已失败，允许新触发覆盖
@@ -200,15 +198,17 @@ async fn capture_inner(
 #[tauri::command]
 pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Result<(), String> {
     debug_log(&format!("前端回调贴回: {} 字符", text.chars().count()));
+
+    // 先写剪贴板再消费会话：写失败时会话保留，
+    // 前端错误路径仍可通过 optimize_cancel 恢复原剪贴板并清理
+    app.clipboard()
+        .write_text(&text)
+        .map_err(|e| e.to_string())?;
+
     let session = OPTIMIZE_SESSION
         .lock()
         .take()
         .ok_or_else(|| "没有进行中的优化会话".to_string())?;
-
-    // 写剪贴板 → 隐藏窗口（可能被用户中途唤起）→ 模拟 Ctrl+V → 恢复原剪贴板
-    app.clipboard()
-        .write_text(&text)
-        .map_err(|e| e.to_string())?;
 
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
@@ -255,11 +255,17 @@ pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Resul
 /// 剪贴板模式快捷键入口：优化剪贴板内容并把结果写回剪贴板
 /// 全程不模拟按键、不依赖目标应用焦点，适用于终端/自绘界面等选区不可靠的场景
 pub async fn capture_clipboard_for_optimize(app: tauri::AppHandle) {
-    if let Some(t) = CLIPBOARD_IN_FLIGHT.lock().as_ref() {
-        if t.elapsed().as_millis() < SESSION_STALE_MS as u128 {
-            debug_log("剪贴板优化进行中，忽略本次触发");
-            return;
+    // 查重与占位在同一临界区完成：快速连按时第二次触发直接被拒，
+    // 不会出现两次都通过判定、双重发事件的情况
+    {
+        let mut in_flight = CLIPBOARD_IN_FLIGHT.lock();
+        if let Some(t) = in_flight.as_ref() {
+            if t.elapsed().as_millis() < SESSION_STALE_MS as u128 {
+                debug_log("剪贴板优化进行中，忽略本次触发");
+                return;
+            }
         }
+        *in_flight = Some(std::time::Instant::now());
     }
 
     debug_log("剪贴板优化触发: 读取剪贴板");
@@ -268,6 +274,8 @@ pub async fn capture_clipboard_for_optimize(app: tauri::AppHandle) {
         Err(e) => {
             let msg = format!("读取剪贴板失败: {}", e);
             debug_log(&msg);
+            // 失败路径必须清除占位，否则后续触发要等到超时才能恢复
+            *CLIPBOARD_IN_FLIGHT.lock() = None;
             let _ = notify_error_event(&app, &msg);
             return;
         }
@@ -275,11 +283,11 @@ pub async fn capture_clipboard_for_optimize(app: tauri::AppHandle) {
     if text.trim().is_empty() {
         let msg = "剪贴板为空，请先复制要优化的内容".to_string();
         debug_log(&msg);
+        *CLIPBOARD_IN_FLIGHT.lock() = None;
         let _ = notify_error_event(&app, &msg);
         return;
     }
 
-    *CLIPBOARD_IN_FLIGHT.lock() = Some(std::time::Instant::now());
     *CLIPBOARD_ORIGINAL.lock() = Some(text.clone());
     debug_log(&format!(
         "剪贴板内容({} 字符) [{}]，通知前端调 AI",

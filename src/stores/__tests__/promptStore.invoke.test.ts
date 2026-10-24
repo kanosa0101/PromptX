@@ -12,7 +12,6 @@ vi.mock('@tauri-apps/api/core', () => ({
 import { invoke } from '@tauri-apps/api/core'
 import { usePromptStore } from '../promptStore'
 import { useUiStore } from '../uiStore'
-import { DEFAULT_SPACES, DEFAULT_PROMPTS } from '@/types'
 import type { AppData, ImportResult, Prompt, Space } from '@/types'
 
 // vi.mocked 对泛型 invoke 的可选参数推断不完整，这里显式声明签名
@@ -72,15 +71,17 @@ describe('loadPrompts', () => {
     expect(store.isLoading).toBe(false)
   })
 
-  it('失败时回退到内置默认数据', async () => {
-    const { store } = getStore()
+  it('失败时保持空列表并发出系统通知（绝不注入演示数据冒充用户数据）', async () => {
+    const { store, ui } = getStore()
     mockedInvoke.mockRejectedValue(new Error('disk error'))
 
     await store.loadPrompts()
 
-    expect(store.spaces).toEqual(DEFAULT_SPACES)
-    expect(store.prompts).toEqual(DEFAULT_PROMPTS)
+    expect(store.spaces).toEqual([])
+    expect(store.prompts).toEqual([])
     expect(store.isLoading).toBe(false)
+    expect(ui.systemNotice).toContain('数据加载失败')
+    expect(ui.systemNotice).toContain('disk error')
   })
 })
 

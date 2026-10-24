@@ -4,7 +4,7 @@
  */
 
 import { optimizeText } from '@/lib/ai'
-import { enqueueWrite, STORAGE_KEY } from '@/lib/storage'
+import { mutateAppData, STORAGE_KEY } from '@/lib/storage'
 import { buildHistoryTitle, MAX_AI_HISTORY } from '@shared/aiHistory'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
 import type { AiSettings } from '@/types'
@@ -168,64 +168,54 @@ async function loadAiSettings(): Promise<AiSettings> {
 
 /**
  * 把优化结果存入「AI 优化」历史空间（空间不存在则自动创建）
+ * 整个读改写在跨上下文锁内进行，与 sidepanel 的并发写入互斥
  */
 async function saveOptimizeHistory(original: string, optimized: string): Promise<void> {
   try {
-    const result = await chrome.storage.local.get(STORAGE_KEY)
-    const data = result[STORAGE_KEY]
-    if (!data) return
+    await mutateAppData((data) => {
+      data.spaces = data.spaces || []
+      data.prompts = data.prompts || []
+      const now = new Date().toISOString()
 
-    const now = new Date().toISOString()
+      // 确保「AI 优化」空间存在
+      if (!data.spaces.some((s) => s.id === AI_HISTORY_SPACE_ID)) {
+        const maxOrder = data.spaces.reduce((max, s) => Math.max(max, s.order || 0), 0)
+        data.spaces.push({
+          id: AI_HISTORY_SPACE_ID,
+          name: 'AI 优化',
+          icon: '✨',
+          color: '#8B5CF6',
+          order: maxOrder + 1,
+          createdAt: now,
+          updatedAt: now,
+        })
+      }
 
-    // 确保「AI 优化」空间存在
-    if (!data.spaces?.some((s: { id: string }) => s.id === AI_HISTORY_SPACE_ID)) {
-      const maxOrder = (data.spaces || []).reduce(
-        (max: number, s: { order: number }) => Math.max(max, s.order || 0),
-        0
-      )
-      data.spaces.push({
-        id: AI_HISTORY_SPACE_ID,
-        name: 'AI 优化',
-        icon: '✨',
-        color: '#8B5CF6',
-        order: maxOrder + 1,
+      // 标题：原文压缩空白后截取（shared/aiHistory.ts，与桌面端行为一致）
+      const title = buildHistoryTitle(original)
+
+      data.prompts.push({
+        id: crypto.randomUUID(),
+        title,
+        content: optimized,
+        tags: ['AI优化'],
+        spaceId: AI_HISTORY_SPACE_ID,
+        variables: [],
+        usageCount: 0,
+        lastUsedAt: null,
         createdAt: now,
         updatedAt: now,
       })
-    }
 
-    // 标题：原文压缩空白后截取（shared/aiHistory.ts，与桌面端行为一致）
-    const title = buildHistoryTitle(original)
-
-    data.prompts.push({
-      id: crypto.randomUUID(),
-      title,
-      content: optimized,
-      tags: ['AI优化'],
-      spaceId: AI_HISTORY_SPACE_ID,
-      variables: [],
-      usageCount: 0,
-      lastUsedAt: null,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    // 「AI 优化」空间条数上限：保留最新 MAX_AI_HISTORY 条，防止数据膨胀
-    const hist = data.prompts.filter(
-      (p: { spaceId: string }) => p.spaceId === AI_HISTORY_SPACE_ID
-    )
-    if (hist.length > MAX_AI_HISTORY) {
-      const sorted = [...hist].sort((a: { createdAt: string }, b: { createdAt: string }) =>
-        a.createdAt < b.createdAt ? -1 : 1
-      )
-      const removeIds = new Set(
-        sorted.slice(0, sorted.length - MAX_AI_HISTORY).map((p: { id: string }) => p.id)
-      )
-      data.prompts = data.prompts.filter((p: { id: string }) => !removeIds.has(p.id))
-    }
-
-    await enqueueWrite(async () => {
-      await chrome.storage.local.set({ [STORAGE_KEY]: data })
+      // 「AI 优化」空间条数上限：保留最新 MAX_AI_HISTORY 条，防止数据膨胀
+      const hist = data.prompts.filter((p) => p.spaceId === AI_HISTORY_SPACE_ID)
+      if (hist.length > MAX_AI_HISTORY) {
+        const sorted = [...hist].sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
+        const removeIds = new Set(
+          sorted.slice(0, sorted.length - MAX_AI_HISTORY).map((p) => p.id)
+        )
+        data.prompts = data.prompts.filter((p) => !removeIds.has(p.id))
+      }
     })
   } catch (error) {
     console.error('[PromptX] Failed to save optimize history:', error)

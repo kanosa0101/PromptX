@@ -152,26 +152,26 @@ const handleExport = async () => {
 }
 
 // 导入数据
-const handleImport = async () => {
-  try {
-    // 创建文件选择器
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (!file) return
+const handleImport = () => {
+  // 创建文件选择器（onchange 回调在本函数返回后才执行，需自带错误处理）
+  const input = document.createElement('input')
+  input.type = 'file'
+  input.accept = '.json'
+  input.onchange = async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
 
+    try {
       const text = await file.text()
       const data = JSON.parse(text)
 
       const result = await promptStore.importData(data, true)
       importStatus.value = `导入成功！导入 ${result.importedPrompts} 个提示词，${result.importedSpaces} 个空间`
+    } catch (error) {
+      importStatus.value = '导入失败：' + (error instanceof Error ? error.message : String(error))
     }
-    input.click()
-  } catch (error) {
-    importStatus.value = '导入失败：' + (error as Error).message
   }
+  input.click()
 }
 
 // 主题选项

@@ -20,6 +20,9 @@
         <button class="btn btn-secondary text-xs" @click="refreshSelection">
           🔄 刷新选区
         </button>
+        <button class="btn btn-secondary text-xs ml-auto" @click="openSettingsPanel" title="设置（AI 配置）">
+          ⚙ 设置
+        </button>
       </div>
     </div>
 
@@ -134,7 +137,8 @@ import { ref, computed, onMounted } from 'vue'
 import { usePromptStore } from './stores/promptStore'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
-import { STORAGE_KEY } from '@/lib/storage'
+import { STORAGE_KEY, loadAppData } from '@/lib/storage'
+import { applyTheme } from '@/lib/theme'
 import { highlightMatches, truncate } from './composables/useSearch'
 import VariableForm from './components/VariableForm.vue'
 import PromptEditor from './components/PromptEditor.vue'
@@ -202,6 +206,11 @@ const openSpaceEditor = () => {
   uiStore.openSpaceEditor()
 }
 
+// 打开设置面板（AI 配置、主题、导入导出）
+const openSettingsPanel = () => {
+  uiStore.openSettings()
+}
+
 // 编辑器保存
 const onEditorSave = async (promptData: { title: string; content: string; tags: string[]; spaceId: string }) => {
   if (editingPrompt.value) {
@@ -253,6 +262,12 @@ const onVariableCancel = () => {
 
 // 初始化
 onMounted(async () => {
+  // 打开侧边栏时立即应用已保存的主题（否则每次重开都是亮色）
+  await applyStoredTheme()
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', applyStoredTheme)
+
   await promptStore.loadData()
   searchInputRef.value?.focus()
   // 其他上下文（如 background 写入 AI 优化历史）改动存储时刷新列表
@@ -262,6 +277,12 @@ onMounted(async () => {
     }
   })
 })
+
+// 读取存储中的主题设置并应用（system 模式跟随系统当前值）
+const applyStoredTheme = async () => {
+  const data = await loadAppData()
+  applyTheme(data.settings?.theme || 'system')
+}
 </script>
 
 <style scoped>
