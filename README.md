@@ -1,6 +1,6 @@
 # PromptX
 
-<p align="center"><img src="app-icon.png" width="110" alt="PromptX"></p>
+<p align="center"><img src="assets/app-icon.png" width="110" alt="PromptX"></p>
 
 轻量、本地、键盘优先的 AI 提示词管理工具。全局快捷键一键唤起，搜索即达，回车即贴；
 还能把选中的任意文本一键交给 AI 优化并原位替换。
@@ -102,8 +102,8 @@
 - [更新日志](CHANGELOG.md)
 - [English README](docs/README.en.md)
 - [从源码构建 / 参与开发](docs/DEVELOPMENT.md)
-- 产品与设计文档：[PRD](docs/PRD.md) · [PRD 2.0](docs/PRD2.0.md) · [PRD 3.0](docs/PRD3.0.md)
-- 技术方案：[双端数据打通（Native Messaging）](docs/design-native-messaging.md) · [UI 层合并](docs/design-shared-ui.md)
+- 产品需求文档：[PRD](docs/PRD.md)
+- 未实施方案：[双端数据打通 / UI 层合并](docs/design.md)
 
 ## License
 

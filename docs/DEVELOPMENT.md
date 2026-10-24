@@ -12,7 +12,7 @@
 
 ```
 PromptX/
-├── shared/                 # 双端共享代码（类型/AI 客户端/搜索/变量/AI 历史）
+├── shared/                 # 双端共享代码（类型/AI 客户端/搜索/变量/AI 历史/确认对话框/空间选项）
 ├── src/                    # 桌面端 Vue 前端（Tauri webview）
 │   ├── components/         # UI 组件
 │   ├── stores/             # Pinia 状态管理
@@ -27,8 +27,11 @@ PromptX/
 │   ├── src/background/     # Service Worker（快捷键 + AI 优化编排）
 │   ├── src/content/        # 内容脚本（选区捕获与原位替换）
 │   └── src/sidepanel/      # 侧边栏（Vue + Pinia）
-└── docs/                   # 文档（PRD、设计方案）
+└── docs/                   # 文档（PRD、设计方案、开发指南）
 ```
+
+图标源文件在 `assets/`（`app-icon.png` 为 1024 源图）。重新生成全套图标：
+`npx tauri icon assets/app-icon.png`（会重建 android/ios 等当前未使用的尺寸，可按需删除）。
 
 ## 常用命令
 
@@ -61,7 +64,7 @@ npm run typecheck      # 扩展类型检查
                 └── background 发起 AI 请求；content script 负责选区捕获/替换
 ```
 
-- 桌面端与扩展端当前无运行时通信（方案见 [design-native-messaging.md](design-native-messaging.md)）
+- 桌面端与扩展端当前无运行时通信（方案见 [design.md](design.md)）
 - `shared/` 通过 `@shared/*` 别名被两端共同引用，是逻辑层的单一来源
 - Rust 侧不引入 HTTP 依赖，AI 调用全部在前端/Service Worker 完成
 

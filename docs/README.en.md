@@ -1,6 +1,6 @@
 # PromptX (English)
 
-<p align="center"><img src="../app-icon.png" width="110" alt="PromptX"></p>
+<p align="center"><img src="../assets/app-icon.png" width="110" alt="PromptX"></p>
 
 A lightweight, local-first, keyboard-driven AI prompt manager for Windows. Summon it with a global hotkey, search, and paste anywhere — plus one-hotkey AI optimization of any selected text.
 
