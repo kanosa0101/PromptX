@@ -1,323 +1,110 @@
 # PromptX
 
-[中文](#中文) | [English](#english)
+<p align="center"><img src="app-icon.png" width="110" alt="PromptX"></p>
 
----
+轻量、本地、键盘优先的 AI 提示词管理工具。全局快捷键一键唤起，搜索即达，回车即贴；
+还能把选中的任意文本一键交给 AI 优化并原位替换。
 
-<a name="中文"></a>
+![Windows](https://img.shields.io/badge/platform-Windows-blue) ![License](https://img.shields.io/badge/license-MIT-green) [![Releases](https://img.shields.io/badge/download-Releases-orange)](https://github.com/kanosa0101/PromptX/releases)
 
-## 中文
+## 下载安装
 
-轻量级 AI 提示词管理工具，专为 AI 开发者和研究人员设计。
+### 桌面端（Windows）
 
-### 特性
+1. 打开 [Releases 页面](https://github.com/kanosa0101/PromptX/releases)，下载最新版的 `PromptX_1.1.0_x64-setup.exe`
+2. 双击运行安装，完成后按 `Alt+Space` 即可唤起
 
-- **极速唤醒** - Alt+Space 全局快捷键，延迟 < 50ms
-- **键盘优先** - 全程键盘操作，无需鼠标
-- **动态变量** - 支持 `{{clipboard}}`, `{{date}}`, `{{time}}`, `{{timestamp}}` 等系统变量
-- **命名空间** - 分类管理提示词，Tab 快速切换
-- **模糊搜索** - 拼音首字母匹配，输入 "dj" 找到"代码解释"
-- **本地存储** - 数据不上云，隐私安全
-- **AI 快捷优化** - 快捷键截取选中文本，AI 优化后原位替换，结果自动存入「AI 优化」空间
-- **浏览器扩展** - 支持在浏览器中快速使用提示词
+> 也可以下载 `PromptX_1.1.0_x64_en-US.msi` 使用 MSI 方式安装，或下载 `PromptX.exe` 免安装直接运行。
 
-### 安装
+### 浏览器扩展（Chrome / Edge）
 
-#### Windows
+1. 在 Releases 页面下载 `promptx-extension.zip` 并解压
+2. 打开浏览器扩展管理页（Chrome 地址栏输入 `chrome://extensions`，Edge 输入 `edge://extensions`）
+3. 打开右上角「开发者模式」，点击「加载已解压的扩展程序」，选择解压出的文件夹
+4. 点击工具栏 PromptX 图标，即可在侧边栏使用
 
-下载 `promptx.exe` 直接运行，或运行安装包。
+> 扩展与桌面端数据相互独立，可单独使用；用「导出/导入数据」功能可以在两端之间迁移提示词。
 
-#### 从源码构建
-
-```bash
-# 安装依赖
-npm install
-
-# 开发模式
-npm run tauri:dev
-
-# 构建
-npm run tauri:build
-```
-
-### 使用流程
+## 快速上手
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      PromptX 使用流程                         │
-├─────────────────────────────────────────────────────────────┤
-│  1. 准备内容: 在编辑器中选中文字 → Ctrl+C 复制                │
-│                                                             │
-│  2. 唤醒: Alt + Space → 窗口居中弹出                         │
-│                                                             │
-│  3. 搜索: 输入关键词或拼音 (如 "dj" → "代码解释")             │
-│                                                             │
-│  4. 选择: ↑↓ 键浏览，Tab 切换空间                            │
-│                                                             │
-│  5. 输出: Enter → 内容粘贴到光标位置，窗口自动隐藏            │
-└─────────────────────────────────────────────────────────────┘
+1. 唤起     任意界面按 Alt+Space
+2. 搜索     输入关键词或拼音首字母（输入 "daima" 或 "dm" 找到「代码解释」）
+3. 输出     ↑↓ 选中，Enter 粘贴到光标位置，窗口自动隐藏
 ```
 
-### AI 快捷优化
+- 第一次使用按 `Ctrl+N` 新建你自己的提示词
+- `Tab` 切换空间（默认/工作/个人…），空间可在设置里管理
+- 复制过内容后，含 `{{clipboard}}` 变量的提示词会自动带上剪贴板内容
 
-在任意应用中选中文本（如输入框里的提示词草稿），按下快捷键即可自动完成：截取 → AI 优化 → 原位替换，全程无窗口打断，结果自动存入独立的「AI 优化」历史空间。
+## AI 快捷优化
 
-1. **配置**: 打开设置 (Ctrl+,) → 「AI 快捷优化」→ 填写 API Key、服务地址与模型（默认预置 DeepSeek，兼容任何 OpenAI 协议服务），点击「测试连接」验证
-2. **使用**: 选中文本 → `Ctrl+Alt+O` → AI 优化结果直接替换原文
-3. **沉淀**: 优化结果自动保存到「AI 优化」空间，可搜索、可复制，好结果可手动收藏进常用库
+选中任意应用里的文本，一个快捷键完成「截取 → AI 优化 → 原位替换」，全程无窗口打断：
 
-> 优化指令模板可在设置中自定义；默认关闭「推理模式」以获得最快速度，追求更高质量可开启深度思考；未配置 API Key 或未截取到选中文本时会弹出提示。
+| 模式 | 快捷键 | 适用场景 |
+|------|--------|----------|
+| 选区优化 | `Ctrl+Alt+O` | 普通应用（编辑器、聊天框、网页输入框） |
+| 剪贴板优化 | `Ctrl+Shift+B` | 终端、选区不可靠的应用：先复制，再按快捷键，优化结果写回剪贴板 |
 
-### 快捷键
+**配置**：`Ctrl+,` 打开设置 → 「AI 快捷优化」→ 填入 API Key、服务地址与模型 → 点击「测试连接」。
+默认预置 DeepSeek（[获取 API Key](https://platform.deepseek.com)），也兼容任何 OpenAI 协议的服务（如 OpenAI、Moonshot、本地 Ollama 等）。
+
+优化结果自动保存到「AI 优化」空间，随时可搜索复用；快捷键和优化指令模板均可在设置中自定义。
+
+## 快捷键
 
 | 操作 | 快捷键 |
 |------|--------|
-| 呼出/隐藏 | Alt+Space |
-| AI 优化选中文本 | Ctrl+Alt+O (可在设置中修改) |
-| 上下选择 | ↑ ↓ |
-| 切换空间 | Tab |
-| 确认输出 | Enter |
-| 关闭窗口 | Esc |
-| 新建提示词 | Ctrl+N |
-| 编辑提示词 | Ctrl+E |
-| 删除提示词 | Ctrl+D |
-| 打开设置 | Ctrl+, |
+| 呼出 / 隐藏 | `Alt+Space`（可修改） |
+| AI 优化选中文本 | `Ctrl+Alt+O`（可修改） |
+| AI 优化剪贴板内容 | `Ctrl+Shift+B`（可修改） |
+| 上下选择 | `↑` `↓` |
+| 切换空间 | `Tab` / `Shift+Tab` |
+| 确认输出 | `Enter` |
+| 新建 / 编辑 / 删除提示词 | `Ctrl+N` / `Ctrl+E` / `Ctrl+D` |
+| 打开设置 | `Ctrl+,` |
+| 关闭窗口 | `Esc` |
 
-### 变量语法
+## 变量语法
 
-**系统变量** (自动填充):
-```
-请解释以下代码：{{clipboard}}
-今天是：{{date}}
-当前时间：{{time}}
-时间戳：{{timestamp}}
-```
-
-**自定义变量** (弹窗输入):
-```
-翻译为{{目标语言}}语言
-请用{{风格}}的风格重写以下内容
-```
-
-### 技术栈
-
-| 层级 | 技术 | 版本 |
-|------|------|------|
-| 框架 | Tauri | 2.x |
-| 前端 | Vue 3 | 3.4+ |
-| 构建 | Vite | 5.x |
-| 样式 | Tailwind CSS | 3.x |
-| 状态 | Pinia | 2.x |
-| 搜索 | Fuse.js + pinyin-pro | - |
-| 后端 | Rust | 1.70+ |
-
-### 项目结构
+提示词内容中支持变量占位，输出时自动填充：
 
 ```
-PromptX/
-├── shared/                 # 双端共享代码（类型/AI 客户端/搜索/变量）
-├── src/                    # Vue 前端
-│   ├── components/         # UI 组件
-│   ├── stores/             # Pinia 状态管理
-│   ├── composables/        # 组合函数
-│   ├── types/              # TypeScript 类型
-│   └── styles/             # 全局样式
-├── extension/              # 浏览器扩展
-├── src-tauri/              # Rust 后端
-│   ├── src/
-│   │   ├── commands/       # Tauri 命令
-│   │   ├── services/       # 业务服务
-│   │   ├── models/         # 数据模型
-│   │   └── utils/          # 工具函数
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── docs/                   # 文档
-├── package.json
-├── vite.config.ts
-└── eslint.config.js
+请解释以下代码：{{clipboard}}      ← 自动填入复制的内容
+今天是：{{date}}                   ← 当前日期
+当前时间：{{time}}                 ← 当前时间
+翻译为{{目标语言}}语言              ← 自定义变量，输出前弹窗询问
 ```
 
-### 数据存储
+## 数据与隐私
 
-- Windows: `%APPDATA%/com.promptx.app/data.json`
-- macOS: `~/Library/Application Support/com.promptx.app/data.json`
-- Linux: `~/.config/com.promptx.app/data.json`
+- **全部本地存储**：提示词与设置保存在本机 `%APPDATA%\com.promptx.app\data.json`，不上传任何服务器
+- **API Key 安全存储**（桌面端）：AI 服务的 API Key 保存在 Windows 凭据管理器中，数据文件里没有明文密钥
+- **备份**：设置 → 导出数据，生成 JSON 文件，可在另一台电脑或浏览器扩展中导入
+- **浏览器扩展**：数据仅存于本浏览器的扩展存储中
 
-### 开发命令
+## 常见问题
 
-```bash
-npm run dev          # 前端开发
-npm run tauri:dev    # Tauri 开发 (带热更新)
-npm run build        # 前端构建
-npm run tauri:build  # Tauri 构建
-npm run lint         # ESLint 检查
-```
+**按 Alt+Space 没反应？**
+可能被其他软件占用了该快捷键。打开设置（Ctrl+,）把「全局快捷键」改成其他组合；若提示注册失败，说明新组合也被占用。
 
-### 文档
+**在终端里 Ctrl+Alt+O 提示"未截取到选中文本"？**
+终端中 Ctrl+C 是中断信号，无法复制选区。改用剪贴板模式：先复制内容，按 `Ctrl+Shift+B`，优化结果会写回剪贴板，直接粘贴即可。
 
-- [docs/PRD.md](docs/PRD.md) - 产品需求文档
-- [docs/PRD2.0.md](docs/PRD2.0.md) - MVP 实现总结
-- [docs/PRD3.0.md](docs/PRD3.0.md) - 实态对齐版需求文档（含 AI 快捷优化）
+**AI 优化报错？**
+打开设置点击「测试连接」：401/403 说明 API Key 不对；404 通常是服务地址少了 `/v1`；其他报错信息里会给出具体提示。
 
----
+**开机没有自动启动？**
+在设置中打开「开机自启动」；若被系统清理软件禁用，请在对应软件中放行。
 
-<a name="english"></a>
+## 更多文档
 
-## English
-
-A lightweight AI prompt management tool designed for AI developers and researchers.
-
-### Features
-
-- **Instant Activation** - Alt+Space global hotkey with < 50ms latency
-- **Keyboard First** - Full keyboard operation, no mouse needed
-- **Dynamic Variables** - Supports `{{clipboard}}`, `{{date}}`, `{{time}}`, `{{timestamp}}` and custom variables
-- **Workspaces** - Organize prompts by category, switch with Tab key
-- **Fuzzy Search** - Pinyin matching, type "dj" to find "代码解释" (Code Explanation)
-- **Local Storage** - Data stays local, privacy protected
-- **AI Quick Optimize** - Hotkey-captured selection is optimized by AI and replaced in place; results are saved to the "AI Optimize" space
-- **Browser Extension** - Quick access to prompts from the browser
-
-### Installation
-
-#### Windows
-
-Download and run `promptx.exe`, or use the installer package.
-
-#### Build from Source
-
-```bash
-# Install dependencies
-npm install
-
-# Development mode
-npm run tauri:dev
-
-# Build
-npm run tauri:build
-```
-
-### Usage Flow
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      PromptX Workflow                        │
-├─────────────────────────────────────────────────────────────┤
-│  1. Prepare: Select text in editor → Ctrl+C to copy          │
-│                                                             │
-│  2. Activate: Alt + Space → Window pops up centered          │
-│                                                             │
-│  3. Search: Enter keyword or pinyin (e.g., "dj")             │
-│                                                             │
-│  4. Select: ↑↓ to browse, Tab to switch workspace            │
-│                                                             │
-│  5. Output: Enter → Paste to cursor, window auto-hides       │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### AI Quick Optimize
-
-Select text in any app (e.g., a draft prompt in a chat box), press the hotkey, and PromptX will capture → AI-optimize → replace it in place, with no window interruption. Results are saved to a dedicated "AI Optimize" space.
-
-1. **Configure**: Open Settings (Ctrl+,) → "AI Quick Optimize" → fill in API Key, Base URL and model (DeepSeek preconfigured; any OpenAI-compatible service works), then click "Test Connection"
-2. **Use**: Select text → `Ctrl+Alt+O` → the optimized prompt replaces the original in place
-3. **Keep**: Results are saved to the "AI Optimize" space automatically for later search and reuse
-
-> The optimization instruction template is customizable in Settings; "Reasoning Mode" is off by default for speed (turn it on for deeper thinking); a notification appears if the API Key is missing or no selection is captured.
-
-### Keyboard Shortcuts
-
-| Action | Shortcut |
-|--------|----------|
-| Toggle Window | Alt+Space |
-| AI Optimize Selection | Ctrl+Alt+O (configurable in Settings) |
-| Navigate | ↑ ↓ |
-| Switch Workspace | Tab |
-| Confirm Output | Enter |
-| Close Window | Esc |
-| New Prompt | Ctrl+N |
-| Edit Prompt | Ctrl+E |
-| Delete Prompt | Ctrl+D |
-| Open Settings | Ctrl+, |
-
-### Variable Syntax
-
-**System Variables** (auto-filled):
-```
-Explain this code: {{clipboard}}
-Today is: {{date}}
-Current time: {{time}}
-Timestamp: {{timestamp}}
-```
-
-**Custom Variables** (popup input):
-```
-Translate to {{language}}
-Rewrite in {{style}} style
-```
-
-### Tech Stack
-
-| Layer | Technology | Version |
-|-------|------------|---------|
-| Framework | Tauri | 2.x |
-| Frontend | Vue 3 | 3.4+ |
-| Build | Vite | 5.x |
-| Styling | Tailwind CSS | 3.x |
-| State | Pinia | 2.x |
-| Search | Fuse.js + pinyin-pro | - |
-| Backend | Rust | 1.70+ |
-
-### Project Structure
-
-```
-PromptX/
-├── shared/                 # Shared code (types / AI client / search / variables)
-├── src/                    # Vue frontend
-│   ├── components/         # UI components
-│   ├── stores/             # Pinia state management
-│   ├── composables/        # Composition functions
-│   ├── types/              # TypeScript types
-│   └── styles/             # Global styles
-├── extension/              # Browser extension
-├── src-tauri/              # Rust backend
-│   ├── src/
-│   │   ├── commands/       # Tauri commands
-│   │   ├── services/       # Business services
-│   │   ├── models/         # Data models
-│   │   └── utils/          # Utility functions
-│   ├── Cargo.toml
-│   └── tauri.conf.json
-├── docs/                   # Documentation
-├── package.json
-├── vite.config.ts
-└── eslint.config.js
-```
-
-### Data Storage
-
-- Windows: `%APPDATA%/com.promptx.app/data.json`
-- macOS: `~/Library/Application Support/com.promptx.app/data.json`
-- Linux: `~/.config/com.promptx.app/data.json`
-
-### Development Commands
-
-```bash
-npm run dev          # Frontend dev server
-npm run tauri:dev    # Tauri dev (with HMR)
-npm run build        # Frontend build
-npm run tauri:build  # Tauri build
-npm run lint         # ESLint check
-```
-
-### Documentation
-
-- [docs/PRD.md](docs/PRD.md) - Product Requirements Document
-- [docs/PRD2.0.md](docs/PRD2.0.md) - MVP Implementation Summary
-- [docs/PRD3.0.md](docs/PRD3.0.md) - Implementation-aligned PRD (incl. AI Quick Optimize)
-
----
+- [更新日志](CHANGELOG.md)
+- [English README](docs/README.en.md)
+- [从源码构建 / 参与开发](docs/DEVELOPMENT.md)
+- 产品与设计文档：[PRD](docs/PRD.md) · [PRD 2.0](docs/PRD2.0.md) · [PRD 3.0](docs/PRD3.0.md)
+- 技术方案：[双端数据打通（Native Messaging）](docs/design-native-messaging.md) · [UI 层合并](docs/design-shared-ui.md)
 
 ## License
 
-MIT
+[MIT](LICENSE)
