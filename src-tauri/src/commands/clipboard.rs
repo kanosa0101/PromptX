@@ -8,18 +8,6 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 /// 全局保存唤醒时的剪贴板内容（在窗口显示前复制）
 pub static WAKEUP_CLIPBOARD: Mutex<Option<String>> = Mutex::new(None);
 
-/// 获取剪贴板文本
-#[tauri::command]
-pub fn get_clipboard_text(app: tauri::AppHandle) -> Result<String, String> {
-    app.clipboard().read_text().map_err(|e| e.to_string())
-}
-
-/// 设置剪贴板文本
-#[tauri::command]
-pub fn set_clipboard_text(app: tauri::AppHandle, text: String) -> Result<(), String> {
-    app.clipboard().write_text(&text).map_err(|e| e.to_string())
-}
-
 /// 获取唤醒时保存的剪贴板内容（用于 {{clipboard}} 变量）
 #[tauri::command]
 pub fn get_wakeup_clipboard() -> Result<String, String> {
@@ -35,21 +23,6 @@ pub fn capture_selection_on_wakeup(app: &tauri::AppHandle) {
 
     let mut guard = WAKEUP_CLIPBOARD.lock();
     *guard = clipboard_content;
-}
-
-/// 剪切选中内容并返回剪切后的剪贴板内容
-#[tauri::command]
-pub async fn cut_selection(app: tauri::AppHandle) -> Result<String, String> {
-    // 执行剪切
-    simulate_cut().map_err(|e| format!("模拟按键失败: {}", e))?;
-
-    // 等待剪贴板更新
-    tokio::time::sleep(Duration::from_millis(200)).await;
-
-    // 读取新的剪贴板内容
-    let new_content = app.clipboard().read_text().unwrap_or_default();
-
-    Ok(new_content)
 }
 
 /// 输出到剪贴板并模拟粘贴，之后恢复原剪贴板内容
@@ -85,33 +58,9 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
     Ok(())
 }
 
-/// 输出到剪贴板并模拟粘贴（简单版本，不恢复）
-#[tauri::command]
-pub fn paste_to_cursor(app: tauri::AppHandle, text: String) -> Result<(), String> {
-    // 设置剪贴板内容
-    app.clipboard()
-        .write_text(&text)
-        .map_err(|e| e.to_string())?;
-
-    // 隐藏窗口
-    if let Some(window) = app.get_webview_window("main") {
-        window.hide().unwrap_or_default();
-    }
-
-    // 模拟粘贴
-    simulate_paste().map_err(|e| format!("模拟按键失败: {}", e))?;
-
-    Ok(())
-}
-
 /// 模拟复制按键 (Ctrl+C / Cmd+C)
 pub fn simulate_copy() -> Result<(), String> {
     simulate_copy_or_cut('c')
-}
-
-/// 模拟剪切按键 (Ctrl+X / Cmd+X)
-fn simulate_cut() -> Result<(), String> {
-    simulate_copy_or_cut('x')
 }
 
 /// 模拟复制或剪切按键 (Ctrl+C/X 或 Cmd+C/X)

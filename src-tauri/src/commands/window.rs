@@ -76,17 +76,6 @@ pub fn save_position(app: &AppHandle) {
     }
 }
 
-/// 保存窗口位置
-#[tauri::command]
-pub fn save_window_position(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    if let Some(window) = app.get_webview_window("main") {
-        save_window_position_inner(&window, &state);
-        Ok(())
-    } else {
-        Err("Window not found".to_string())
-    }
-}
-
 /// 内部函数：保存窗口位置到存储
 fn save_window_position_inner(window: &tauri::WebviewWindow, state: &State<'_, AppState>) {
     if let Ok(pos) = window.outer_position() {

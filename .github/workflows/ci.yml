@@ -17,6 +17,24 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      - run: npm run typecheck
+
+  # 浏览器扩展：类型检查 + 构建（独立 npm 工作区）
+  check-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - working-directory: extension
+        run: npm ci
+      - working-directory: extension
+        run: npm run typecheck
+      - working-directory: extension
+        run: npm run build
 
   test-frontend:
     runs-on: ubuntu-latest

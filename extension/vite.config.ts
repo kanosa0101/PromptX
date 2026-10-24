@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
-import { copyFileSync, mkdirSync, existsSync, writeFileSync } from 'fs'
+import { copyFileSync, mkdirSync, existsSync } from 'fs'
 
 // 构建后处理插件
 function copyManifestPlugin() {

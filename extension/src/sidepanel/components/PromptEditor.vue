@@ -22,7 +22,7 @@
           placeholder="提示词内容，可使用 {{clipboard}}、{{date}}、{{time}} 等变量..."
           class="editor-textarea"
         />
-        <p class="text-xs text-gray-500 mt-1">
+        <p class="text-xs text-gray-500 mt-1" v-pre>
           支持 {{clipboard}} (页面选区)、{{date}}、{{time}}、{{timestamp}} 等系统变量
         </p>
       </div>
@@ -67,7 +67,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue'
+import { reactive, ref } from 'vue'
 import { useUiStore } from '../stores/uiStore'
 import type { Prompt, Space } from '@/types'
 

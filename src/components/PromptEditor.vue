@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { Prompt } from '@/types'
+import type { Prompt, Variable } from '@/types'
 import { usePromptStore } from '@/stores/promptStore'
+import { parseVariables } from '@shared/variable'
 
 const props = defineProps<{
   prompt?: Prompt | null
@@ -39,23 +40,12 @@ watch(() => props.prompt, (prompt) => {
   }
 }, { immediate: true })
 
-// 解析出的变量
-const parsedVariables = computed(() => {
-  const regex = /\{\{([^{}]+)\}\}/g
-  const variables: string[] = []
-  let match
-  while ((match = regex.exec(content.value)) !== null) {
-    const name = match[1].trim()
-    if (name && !variables.includes(name)) {
-      variables.push(name)
-    }
-  }
-  return variables
-})
+// 解析出的变量（复用 shared/variable.ts，与保存到后端的解析保持同一实现）
+const parsedVariables = computed<Variable[]>(() => parseVariables(content.value))
 
 // 格式化变量显示
 const formattedVariables = computed(() => {
-  return parsedVariables.value.map(v => '{{' + v + '}}').join(' ')
+  return parsedVariables.value.map(v => `{{${v.name}}}`).join(' ')
 })
 
 // 标签操作
@@ -81,10 +71,7 @@ const handleSave = async () => {
     content: content.value,
     tags: tags.value,
     spaceId: spaceId.value,
-    variables: parsedVariables.value.map((name) => ({
-      name,
-      type: ['clipboard', 'date', 'time', 'timestamp'].includes(name) ? 'system' : 'custom',
-    })),
+    variables: parsedVariables.value,
     usageCount: props.prompt?.usageCount || 0,
     lastUsedAt: props.prompt?.lastUsedAt || null,
     createdAt: props.prompt?.createdAt || new Date().toISOString(),

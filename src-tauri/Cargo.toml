@@ -1,6 +1,6 @@
 [package]
 name = "promptx"
-version = "1.0.0"
+version = "1.1.0"
 description = "A lightweight AI prompt clipboard tool"
 authors = ["PromptX Team"]
 edition = "2021"
@@ -26,6 +26,8 @@ tokio = { version = "1", features = ["time"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }
+# API Key 安全存储：Windows 凭据管理器
+keyring = "3"
 
 [features]
 default = ["custom-protocol"]

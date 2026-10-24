@@ -138,6 +138,8 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
   aiBaseUrl: DEFAULT_AI_BASE_URL,
   aiApiKey: '',
   aiModel: DEFAULT_AI_MODEL,
-  optimizeTemplate: DEFAULT_OPTIMIZE_TEMPLATE,
+  // 空串 = 使用内置默认模板（DEFAULT_OPTIMIZE_TEMPLATE）。
+  // 模板正文只保留这一份：设置里不物化默认值，避免默认模板更新后无法生效。
+  optimizeTemplate: '',
   optimizeThinking: false,
 }

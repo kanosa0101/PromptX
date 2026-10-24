@@ -4,7 +4,7 @@
       <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">空间管理</h3>
       <button
         class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
-        @click="$emit('close')"
+        @click="emit('close')"
       >
         ✕
       </button>

@@ -51,6 +51,22 @@ fn main() {
 
             app.manage(AppState { storage });
 
+            // 旧版本兼容：把 data.json 中的明文 API Key 迁移到系统钥匙串
+            // （仅钥匙串可用的平台生效；迁移后 data.json 不再含明文 key）
+            {
+                let state = app.state::<AppState>();
+                let storage = state.storage.write();
+                if let Ok(mut data) = storage.load() {
+                    if crate::services::secret::migrate_plaintext_key(
+                        &mut data,
+                        &crate::services::secret::keychain(),
+                    ) {
+                        eprintln!("已将明文 API Key 迁移到系统钥匙串");
+                        let _ = storage.save(data);
+                    }
+                }
+            }
+
             // 按设置注册全部全局快捷键（窗口呼出 + AI 优化）
             let app_handle = app.handle().clone();
             apply_shortcuts(&app_handle);
@@ -94,8 +110,6 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             // 提示词管理
             commands::prompt::get_app_data,
-            commands::prompt::get_all_prompts,
-            commands::prompt::search_prompts,
             commands::prompt::create_prompt,
             commands::prompt::update_prompt,
             commands::prompt::delete_prompt,
@@ -106,12 +120,8 @@ fn main() {
             commands::space::update_space,
             commands::space::delete_space,
             // 剪贴板
-            commands::clipboard::get_clipboard_text,
             commands::clipboard::get_wakeup_clipboard,
-            commands::clipboard::set_clipboard_text,
-            commands::clipboard::paste_to_cursor,
             commands::clipboard::paste_and_restore,
-            commands::clipboard::cut_selection,
             // AI 优化
             commands::ai::optimize_apply_result,
             commands::ai::optimize_cancel,
@@ -126,7 +136,6 @@ fn main() {
             // 窗口
             commands::window::toggle_window,
             commands::window::hide_window,
-            commands::window::save_window_position,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

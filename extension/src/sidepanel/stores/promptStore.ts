@@ -32,7 +32,9 @@ export const usePromptStore = defineStore('prompt', {
       return useSearch(sorted, this.searchQuery, this.currentSpaceId)
     },
 
-    selectedPrompt: (state) => state.filteredPrompts[state.selectedIndex] || null
+    selectedPrompt(): SearchResult | null {
+      return this.filteredPrompts[this.selectedIndex] || null
+    }
   },
 
   actions: {

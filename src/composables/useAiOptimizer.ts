@@ -34,19 +34,18 @@ export function useAiOptimizer() {
   }
 
   /** AI 优化并回调 Rust 贴回原位置 */
+  const aiSettings = () => ({
+    aiBaseUrl: settingsStore.aiBaseUrl,
+    aiApiKey: settingsStore.aiApiKey,
+    aiModel: settingsStore.aiModel,
+    optimizeTemplate: settingsStore.optimizeTemplate,
+    optimizeThinking: settingsStore.optimizeThinking,
+  })
+
   const runOptimize = async (text: string) => {
     try {
       log(`收到优化事件(${text.length} 字符)，开始调用 AI`)
-      const optimized = await optimizeText(
-        {
-          aiBaseUrl: settingsStore.aiBaseUrl,
-          aiApiKey: settingsStore.aiApiKey,
-          aiModel: settingsStore.aiModel,
-          optimizeTemplate: settingsStore.optimizeTemplate,
-          optimizeThinking: settingsStore.optimizeThinking,
-        },
-        text
-      )
+      const optimized = await optimizeText(aiSettings(), text)
       log(`AI 返回 ${optimized.length} 字符，回调 Rust 贴回`)
       await invoke('optimize_apply_result', { text: optimized })
     } catch (error) {
@@ -59,12 +58,32 @@ export function useAiOptimizer() {
     }
   }
 
+  /** 剪贴板模式：优化剪贴板内容并写回（不模拟按键，用户自行粘贴） */
+  const runClipboardOptimize = async (text: string) => {
+    try {
+      log(`收到剪贴板优化事件(${text.length} 字符)，开始调用 AI`)
+      const optimized = await optimizeText(aiSettings(), text)
+      log(`AI 返回 ${optimized.length} 字符，写回剪贴板`)
+      await invoke('clipboard_optimize_apply_result', { text: optimized })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      log(`剪贴板优化失败: ${message}`)
+      // 结束会话（原剪贴板未被修改，无需恢复），唤起主窗口展示错误
+      invoke('clipboard_optimize_cancel').catch(() => {})
+      invoke('toggle_window').catch(() => {})
+      showError(message)
+    }
+  }
+
   /** 注册事件监听（在 App 挂载时调用一次） */
   const start = async () => {
     try {
       unlistenFns = await Promise.all([
         listen<{ text: string }>('promptx-ai-captured', (event) => {
           runOptimize(event.payload.text)
+        }),
+        listen<{ text: string }>('promptx-ai-clipboard', (event) => {
+          runClipboardOptimize(event.payload.text)
         }),
         listen<{ message: string }>('promptx-ai-error', (event) => {
           log('收到错误事件: ' + event.payload.message)

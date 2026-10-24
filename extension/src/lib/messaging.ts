@@ -29,8 +29,11 @@ export async function insertTextToActiveTab(text: string): Promise<boolean> {
 /**
  * 向指定标签页发送消息
  */
-export async function sendMessageToTab(tabId: number, message: any): Promise<any> {
-  return chrome.tabs.sendMessage(tabId, message)
+export async function sendMessageToTab<T = unknown>(
+  tabId: number,
+  message: unknown
+): Promise<T> {
+  return chrome.tabs.sendMessage(tabId, message) as Promise<T>
 }
 
 /**

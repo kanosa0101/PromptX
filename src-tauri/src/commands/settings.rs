@@ -113,27 +113,33 @@ fn parse_key_code(key: &str) -> Result<Code, String> {
     }
 }
 
-/// 获取设置
+/// 获取设置（API Key 从系统钥匙串附加，data.json 中不落明文）
 #[tauri::command]
 pub fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
     let storage = state.storage.read();
     let data = storage.load().map_err(|e| e.to_string())?;
-    Ok(data.settings)
+    Ok(crate::services::secret::attach_api_key(
+        data.settings,
+        &crate::services::secret::keychain(),
+    ))
 }
 
-/// 更新设置
+/// 更新设置（API Key 剥离到系统钥匙串后持久化；钥匙串不可用时回退明文）
 #[tauri::command]
 pub fn update_settings(
     settings: Settings,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<Settings, String> {
+    let keychain = crate::services::secret::keychain();
+    let persisted = crate::services::secret::stash_api_key(settings.clone(), &keychain);
+
     // 写锁作用域：必须在 apply_shortcuts 之前释放（其内部要拿读锁）
     {
         let storage = state.storage.write();
         let mut data = storage.load().map_err(|e| e.to_string())?;
 
-        data.settings = settings.clone();
+        data.settings = persisted;
         storage.save(data).map_err(|e| e.to_string())?;
     }
 
@@ -150,7 +156,8 @@ pub fn update_settings(
     // 统一重注册全部全局快捷键（含 AI 优化快捷键）
     crate::apply_shortcuts(&app);
 
-    Ok(settings)
+    // 返回给前端的是带真实 key 的视图（与 get_settings 一致）
+    Ok(crate::services::secret::attach_api_key(settings, &keychain))
 }
 
 /// 快捷键注册状态（供前端提示冲突）

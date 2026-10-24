@@ -99,16 +99,25 @@
       <div class="py-1.5">
         <div class="flex items-center justify-between">
           <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
-          <button
-            class="text-xs text-[#3B82F6] hover:underline"
-            @click="resetTemplate"
-          >
-            恢复默认
-          </button>
+          <div class="flex gap-3">
+            <button
+              class="text-xs text-[#3B82F6] hover:underline"
+              @click="fillDefaultTemplate"
+            >
+              填入默认
+            </button>
+            <button
+              class="text-xs text-[#3B82F6] hover:underline"
+              @click="resetTemplate"
+            >
+              恢复默认
+            </button>
+          </div>
         </div>
         <textarea
           v-model="optimizeTemplate"
           rows="3"
+          placeholder="留空使用内置默认优化模板"
           class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
           @blur="saveSettings"
         ></textarea>
@@ -181,7 +190,7 @@ onMounted(async () => {
   aiBaseUrl.value = data.settings?.aiBaseUrl || DEFAULT_SETTINGS.aiBaseUrl
   aiApiKey.value = data.settings?.aiApiKey || ''
   aiModel.value = data.settings?.aiModel || DEFAULT_SETTINGS.aiModel
-  optimizeTemplate.value = data.settings?.optimizeTemplate || DEFAULT_SETTINGS.optimizeTemplate
+  optimizeTemplate.value = data.settings?.optimizeTemplate ?? ''
   optimizeThinking.value = data.settings?.optimizeThinking ?? false
 })
 
@@ -218,10 +227,15 @@ const saveSettings = async () => {
   })
 }
 
-// 恢复默认优化模板
+// 恢复默认优化模板：清空 = 使用内置默认（模板正文单源维护在 shared/types.ts）
 const resetTemplate = () => {
-  optimizeTemplate.value = DEFAULT_OPTIMIZE_TEMPLATE
+  optimizeTemplate.value = ''
   saveSettings()
+}
+
+// 把内置默认模板填入编辑框，便于在其基础上自定义（失焦后才保存）
+const fillDefaultTemplate = () => {
+  optimizeTemplate.value = DEFAULT_OPTIMIZE_TEMPLATE
 }
 
 // 测试 AI 连接（使用当前表单值，无需先保存）

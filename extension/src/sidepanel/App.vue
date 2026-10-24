@@ -14,6 +14,9 @@
         <button class="btn btn-secondary text-xs" @click="openEditor">
           + 新建
         </button>
+        <button class="btn btn-secondary text-xs" @click="openSpaceEditor">
+          + 空间
+        </button>
         <button class="btn btn-secondary text-xs" @click="refreshSelection">
           🔄 刷新选区
         </button>
@@ -110,9 +113,7 @@
     <!-- 空间编辑器 -->
     <SpaceEditor
       v-if="showSpaceEditor"
-      :spaces="spaces"
-      @save="onSpaceEditorSave"
-      @cancel="onSpaceEditorCancel"
+      @close="onSpaceEditorClose"
     />
 
     <!-- 设置面板 -->
@@ -129,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usePromptStore } from './stores/promptStore'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
@@ -150,7 +151,6 @@ const outputStatus = ref<'success' | 'clipboard' | null>(null)
 
 // 从 store 获取数据
 const spaces = computed(() => promptStore.spaces)
-const prompts = computed(() => promptStore.prompts)
 const currentSpaceId = computed(() => promptStore.currentSpaceId)
 const pageSelection = computed(() => promptStore.pageSelection)
 const isLoading = computed(() => promptStore.isLoading)
@@ -187,21 +187,6 @@ const selectPrompt = (index: number) => {
   promptStore.setSelectedIndex(index)
 }
 
-// 选择并输出
-const selectAndOutput = async (index: number) => {
-  const prompt = filteredPrompts.value[index]
-  if (!prompt) return
-
-  promptStore.setSelectedIndex(index)
-  await promptStore.selectAndOutput(prompt)
-
-  // 显示输出状态
-  outputStatus.value = promptStore.lastOutputMethod
-  setTimeout(() => {
-    outputStatus.value = null
-  }, 2000)
-}
-
 // 刷新选区
 const refreshSelection = async () => {
   await promptStore.refreshSelection()
@@ -212,8 +197,13 @@ const openEditor = () => {
   uiStore.openEditor()
 }
 
+// 打开空间编辑器
+const openSpaceEditor = () => {
+  uiStore.openSpaceEditor()
+}
+
 // 编辑器保存
-const onEditorSave = async (promptData: any) => {
+const onEditorSave = async (promptData: { title: string; content: string; tags: string[]; spaceId: string }) => {
   if (editingPrompt.value) {
     await promptStore.updatePrompt(editingPrompt.value.id, promptData)
   } else {
@@ -233,20 +223,14 @@ const onEditorDelete = async (id: string) => {
   uiStore.closeEditor()
 }
 
-// 空间编辑器保存
-const onSpaceEditorSave = async (spaceData: { name: string; icon: string; color: string }) => {
-  await promptStore.createSpace(spaceData.name, spaceData.icon, spaceData.color)
-  uiStore.closeSpaceEditor()
-}
-
-// 空间编辑器取消
-const onSpaceEditorCancel = () => {
+// 空间编辑器关闭（创建/编辑/删除由组件内部完成）
+const onSpaceEditorClose = () => {
   uiStore.closeSpaceEditor()
 }
 
 // 设置面板关闭
 const onSettingsClose = () => {
-  uiStore.hideSettings()
+  uiStore.closeSettings()
 }
 
 // 变量确认

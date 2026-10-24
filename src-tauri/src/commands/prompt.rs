@@ -13,58 +13,6 @@ pub fn get_app_data(state: State<'_, AppState>) -> Result<AppData, String> {
     storage.load().map_err(|e| e.to_string())
 }
 
-/// 获取所有提示词
-#[tauri::command]
-pub fn get_all_prompts(
-    space_id: Option<String>,
-    state: State<'_, AppState>,
-) -> Result<Vec<Prompt>, String> {
-    let storage = state.storage.read();
-    let data = storage.load().map_err(|e| e.to_string())?;
-
-    if let Some(sid) = space_id {
-        Ok(data
-            .prompts
-            .into_iter()
-            .filter(|p| p.space_id == sid)
-            .collect())
-    } else {
-        Ok(data.prompts)
-    }
-}
-
-/// 搜索提示词
-#[tauri::command]
-pub fn search_prompts(
-    query: String,
-    space_id: Option<String>,
-    state: State<'_, AppState>,
-) -> Result<Vec<Prompt>, String> {
-    let storage = state.storage.read();
-    let data = storage.load().map_err(|e| e.to_string())?;
-
-    let mut prompts = data.prompts;
-
-    // 按空间过滤
-    if let Some(sid) = space_id {
-        prompts.retain(|p| p.space_id == sid);
-    }
-
-    // 搜索过滤
-    if !query.is_empty() {
-        let query_lower = query.to_lowercase();
-        prompts.retain(|p| {
-            p.title.to_lowercase().contains(&query_lower)
-                || p.content.to_lowercase().contains(&query_lower)
-                || p.tags
-                    .iter()
-                    .any(|t| t.to_lowercase().contains(&query_lower))
-        });
-    }
-
-    Ok(prompts)
-}
-
 /// 创建提示词
 #[tauri::command]
 pub fn create_prompt(prompt: PromptInput, state: State<'_, AppState>) -> Result<Prompt, String> {

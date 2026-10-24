@@ -15,7 +15,7 @@ export interface Settings extends AiSettings {
 }
 
 // 应用数据结构（settings 为扩展端 Settings）
-export interface ExtensionAppData extends SharedAppData<Settings> {}
+export type ExtensionAppData = SharedAppData<Settings>
 
 // 默认设置
 export const DEFAULT_SETTINGS: Settings = {

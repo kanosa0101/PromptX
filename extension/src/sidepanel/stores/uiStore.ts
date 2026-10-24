@@ -14,6 +14,7 @@ export const useUiStore = defineStore('ui', {
     editingPrompt: null as Prompt | null,
     showSettings: false,
     showHelp: false,
+    showSpaceEditor: false,
     showConfirmDialog: false,
     confirmDialogTitle: '' as string,
     confirmDialogMessage: '' as string,
@@ -81,6 +82,20 @@ export const useUiStore = defineStore('ui', {
      */
     closeHelp() {
       this.showHelp = false
+    },
+
+    /**
+     * 打开空间编辑器
+     */
+    openSpaceEditor() {
+      this.showSpaceEditor = true
+    },
+
+    /**
+     * 关闭空间编辑器
+     */
+    closeSpaceEditor() {
+      this.showSpaceEditor = false
     },
 
     /**

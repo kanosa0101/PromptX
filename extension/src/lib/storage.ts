@@ -2,7 +2,7 @@
  * chrome.storage 封装
  */
 
-import type { AppData } from '@/types'
+import type { ExtensionAppData } from '@/types'
 import { DEFAULT_APP_DATA, DEFAULT_SETTINGS } from '@/types'
 
 export const STORAGE_KEY = 'promptx_data'
@@ -10,11 +10,11 @@ export const STORAGE_KEY = 'promptx_data'
 /**
  * 加载应用数据
  */
-export async function loadAppData(): Promise<AppData> {
+export async function loadAppData(): Promise<ExtensionAppData> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEY)
     if (result[STORAGE_KEY]) {
-      const data = result[STORAGE_KEY] as AppData
+      const data = result[STORAGE_KEY] as ExtensionAppData
       // 合并默认设置：兼容旧版本数据（补齐新增的 AI 设置字段）
       return { ...data, settings: { ...DEFAULT_SETTINGS, ...(data.settings || {}) } }
     }
@@ -39,7 +39,7 @@ export function enqueueWrite<T>(task: () => Promise<T>): Promise<T> {
   return run
 }
 
-export async function saveAppData(data: AppData): Promise<void> {
+export async function saveAppData(data: ExtensionAppData): Promise<void> {
   await enqueueWrite(() => chrome.storage.local.set({ [STORAGE_KEY]: data }))
 }
 
@@ -55,7 +55,7 @@ export async function exportData(): Promise<string> {
  * 导入数据
  */
 export async function importData(jsonStr: string, merge = false): Promise<{ imported: number; skipped: number }> {
-  const imported = JSON.parse(jsonStr) as AppData
+  const imported = JSON.parse(jsonStr) as ExtensionAppData
 
   if (merge) {
     const existing = await loadAppData()

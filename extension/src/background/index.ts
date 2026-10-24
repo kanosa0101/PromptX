@@ -5,7 +5,9 @@
 
 import { optimizeText } from '@/lib/ai'
 import { enqueueWrite, STORAGE_KEY } from '@/lib/storage'
+import { buildHistoryTitle, MAX_AI_HISTORY } from '@shared/aiHistory'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
+import type { AiSettings } from '@/types'
 
 // 点击扩展图标时打开 Side Panel
 chrome.action.onClicked.addListener((tab) => {
@@ -142,12 +144,7 @@ async function runOptimizeFlow(): Promise<void> {
 /**
  * 读取 AI 设置（合并默认值，兼容旧数据）
  */
-async function loadAiSettings(): Promise<{
-  aiBaseUrl: string
-  aiApiKey: string
-  aiModel: string
-  optimizeTemplate: string
-}> {
+async function loadAiSettings(): Promise<AiSettings> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEY)
     const data = result[STORAGE_KEY]
@@ -197,12 +194,8 @@ async function saveOptimizeHistory(original: string, optimized: string): Promise
       })
     }
 
-    // 标题：原文压缩空白后取前 30 字符（按 Unicode 字符截取）
-    const flattened = original.split(/\s+/).filter(Boolean).join(' ')
-    const chars = Array.from(flattened)
-    let title = chars.slice(0, 30).join('')
-    if (chars.length > 30) title += '…'
-    if (!title) title = '未命名优化'
+    // 标题：原文压缩空白后截取（shared/aiHistory.ts，与桌面端行为一致）
+    const title = buildHistoryTitle(original)
 
     data.prompts.push({
       id: crypto.randomUUID(),
@@ -218,7 +211,6 @@ async function saveOptimizeHistory(original: string, optimized: string): Promise
     })
 
     // 「AI 优化」空间条数上限：保留最新 MAX_AI_HISTORY 条，防止数据膨胀
-    const MAX_AI_HISTORY = 200
     const hist = data.prompts.filter(
       (p: { spaceId: string }) => p.spaceId === AI_HISTORY_SPACE_ID
     )

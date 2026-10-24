@@ -12,7 +12,14 @@ export function useKeyboardNavigation() {
 
   const handleKeyDown = (e: KeyboardEvent) => {
     // 如果在弹窗状态，不处理导航键
-    if (uiStore.showEditor || uiStore.showVariableForm || uiStore.showSpaceEditor || uiStore.showSettings) {
+    if (
+      uiStore.showEditor ||
+      uiStore.showVariableForm ||
+      uiStore.showSpaceEditor ||
+      uiStore.showSettings ||
+      uiStore.showHelp ||
+      uiStore.showConfirmDialog
+    ) {
       return
     }
 
@@ -25,13 +32,14 @@ export function useKeyboardNavigation() {
         e.preventDefault()
         promptStore.setSelectedIndex(promptStore.selectedIndex - 1)
         break
-      case 'Enter':
+      case 'Enter': {
         e.preventDefault()
         const selected = promptStore.selectedPrompt
         if (selected) {
           promptStore.selectAndOutput(selected)
         }
         break
+      }
       case 'Tab':
         e.preventDefault()
         if (e.shiftKey) {

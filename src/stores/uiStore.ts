@@ -15,7 +15,6 @@ export const useUiStore = defineStore('ui', {
     currentPrompt: null as Prompt | null,
     editingPrompt: null as Prompt | null,
     editingSpace: null as Space | null,
-    windowVisible: true,
     aiError: '',
     systemNotice: '',
   }),
@@ -111,35 +110,6 @@ export const useUiStore = defineStore('ui', {
         this.confirmDialogCallback()
       }
       this.closeConfirmDialog()
-    },
-
-    showWindow() {
-      this.windowVisible = true
-    },
-
-    hideWindow() {
-      this.windowVisible = false
-      // 重置所有面板
-      this.showSettings = false
-      this.showPromptEditor = false
-      this.showVariableForm = false
-      this.showHelp = false
-      this.showSpaceEditor = false
-      this.showConfirmDialog = false
-      this.confirmDialogMessage = ''
-      this.confirmDialogTitle = ''
-      this.confirmDialogCallback = null
-      this.editingPrompt = null
-      this.editingSpace = null
-      this.currentPrompt = null
-    },
-
-    toggleWindow() {
-      if (this.windowVisible) {
-        this.hideWindow()
-      } else {
-        this.showWindow()
-      }
     },
   },
 })
