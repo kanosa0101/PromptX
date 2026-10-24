@@ -75,7 +75,10 @@ npm run typecheck      # 扩展类型检查
 
 ## 打 Release
 
-1. 更新版本号：根 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`、`extension/package.json`、`extension/manifest.json`、`CHANGELOG.md`
-2. `npm run tauri:build` 产出安装包（`src-tauri/target/release/bundle/nsis/` 与 `msi/`）
-3. 扩展打包：`extension/dist/` 压缩为 zip
-4. 在 GitHub 创建 Release 并上传产物
+发布已自动化（`.github/workflows/release.yml`）：
+
+1. 更新版本号：根 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml`（同步 `Cargo.lock`）、`extension/package.json`、`extension/manifest.json`、`CHANGELOG.md`
+2. 提交并打标签：`git tag v<版本号> && git push origin v<版本号>`
+3. CI 自动构建 Windows 安装包（NSIS/MSI）与扩展 zip，并创建 GitHub Release 上传产物
+
+仓库另有 CodeQL 安全扫描（`.github/workflows/security.yml`，每周一与代码变更时运行）。

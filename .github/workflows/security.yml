@@ -1,0 +1,29 @@
+name: Security
+
+# CodeQL 代码安全扫描（TypeScript/JavaScript：桌面端 + 扩展 + shared）
+on:
+  push:
+    branches: [main]
+    paths: ['src/**', 'extension/src/**', 'shared/**']
+  pull_request:
+    branches: [main]
+    paths: ['src/**', 'extension/src/**', 'shared/**']
+  schedule:
+    # 每周一 04:00 全量扫描
+    - cron: '0 4 * * 1'
+
+permissions:
+  security-events: write
+  contents: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript-typescript'

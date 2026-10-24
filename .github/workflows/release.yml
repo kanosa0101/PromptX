@@ -1,0 +1,89 @@
+name: Release
+
+# 推送 v* 标签自动构建产物并发布 GitHub Release：
+# Windows 安装包（NSIS/MSI，由 tauri build 产出）+ 浏览器扩展 zip
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      # tauri build 会先执行 beforeBuildCommand（前端构建）再编译 Rust 并打包
+      - run: npm run tauri:build
+      - name: 收集安装包
+        shell: bash
+        run: |
+          mkdir -p release
+          cp src-tauri/target/release/bundle/nsis/*.exe release/
+          cp src-tauri/target/release/bundle/msi/*.msi release/ || true
+          ls -la release/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifacts
+          path: release/
+
+  build-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            extension/package-lock.json
+      # shared/ 代码向上解析到根 node_modules（fuse.js/pinyin-pro 等在根声明）
+      - run: npm ci
+      - working-directory: extension
+        run: npm ci
+      - working-directory: extension
+        run: npm run build
+      - name: 打包扩展 zip（以标签命名）
+        working-directory: extension
+        run: |
+          cd dist
+          zip -r "../PromptX-extension-${GITHUB_REF_NAME}.zip" .
+          cd ..
+          ls -la *.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: extension-artifact
+          path: extension/PromptX-extension-*.zip
+
+  release:
+    needs: [build-windows, build-extension]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-artifacts
+          path: dist-windows
+      - uses: actions/download-artifact@v4
+        with:
+          name: extension-artifact
+          path: dist-extension
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            dist-windows/*.exe
+            dist-windows/*.msi
+            dist-extension/*.zip
