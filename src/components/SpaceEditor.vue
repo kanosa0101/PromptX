@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { usePromptStore } from '@/stores/promptStore'
+import { SPACE_ICON_OPTIONS, SPACE_COLOR_OPTIONS } from '@shared/spaceOptions'
 import type { Space } from '@/types'
 
 const props = defineProps<{
@@ -33,11 +34,9 @@ watch(() => props.space, (space) => {
   }
 }, { immediate: true })
 
-// 可选图标列表
-const iconOptions = ['📁', '💼', '🏠', '🎨', '📚', '💡', '🔧', '⭐', '🎯', '📝']
-
-// 可选颜色列表
-const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16']
+// 可选图标/颜色（双端共用，见 shared/spaceOptions.ts）
+const iconOptions = SPACE_ICON_OPTIONS
+const colorOptions = SPACE_COLOR_OPTIONS
 
 // 保存
 const handleSave = async () => {

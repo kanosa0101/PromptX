@@ -37,27 +37,59 @@ const fuseOptions = {
 }
 
 // Fuse 实例缓存（按空间 ID 缓存）
-const fuseCache = new Map<string, Fuse<Prompt>>()
+// 以「过滤前列表的引用」判断失效：引用不同即重建。
+// 调用方传入稳定引用（computed 缓存的排序列表）时逐键搜索不再重复建索引；
+// 任何增删改都会产生新引用，缓存随之正确失效（也不会出现按位置比对
+// 检测不到内容原地变更、索引读到旧内容的脏缓存问题）
+const fuseCache = new Map<string, { source: Prompt[]; fuse: Fuse<Prompt> }>()
 
 /**
- * 获取或创建 Fuse 实例（按空间 ID 缓存）
+ * 获取或创建 Fuse 实例（按空间 ID 缓存，按源列表引用失效）
  */
 function getFuseInstance(prompts: Prompt[], spaceId?: string): Fuse<Prompt> {
   const cacheKey = spaceId || '__all__'
 
   const cached = fuseCache.get(cacheKey)
-  if (cached) {
-    // 检查数据是否变化（通过引用比较）
-    // Fuse 内部持有列表引用，如果列表没变则复用
-    const cachedItems = cached.getIndex().docs as Prompt[]
-    if (cachedItems === prompts || (cachedItems.length === prompts.length && cachedItems.every((item, i) => item.id === prompts[i]?.id))) {
-      return cached
-    }
+  if (cached && cached.source === prompts) {
+    return cached.fuse
   }
 
-  const fuse = new Fuse(prompts, fuseOptions)
-  fuseCache.set(cacheKey, fuse)
+  const filtered = spaceId ? prompts.filter((p) => p.spaceId === spaceId) : prompts
+  const fuse = new Fuse(filtered, fuseOptions)
+  fuseCache.set(cacheKey, { source: prompts, fuse })
   return fuse
+}
+
+/** 拼音索引缓存条目（按提示词对象引用失效，对象被替换时自动重建） */
+interface PinyinIndex {
+  titleInitials: string
+  titleFull: string
+  contentInitials: string
+  titleLower: string
+  contentLower: string
+  tagFull: string
+  tagLower: string
+}
+
+const pinyinIndexCache = new WeakMap<Prompt, PinyinIndex>()
+
+/** 取提示词的拼音/小写索引（跨按键复用，拼音转换是搜索路径上最贵的操作） */
+function getPinyinIndex(p: Prompt): PinyinIndex {
+  let idx = pinyinIndexCache.get(p)
+  if (!idx) {
+    const tagText = p.tags.join(' ')
+    idx = {
+      titleInitials: getPinyinInitials(p.title),
+      titleFull: getPinyinFull(p.title),
+      contentInitials: getPinyinInitials(p.content),
+      titleLower: p.title.toLowerCase(),
+      contentLower: p.content.toLowerCase(),
+      tagFull: getPinyinFull(tagText),
+      tagLower: tagText.toLowerCase(),
+    }
+    pinyinIndexCache.set(p, idx)
+  }
+  return idx
 }
 
 /**
@@ -78,31 +110,27 @@ export function searchPrompts(prompts: Prompt[], query: string, spaceId?: string
   const isPinyinQuery = /^[a-zA-Z]+$/.test(queryLower)
 
   if (isPinyinQuery) {
-    // 拼音搜索：匹配首字母或完整拼音
+    // 拼音搜索：匹配首字母或完整拼音（索引跨按键缓存）
     return filtered
       .filter((p) => {
-        const titleInitials = getPinyinInitials(p.title)
-        const titleFull = getPinyinFull(p.title)
-        const contentInitials = getPinyinInitials(p.content)
-        const tagText = p.tags.join(' ')
-
+        const idx = getPinyinIndex(p)
         return (
-          titleInitials.includes(queryLower) ||
-          titleFull.includes(queryLower) ||
-          contentInitials.includes(queryLower) ||
+          idx.titleInitials.includes(queryLower) ||
+          idx.titleFull.includes(queryLower) ||
+          idx.contentInitials.includes(queryLower) ||
           // 也支持中文标题的英文部分匹配
-          p.title.toLowerCase().includes(queryLower) ||
-          p.content.toLowerCase().includes(queryLower) ||
+          idx.titleLower.includes(queryLower) ||
+          idx.contentLower.includes(queryLower) ||
           // 也搜索标签
-          getPinyinFull(tagText).includes(queryLower) ||
-          tagText.toLowerCase().includes(queryLower)
+          idx.tagFull.includes(queryLower) ||
+          idx.tagLower.includes(queryLower)
         )
       })
       .map((p) => ({ ...p }))
   }
 
-  // Fuse.js 模糊搜索（使用缓存实例）
-  const fuse = getFuseInstance(filtered, spaceId)
+  // Fuse.js 模糊搜索（使用缓存实例；传源列表，过滤在缓存层内部做）
+  const fuse = getFuseInstance(prompts, spaceId)
   const results = fuse.search(query)
 
   return results.map((r) => ({

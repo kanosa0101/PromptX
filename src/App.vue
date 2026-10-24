@@ -15,7 +15,7 @@ import SettingsPanel from '@/components/SettingsPanel.vue'
 import PromptEditor from '@/components/PromptEditor.vue'
 import HelpPanel from '@/components/HelpPanel.vue'
 import SpaceEditor from '@/components/SpaceEditor.vue'
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
+import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
 
 const promptStore = usePromptStore()
 const settingsStore = useSettingsStore()

@@ -1,7 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
-  content: ['./src/**/*.{vue,ts,html}'],
+  content: ['./src/**/*.{vue,ts,html}', '../shared/**/*.{vue,ts}'],
   theme: {
     extend: {
       colors: {
@@ -20,6 +20,15 @@ export default {
         border: {
           light: '#E5E7EB',
           dark: '#374151'
+        }
+      },
+      animation: {
+        'fade-in': 'fadeIn 150ms ease-out'
+      },
+      keyframes: {
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
         }
       }
     }

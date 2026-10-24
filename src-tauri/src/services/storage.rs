@@ -20,6 +20,9 @@ pub struct StorageService {
     data_path: PathBuf,
     backup_path: PathBuf,
     temp_path: PathBuf,
+    /// 内存缓存：命中时免去磁盘读取与 JSON 解析。
+    /// 所有读写都经过 AppState 上的 RwLock，缓存与磁盘始终一致
+    cache: parking_lot::Mutex<Option<AppData>>,
 }
 
 impl StorageService {
@@ -43,11 +46,16 @@ impl StorageService {
             data_path,
             backup_path,
             temp_path,
+            cache: parking_lot::Mutex::new(None),
         }
     }
 
-    /// 加载应用数据
+    /// 加载应用数据（优先内存缓存）
     pub fn load(&self) -> Result<AppData, StorageError> {
+        if let Some(cached) = self.cache.lock().clone() {
+            return Ok(cached);
+        }
+
         if !self.data_path.exists() {
             // 创建默认数据
             let default_data = AppData::default();
@@ -56,20 +64,38 @@ impl StorageService {
         }
 
         let content = fs::read_to_string(&self.data_path)?;
-        match serde_json::from_str(&content) {
-            Ok(data) => Ok(data),
+        match serde_json::from_str::<AppData>(&content) {
+            Ok(data) => {
+                *self.cache.lock() = Some(data.clone());
+                Ok(data)
+            }
             Err(_) => {
                 // 主文件解析失败，尝试从备份恢复
                 eprintln!("数据文件解析失败，尝试从备份恢复...");
                 if self.backup_path.exists() {
-                    let backup_content = fs::read_to_string(&self.backup_path)?;
-                    let data: AppData =
-                        serde_json::from_str(&backup_content).map_err(StorageError::Json)?;
-                    // 恢复成功，保存到主文件
-                    if let Err(e) = self.save(data.clone()) {
-                        eprintln!("备份恢复后保存失败: {}", e);
+                    let backup_result = fs::read_to_string(&self.backup_path)
+                        .map_err(StorageError::Io)
+                        .and_then(|c| {
+                            serde_json::from_str::<AppData>(&c).map_err(StorageError::Json)
+                        });
+                    match backup_result {
+                        Ok(data) => {
+                            // 恢复成功，保存到主文件
+                            if let Err(e) = self.save(data.clone()) {
+                                eprintln!("备份恢复后保存失败: {}", e);
+                            }
+                            Ok(data)
+                        }
+                        Err(e) => {
+                            // 备份也损坏：隔离两个文件后回退默认数据，
+                            // 而不是让应用永久报错不可用
+                            eprintln!("备份也无法读取({}), 隔离损坏文件并使用默认数据", e);
+                            self.quarantine_corrupt_files();
+                            let default_data = AppData::default();
+                            let _ = self.save(default_data.clone());
+                            Ok(default_data)
+                        }
                     }
-                    Ok(data)
                 } else {
                     // 没有备份，返回默认数据
                     eprintln!("无备份文件，使用默认数据");
@@ -81,12 +107,30 @@ impl StorageService {
         }
     }
 
-    /// 保存应用数据（原子写入）
+    /// 把损坏的主文件/备份改名隔离（保留现场便于人工排查，名字追加 .corrupt 后缀）
+    fn quarantine_corrupt_files(&self) {
+        let quarantine = |path: &PathBuf| {
+            let Some(mut name) = path.file_name().map(|n| n.to_os_string()) else {
+                return;
+            };
+            name.push(".corrupt");
+            let _ = fs::rename(path, path.with_file_name(name));
+        };
+        quarantine(&self.data_path);
+        quarantine(&self.backup_path);
+    }
+
+    /// 保存应用数据（原子写入，成功后更新内存缓存）
     pub fn save(&self, data: AppData) -> Result<(), StorageError> {
-        // 备份旧数据
+        // 备份旧数据（同样走临时文件+重命名，避免崩溃留下半截备份）
         if self.data_path.exists() {
             let old_content = fs::read_to_string(&self.data_path)?;
-            fs::write(&self.backup_path, old_content)?;
+            fs::write(&self.temp_path, &old_content)?;
+            if let Err(e) = fs::rename(&self.temp_path, &self.backup_path) {
+                // 重命名失败（被占用等）退回直接写
+                eprintln!("备份重命名失败: {}, 尝试直接写入", e);
+                fs::write(&self.backup_path, old_content)?;
+            }
         }
 
         // 序列化数据
@@ -103,13 +147,17 @@ impl StorageService {
         // 2. 重命名临时文件到目标文件（原子操作）
         // Windows 下如果目标文件存在，rename 会覆盖
         match fs::rename(&self.temp_path, &self.data_path) {
-            Ok(()) => Ok(()),
+            Ok(()) => {
+                *self.cache.lock() = Some(data);
+                Ok(())
+            }
             Err(e) => {
                 // 重命名失败（可能被其他进程占用），尝试直接写入
                 eprintln!("原子重命名失败: {}, 尝试直接写入", e);
                 let mut file = fs::File::create(&self.data_path)?;
                 file.write_all(content.as_bytes())?;
                 let _ = fs::remove_file(&self.temp_path); // 清理临时文件
+                *self.cache.lock() = Some(data);
                 Ok(())
             }
         }
@@ -139,6 +187,44 @@ pub fn load_from_path(path: &std::path::Path) -> Result<AppData, StorageError> {
 mod tests {
     use super::*;
     use std::io::Write as IoWrite;
+
+    fn make_service(dir: &std::path::Path) -> StorageService {
+        StorageService {
+            data_path: dir.join("data.json"),
+            backup_path: dir.join("data.json.backup"),
+            temp_path: dir.join("data.json.tmp"),
+            cache: parking_lot::Mutex::new(None),
+        }
+    }
+
+    #[test]
+    fn test_quarantine_when_both_files_corrupt() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join("data.json"), "{bad").unwrap();
+        std::fs::write(dir.path().join("data.json.backup"), "{bad2").unwrap();
+        let svc = make_service(dir.path());
+
+        // 主文件与备份都损坏：隔离后回退默认数据，而不是永久报错
+        let data = svc.load().unwrap();
+        assert_eq!(data.version, "1.0.0");
+        assert!(dir.path().join("data.json.corrupt").exists());
+        assert!(dir.path().join("data.json.backup.corrupt").exists());
+        assert!(dir.path().join("data.json").exists()); // 已用默认数据重建
+    }
+
+    #[test]
+    fn test_cache_hits_after_save() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = make_service(dir.path());
+
+        let mut data = svc.load().unwrap(); // 首次加载建立默认文件
+        data.version = "9.9.9".to_string();
+        svc.save(data).unwrap();
+        std::fs::remove_file(dir.path().join("data.json")).unwrap();
+
+        // 磁盘文件已删除仍能从缓存读到刚保存的数据
+        assert_eq!(svc.load().unwrap().version, "9.9.9");
+    }
 
     #[test]
     fn test_atomic_write_saves_data() {

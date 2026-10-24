@@ -1,3 +1,7 @@
+<!--
+  确认对话框（桌面端 + 浏览器扩展端共用的展示组件）
+  状态管理由各端接入：桌面端走 props/events，扩展端用薄包装绑 uiStore
+-->
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 

@@ -8,14 +8,17 @@ use uuid::Uuid;
 
 /// 获取所有应用数据
 #[tauri::command]
-pub fn get_app_data(state: State<'_, AppState>) -> Result<AppData, String> {
+pub async fn get_app_data(state: State<'_, AppState>) -> Result<AppData, String> {
     let storage = state.storage.read();
     storage.load().map_err(|e| e.to_string())
 }
 
 /// 创建提示词
 #[tauri::command]
-pub fn create_prompt(prompt: PromptInput, state: State<'_, AppState>) -> Result<Prompt, String> {
+pub async fn create_prompt(
+    prompt: PromptInput,
+    state: State<'_, AppState>,
+) -> Result<Prompt, String> {
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 
@@ -42,7 +45,7 @@ pub fn create_prompt(prompt: PromptInput, state: State<'_, AppState>) -> Result<
 
 /// 更新提示词
 #[tauri::command]
-pub fn update_prompt(
+pub async fn update_prompt(
     id: String,
     updates: PromptUpdate,
     state: State<'_, AppState>,
@@ -80,7 +83,7 @@ pub fn update_prompt(
 
 /// 删除提示词
 #[tauri::command]
-pub fn delete_prompt(id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn delete_prompt(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 
@@ -95,7 +98,7 @@ pub fn delete_prompt(id: String, state: State<'_, AppState>) -> Result<(), Strin
 
 /// 更新使用计数
 #[tauri::command]
-pub fn update_prompt_usage(id: String, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn update_prompt_usage(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 
@@ -126,7 +129,7 @@ pub struct ImportResult {
 /// merge=true: 冲突项用导入数据覆盖更新
 /// merge=false: 冲突项跳过（保留本地）
 #[tauri::command]
-pub fn import_data(
+pub async fn import_data(
     import_data: AppData,
     merge: bool,
     state: State<'_, AppState>,

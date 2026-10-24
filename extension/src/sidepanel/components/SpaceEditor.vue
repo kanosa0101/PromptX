@@ -101,6 +101,7 @@
 import { ref, reactive, computed } from 'vue'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
 import { useUiStore } from '../stores/uiStore'
+import { SPACE_ICON_OPTIONS, SPACE_COLOR_OPTIONS } from '@shared/spaceOptions'
 import type { Space } from '@/types'
 
 const emit = defineEmits<{
@@ -121,8 +122,9 @@ const form = reactive({
   color: '#3B82F6'
 })
 
-const iconOptions = ['📁', '💼', '🏠', '📚', '🎨', '🔧', '📝', '🚀']
-const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6B7280', '#14B8A6']
+// 可选图标/颜色（双端共用，见 shared/spaceOptions.ts）
+const iconOptions = SPACE_ICON_OPTIONS
+const colorOptions = SPACE_COLOR_OPTIONS
 
 const editSpace = (space: Space) => {
   editingSpace.value = space
@@ -136,18 +138,9 @@ const deleteSpace = (id: string) => {
   uiStore.openConfirmDialog(
     '确定删除此空间？其中的提示词将移至默认空间。',
     async () => {
-      // 将提示词移至默认空间
-      promptStore.prompts.forEach(p => {
-        if (p.spaceId === id) {
-          p.spaceId = 'space_default'
-        }
-      })
-      // 删除空间
-      const index = promptStore.spaces.findIndex(s => s.id === id)
-      if (index !== -1) {
-        promptStore.spaces.splice(index, 1)
-      }
-      await promptStore.saveData()
+      // 走 store 动作：统一处理提示词迁移、当前空间切换与持久化
+      // （此前内联实现漏了 currentSpaceId 重置，删除当前空间后列表空白）
+      await promptStore.deleteSpace(id)
     },
     '删除空间'
   )
@@ -162,27 +155,24 @@ const cancelEdit = () => {
 }
 
 const saveSpace = async () => {
-  if (!form.name) return
+  const name = form.name.trim()
+  if (!name) return
 
   if (editingSpace.value) {
-    // 更新空间
-    const space = promptStore.spaces.find(s => s.id === editingSpace.value!.id)
-    if (space) {
-      space.name = form.name
-      space.icon = form.icon
-      space.color = form.color
-      space.updatedAt = new Date().toISOString()
-    }
+    await promptStore.updateSpace(editingSpace.value.id, {
+      name,
+      icon: form.icon,
+      color: form.color
+    })
   } else {
     // 创建新空间
     await promptStore.createSpace({
-      name: form.name,
+      name,
       icon: form.icon,
       color: form.color
     })
   }
 
-  await promptStore.saveData()
   cancelEdit()
 }
 </script>

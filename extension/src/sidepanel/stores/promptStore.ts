@@ -25,11 +25,15 @@ export const usePromptStore = defineStore('prompt', {
   getters: {
     currentSpace: (state) => state.spaces.find(s => s.id === state.currentSpaceId),
 
-    // 使用 useSearch composable 进行搜索（支持拼音匹配）
+    // 创建时间倒序：最新在前。独立 getter 让排序结果被 computed 缓存，
+    // 引用稳定直到 prompts 变化——搜索层据此复用 Fuse/拼音索引
+    sortedByCreated(): Prompt[] {
+      return [...this.prompts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    },
+
+    // 使用 useSearch composable 进行搜索（支持拼音匹配；搜索时按相关度排序）
     filteredPrompts(): SearchResult[] {
-      // 按创建时间倒序展示：最新的提示词排在最前（搜索时仍按相关度排序）
-      const sorted = [...this.prompts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      return useSearch(sorted, this.searchQuery, this.currentSpaceId)
+      return useSearch(this.sortedByCreated, this.searchQuery, this.currentSpaceId)
     },
 
     selectedPrompt(): SearchResult | null {
@@ -193,14 +197,18 @@ export const usePromptStore = defineStore('prompt', {
      * 更新提示词
      */
     async updatePrompt(id: string, data: Partial<{ title: string; content: string; tags: string[]; spaceId: string }>) {
-      const prompt = this.prompts.find(p => p.id === id)
-      if (prompt) {
-        Object.assign(prompt, data, {
+      const index = this.prompts.findIndex((p) => p.id === id)
+      if (index !== -1) {
+        const updated: Prompt = {
+          ...this.prompts[index],
+          ...data,
           updatedAt: new Date().toISOString()
-        })
-        if (data.content) {
-          prompt.variables = parseVariables(data.content)
         }
+        if (data.content) {
+          updated.variables = parseVariables(data.content)
+        }
+        // 替换对象引用，使搜索索引（Fuse/拼音缓存）随之失效
+        this.prompts[index] = updated
         await this.saveData()
       }
     },

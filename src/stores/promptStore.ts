@@ -21,12 +21,15 @@ export const usePromptStore = defineStore('prompt', {
 
   getters: {
     currentSpace: (state) => state.spaces.find((s) => s.id === state.currentSpaceId),
+    sortedByCreated(): Prompt[] {
+      // 创建时间倒序：最新在前。独立 getter 让排序结果被 computed 缓存，
+      // 引用稳定直到 prompts 变化——搜索层据此复用 Fuse/拼音索引
+      return [...this.prompts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    },
     filteredPrompts(): Prompt[] {
       const settingsStore = useSettingsStore()
       const maxResults = settingsStore.maxResults || 6
-      // 按创建时间倒序展示：最新的提示词排在最前（搜索时仍按相关度排序）
-      const sorted = [...this.prompts].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-      const results = useSearch(sorted, this.searchQuery, this.currentSpaceId)
+      const results = useSearch(this.sortedByCreated, this.searchQuery, this.currentSpaceId)
       return results.slice(0, maxResults)
     },
     selectedPrompt(): Prompt | undefined {

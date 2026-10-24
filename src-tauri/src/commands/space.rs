@@ -8,7 +8,7 @@ use uuid::Uuid;
 
 /// 创建空间
 #[tauri::command]
-pub fn create_space(
+pub async fn create_space(
     name: String,
     icon: String,
     color: String,
@@ -36,7 +36,7 @@ pub fn create_space(
 
 /// 更新空间
 #[tauri::command]
-pub fn update_space(
+pub async fn update_space(
     id: String,
     name: Option<String>,
     icon: Option<String>,
@@ -72,7 +72,7 @@ pub fn update_space(
 
 /// 删除空间
 #[tauri::command]
-pub fn delete_space(id: String, state: State<'_, AppState>) -> Result<u32, String> {
+pub async fn delete_space(id: String, state: State<'_, AppState>) -> Result<u32, String> {
     let storage = state.storage.write();
     let mut data = storage.load().map_err(|e| e.to_string())?;
 

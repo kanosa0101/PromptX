@@ -115,7 +115,7 @@ fn parse_key_code(key: &str) -> Result<Code, String> {
 
 /// 获取设置（API Key 从系统钥匙串附加，data.json 中不落明文）
 #[tauri::command]
-pub fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
+pub async fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
     let storage = state.storage.read();
     let data = storage.load().map_err(|e| e.to_string())?;
     Ok(crate::services::secret::attach_api_key(
@@ -126,7 +126,7 @@ pub fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
 
 /// 更新设置（API Key 剥离到系统钥匙串后持久化；钥匙串不可用时回退明文）
 #[tauri::command]
-pub fn update_settings(
+pub async fn update_settings(
     settings: Settings,
     app: tauri::AppHandle,
     state: State<'_, AppState>,
