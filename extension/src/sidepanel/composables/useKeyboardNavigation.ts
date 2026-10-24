@@ -11,6 +11,15 @@ export function useKeyboardNavigation() {
   const uiStore = useUiStore()
 
   const handleKeyDown = (e: KeyboardEvent) => {
+    // 帮助面板打开时：Esc 关闭，其余按键不处理
+    if (uiStore.showHelp) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        uiStore.closeHelp()
+      }
+      return
+    }
+
     // 如果在弹窗状态，不处理导航键
     if (
       uiStore.showEditor ||
@@ -20,6 +29,13 @@ export function useKeyboardNavigation() {
       uiStore.showHelp ||
       uiStore.showConfirmDialog
     ) {
+      return
+    }
+
+    // Ctrl+N 新建提示词（与空状态提示文案一致）
+    if (e.ctrlKey && (e.key === 'n' || e.key === 'N')) {
+      e.preventDefault()
+      uiStore.openEditor()
       return
     }
 

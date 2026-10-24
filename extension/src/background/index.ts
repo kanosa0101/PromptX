@@ -9,13 +9,6 @@ import { buildHistoryTitle, MAX_AI_HISTORY } from '@shared/aiHistory'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
 import type { AiSettings } from '@/types'
 
-// 点击扩展图标时打开 Side Panel
-chrome.action.onClicked.addListener((tab) => {
-  if (tab.windowId) {
-    chrome.sidePanel.open({ windowId: tab.windowId })
-  }
-})
-
 // 监听快捷键命令
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === '_execute_action' || command === 'open-sidepanel') {
@@ -89,7 +82,16 @@ async function notifyFailure(message: string): Promise<void> {
  * 截取选中文本 → 调 AI 优化 → 原位替换 → 存入「AI 优化」历史空间
  * 全程不打开 Side Panel；进度与结果通过图标徽标反馈
  */
+// 优化流程互斥标记：AI 请求通常 10~60 秒，进行中时忽略再次触发，
+// 避免并发请求与历史双写（SW 存活期内有效；SW 重启后标记自然复位）
+let optimizeRunning = false
+
 async function runOptimizeFlow(): Promise<void> {
+  if (optimizeRunning) {
+    console.warn('[PromptX] AI 优化进行中，忽略本次触发')
+    return
+  }
+  optimizeRunning = true
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
     if (!tab?.id || !tab.url?.startsWith('http')) {
@@ -154,6 +156,8 @@ async function runOptimizeFlow(): Promise<void> {
     clearBadgeLater(3000)
     // 系统通知展示失败原因（Key 未配置 / 接口报错 / 网络故障等）
     await notifyFailure(error instanceof Error ? error.message : String(error))
+  } finally {
+    optimizeRunning = false
   }
 }
 
@@ -272,6 +276,3 @@ async function insertToActiveTab(text: string): Promise<{ success: boolean }> {
 
 // Side Panel 行为配置
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })
-
-// 初始化完成日志 (调试用)
-console.log('[PromptX] Background service worker started')

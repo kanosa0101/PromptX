@@ -12,7 +12,7 @@
           type="text"
           placeholder="提示词标题..."
           class="editor-input"
-        />
+        >
       </div>
 
       <div>
@@ -22,7 +22,10 @@
           placeholder="提示词内容，可使用 {{clipboard}}、{{date}}、{{time}} 等变量..."
           class="editor-textarea"
         />
-        <p class="text-xs text-gray-500 mt-1" v-pre>
+        <p
+          v-pre
+          class="text-xs text-gray-500 mt-1"
+        >
           支持 {{clipboard}} (页面选区)、{{date}}、{{time}}、{{timestamp}} 等系统变量
         </p>
       </div>
@@ -34,13 +37,20 @@
           type="text"
           placeholder="标签 (逗号分隔)..."
           class="editor-input"
-        />
+        >
       </div>
 
       <div>
         <label class="block text-sm font-medium mb-1">空间</label>
-        <select v-model="form.spaceId" class="editor-input">
-          <option v-for="space in spaces" :key="space.id" :value="space.id">
+        <select
+          v-model="form.spaceId"
+          class="editor-input"
+        >
+          <option
+            v-for="space in spaces"
+            :key="space.id"
+            :value="space.id"
+          >
             {{ space.icon }} {{ space.name }}
           </option>
         </select>
@@ -48,10 +58,17 @@
     </div>
 
     <div class="flex gap-2 mt-4">
-      <button class="btn btn-secondary flex-1" @click="$emit('cancel')">
+      <button
+        class="btn btn-secondary flex-1"
+        @click="$emit('cancel')"
+      >
         取消
       </button>
-      <button class="btn btn-primary flex-1" @click="onSave" :disabled="!form.title || !form.content">
+      <button
+        class="btn btn-primary flex-1"
+        :disabled="!form.title || !form.content"
+        @click="onSave"
+      >
         保存
       </button>
     </div>

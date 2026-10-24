@@ -1,7 +1,9 @@
 <template>
   <div class="space-editor-panel p-4 bg-white dark:bg-[#1A1A2E]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">空间管理</h3>
+      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+        空间管理
+      </h3>
       <button
         class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
         @click="emit('close')"
@@ -48,12 +50,24 @@
     </button>
 
     <!-- 创建/编辑表单 -->
-    <div v-if="showCreateForm || editingSpace" class="mt-4 p-3 bg-[#F4F4F5] dark:bg-[#27272A] rounded">
+    <div
+      v-if="showCreateForm || editingSpace"
+      class="mt-4 p-3 bg-[#F4F4F5] dark:bg-[#27272A] rounded"
+    >
       <div class="space-y-3">
         <div>
           <label class="block text-sm text-[#1A1A2E] dark:text-[#E4E4E7] mb-1">图标</label>
-          <select v-model="form.icon" class="w-full px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent">
-            <option v-for="icon in iconOptions" :key="icon" :value="icon">{{ icon }}</option>
+          <select
+            v-model="form.icon"
+            class="w-full px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent"
+          >
+            <option
+              v-for="icon in iconOptions"
+              :key="icon"
+              :value="icon"
+            >
+              {{ icon }}
+            </option>
           </select>
         </div>
         <div>
@@ -63,7 +77,7 @@
             type="text"
             class="w-full px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent"
             placeholder="空间名称"
-          />
+          >
         </div>
         <div>
           <label class="block text-sm text-[#1A1A2E] dark:text-[#E4E4E7] mb-1">颜色</label>

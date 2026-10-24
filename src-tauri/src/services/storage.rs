@@ -4,6 +4,7 @@ use crate::models::AppData;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tauri::Manager;
 use thiserror::Error;
 
@@ -21,8 +22,9 @@ pub struct StorageService {
     backup_path: PathBuf,
     temp_path: PathBuf,
     /// 内存缓存：命中时免去磁盘读取与 JSON 解析。
-    /// 所有读写都经过 AppState 上的 RwLock，缓存与磁盘始终一致
-    cache: parking_lot::Mutex<Option<AppData>>,
+    /// 所有读写都经过 AppState 上的 RwLock，缓存与磁盘始终一致。
+    /// 存 Arc 共享快照：只读热路径（失焦检查、位置恢复）拿引用即可，免整份克隆
+    cache: parking_lot::Mutex<Option<Arc<AppData>>>,
 }
 
 impl StorageService {
@@ -50,12 +52,26 @@ impl StorageService {
         }
     }
 
-    /// 加载应用数据（优先内存缓存）
+    /// 加载应用数据（优先内存缓存；需要可写副本时使用）
     pub fn load(&self) -> Result<AppData, StorageError> {
+        Ok(self.load_arc()?.as_ref().clone())
+    }
+
+    /// 加载应用数据（优先内存缓存）：返回共享快照，只读热路径用，
+    /// 避免每次热键唤醒/失焦检查都整份克隆全部提示词
+    pub fn load_arc(&self) -> Result<Arc<AppData>, StorageError> {
         if let Some(cached) = self.cache.lock().clone() {
             return Ok(cached);
         }
 
+        let data = self.load_from_disk()?;
+        let arc = Arc::new(data);
+        *self.cache.lock() = Some(arc.clone());
+        Ok(arc)
+    }
+
+    /// 从磁盘加载（含损坏恢复与默认数据回退）；调用方负责填充缓存
+    fn load_from_disk(&self) -> Result<AppData, StorageError> {
         if !self.data_path.exists() {
             // 创建默认数据
             let default_data = AppData::default();
@@ -65,10 +81,7 @@ impl StorageService {
 
         let content = fs::read_to_string(&self.data_path)?;
         match serde_json::from_str::<AppData>(&content) {
-            Ok(data) => {
-                *self.cache.lock() = Some(data.clone());
-                Ok(data)
-            }
+            Ok(data) => Ok(data),
             Err(_) => {
                 // 主文件解析失败，尝试从备份恢复
                 eprintln!("数据文件解析失败，尝试从备份恢复...");
@@ -159,7 +172,7 @@ impl StorageService {
         // Windows 下如果目标文件存在，rename 会覆盖
         match fs::rename(&self.temp_path, &self.data_path) {
             Ok(()) => {
-                *self.cache.lock() = Some(data);
+                *self.cache.lock() = Some(Arc::new(data));
                 Ok(())
             }
             Err(e) => {
@@ -167,31 +180,13 @@ impl StorageService {
                 eprintln!("原子重命名失败: {}, 尝试直接写入", e);
                 let mut file = fs::File::create(&self.data_path)?;
                 file.write_all(content.as_bytes())?;
+                file.sync_all()?; // 与主路径一致：确保数据落盘
                 let _ = fs::remove_file(&self.temp_path); // 清理临时文件
-                *self.cache.lock() = Some(data);
+                *self.cache.lock() = Some(Arc::new(data));
                 Ok(())
             }
         }
     }
-}
-
-/// Save AppData to a specific path (test helper)
-#[allow(dead_code)]
-pub fn save_to_path(path: &std::path::Path, data: &AppData) -> Result<(), StorageError> {
-    let content = serde_json::to_string(data)?;
-    fs::write(path, content)?;
-    Ok(())
-}
-
-/// Load AppData from a specific path (test helper)
-#[allow(dead_code)]
-pub fn load_from_path(path: &std::path::Path) -> Result<AppData, StorageError> {
-    if !path.exists() {
-        return Ok(AppData::default());
-    }
-    let content = fs::read_to_string(path)?;
-    let data: AppData = serde_json::from_str(&content)?;
-    Ok(data)
 }
 
 #[cfg(test)]

@@ -47,10 +47,18 @@ static OPTIMIZE_SESSION: Mutex<Option<OptimizeSession>> = Mutex::new(None);
 
 /// 轻量诊断日志（后台全自动流程无 UI，故障时需要可追溯）
 /// Rust 侧直接写；前端通过 ai_debug_log 命令写入（带 [FE] 前缀）
+/// 超过 1MB 轮转一份（.1），避免长期使用无限膨胀
 pub fn debug_log(msg: &str) {
     let ts = chrono::Local::now().format("%m-%d %H:%M:%S%.3f");
     let line = format!("[{}] {}\n", ts, msg);
     let path = std::env::temp_dir().join("promptx-ai.log");
+    if let Ok(meta) = std::fs::metadata(&path) {
+        if meta.len() > 1_048_576 {
+            let old = path.with_extension("log.1");
+            let _ = std::fs::remove_file(&old);
+            let _ = std::fs::rename(&path, &old);
+        }
+    }
     if let Ok(mut f) = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
@@ -357,8 +365,9 @@ pub fn optimize_cancel(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// 超出上限时清理「AI 优化」空间中最旧的条目（不影响其他空间）
-fn trim_ai_history(prompts: &mut Vec<Prompt>) {
+/// 超出上限时清理「AI 优化」空间中最旧的条目（不影响其他空间）；
+/// import_data 导入后也调用，防止导入数据绕过历史上限
+pub(crate) fn trim_ai_history(prompts: &mut Vec<Prompt>) {
     let mut idx: Vec<(chrono::DateTime<Utc>, usize)> = prompts
         .iter()
         .enumerate()

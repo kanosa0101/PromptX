@@ -116,16 +116,17 @@ fn parse_key_code(key: &str) -> Result<Code, String> {
 /// 获取设置（API Key 从系统钥匙串附加，data.json 中不落明文）
 #[tauri::command]
 pub async fn get_settings(state: State<'_, AppState>) -> Result<Settings, String> {
-    // 先拷贝出设置并释放读锁，再做钥匙串系统调用：
-    // 域环境下 Credential Manager 读取可达秒级，持锁期间会阻塞所有写者
+    // 先拷贝出设置并释放读锁；钥匙串读取（域环境可达秒级）放阻塞池，
+    // 既不持锁也不占用 tokio async worker
     let settings = {
         let storage = state.storage.read();
         storage.load().map_err(|e| e.to_string())?.settings
     };
-    Ok(crate::services::secret::attach_api_key(
-        settings,
-        &crate::services::secret::keychain(),
-    ))
+    tauri::async_runtime::spawn_blocking(move || {
+        crate::services::secret::attach_api_key(settings, &crate::services::secret::keychain())
+    })
+    .await
+    .map_err(|e| e.to_string())
 }
 
 /// 更新设置（API Key 剥离到系统钥匙串后持久化；钥匙串不可用时回退明文）
@@ -135,23 +136,33 @@ pub async fn update_settings(
     app: tauri::AppHandle,
     state: State<'_, AppState>,
 ) -> Result<Settings, String> {
-    let keychain = crate::services::secret::keychain();
-    let persisted = crate::services::secret::stash_api_key(settings.clone(), &keychain);
+    // 钥匙串写入 + 全量保存（含双 fsync）都在阻塞池执行
+    let storage = state.storage.clone();
+    let (persisted, view) = tauri::async_runtime::spawn_blocking(move || {
+        let keychain = crate::services::secret::keychain();
+        let persisted = crate::services::secret::stash_api_key(settings, &keychain);
 
-    // 写锁作用域：必须在 apply_shortcuts 之前释放（其内部要拿读锁）
-    {
-        let storage = state.storage.write();
-        let mut data = storage.load().map_err(|e| e.to_string())?;
+        // 写锁作用域：必须在 apply_shortcuts 之前释放（其内部要拿读锁）
+        {
+            let storage = storage.write();
+            let mut data = storage.load().map_err(|e| e.to_string())?;
 
-        data.settings = persisted;
-        storage.save(data).map_err(|e| e.to_string())?;
-    }
+            data.settings = persisted.clone();
+            storage.save(data).map_err(|e| e.to_string())?;
+        }
+
+        // 返回给前端的是带真实 key 的视图（与 get_settings 一致）
+        let view = crate::services::secret::attach_api_key(persisted.clone(), &keychain);
+        Ok::<_, String>((persisted, view))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     // 应用窗口透明度
-    window::apply_opacity(&app, settings.window_opacity);
+    window::apply_opacity(&app, persisted.window_opacity);
 
     // 应用开机自启设置
-    if settings.launch_at_login {
+    if persisted.launch_at_login {
         let _ = app.autolaunch().enable();
     } else {
         let _ = app.autolaunch().disable();
@@ -160,8 +171,7 @@ pub async fn update_settings(
     // 统一重注册全部全局快捷键（含 AI 优化快捷键）
     crate::apply_shortcuts(&app);
 
-    // 返回给前端的是带真实 key 的视图（与 get_settings 一致）
-    Ok(crate::services::secret::attach_api_key(settings, &keychain))
+    Ok(view)
 }
 
 /// 快捷键注册状态（供前端提示冲突）

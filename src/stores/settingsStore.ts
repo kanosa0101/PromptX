@@ -10,7 +10,6 @@ export const useSettingsStore = defineStore('settings', {
     language: 'zh-CN',
     windowOpacity: 0.95,
     windowPosition: null as { x: number; y: number } | null,
-    windowSize: { width: 600, height: 400 },
     autoHide: true,
     searchDebounce: 300,
     maxResults: 6,

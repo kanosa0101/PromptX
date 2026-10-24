@@ -9,13 +9,6 @@ pub struct Position {
     pub y: i32,
 }
 
-/// 窗口尺寸
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Size {
-    pub width: u32,
-    pub height: u32,
-}
-
 /// 默认 AI Base URL (OpenAI 兼容协议)
 pub const DEFAULT_AI_BASE_URL: &str = "https://api.deepseek.com";
 
@@ -61,8 +54,6 @@ pub struct Settings {
     pub window_opacity: f32,
     #[serde(rename = "windowPosition")]
     pub window_position: Option<Position>,
-    #[serde(rename = "windowSize")]
-    pub window_size: Size,
     #[serde(rename = "searchDebounce")]
     pub search_debounce: u32,
     #[serde(rename = "maxResults")]
@@ -105,10 +96,6 @@ impl Default for Settings {
             language: "zh-CN".to_string(),
             window_opacity: 0.95,
             window_position: None,
-            window_size: Size {
-                width: 600,
-                height: 400,
-            },
             search_debounce: 300,
             max_results: 6,
             auto_hide: true,
@@ -136,8 +123,6 @@ mod tests {
         assert_eq!(settings.language, "zh-CN");
         assert!((settings.window_opacity - 0.95).abs() < f32::EPSILON);
         assert!(settings.window_position.is_none());
-        assert_eq!(settings.window_size.width, 600);
-        assert_eq!(settings.window_size.height, 400);
         assert_eq!(settings.search_debounce, 300);
         assert_eq!(settings.max_results, 6);
         assert!(settings.auto_hide);
@@ -157,8 +142,6 @@ mod tests {
             deserialized.window_position.is_none(),
             "window_position should still be None"
         );
-        assert_eq!(deserialized.window_size.width, settings.window_size.width);
-        assert_eq!(deserialized.window_size.height, settings.window_size.height);
         assert_eq!(deserialized.search_debounce, settings.search_debounce);
         assert_eq!(deserialized.max_results, settings.max_results);
         assert_eq!(deserialized.auto_hide, settings.auto_hide);

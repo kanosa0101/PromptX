@@ -80,20 +80,30 @@ fn main() {
             let app_handle = app.handle().clone();
             apply_shortcuts(&app_handle);
 
-            // 监听窗口失去焦点事件：按 autoHide 设置决定是否隐藏（隐藏前保存位置）
+            // 监听窗口失去焦点事件：按 autoHide 设置决定是否隐藏（隐藏后异步保存位置）
             if let Some(window) = app.get_webview_window("main") {
                 let window_clone = window.clone();
                 let app_for_events = app_handle.clone();
                 window.on_window_event(move |event| {
                     if let tauri::WindowEvent::Focused(false) = event {
+                        // 窗口已不可见 = 焦点丢失是「隐藏」的副作用：
+                        // 各隐藏路径（hide_window 命令/快捷键）已自行保存位置，跳过避免双重全量保存
+                        if !window_clone.is_visible().unwrap_or(false) {
+                            return;
+                        }
                         let auto_hide = storage_for_events
                             .read()
-                            .load()
+                            .load_arc()
                             .map(|d| d.settings.auto_hide)
                             .unwrap_or(true);
                         if auto_hide {
-                            window::save_position(&app_for_events);
+                            // 先隐藏（用户无感延迟），再在后台线程保存位置：
+                            // 保存含双 fsync，在事件循环线程执行会阻塞整个 UI
                             window_clone.hide().unwrap_or_default();
+                            let app_bg = app_for_events.clone();
+                            std::thread::spawn(move || {
+                                window::save_position(&app_bg);
+                            });
                         }
                     }
                 });
@@ -143,7 +153,6 @@ fn main() {
             commands::settings::register_hotkey,
             commands::settings::get_hotkey_status,
             // 窗口
-            commands::window::toggle_window,
             commands::window::hide_window,
             commands::window::show_window,
         ])
@@ -248,8 +257,12 @@ pub fn apply_shortcuts(app: &tauri::AppHandle) {
 pub fn toggle_window_with_clipboard_capture(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
-            // 窗口已显示 → 隐藏窗口
+            // 窗口已显示 → 隐藏（先隐藏，位置后台保存；失焦处理器见窗口已隐藏会跳过）
             window.hide().unwrap_or_default();
+            let app_bg = app.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                window::save_position(&app_bg);
+            });
         } else {
             // 窗口隐藏 → 显示窗口
             // 关键步骤：在窗口显示前捕获选中内容

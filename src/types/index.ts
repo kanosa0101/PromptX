@@ -15,11 +15,6 @@ export interface Position {
 }
 
 // 窗口尺寸
-export interface Size {
-  width: number
-  height: number
-}
-
 // 设置模型（桌面端：窗口行为 + AI 公共子集）
 export interface Settings extends AiSettings {
   globalHotkey: string
@@ -27,7 +22,6 @@ export interface Settings extends AiSettings {
   language: string
   windowOpacity: number
   windowPosition: Position | null
-  windowSize: Size
   autoHide: boolean
   searchDebounce: number
   maxResults: number
@@ -71,7 +65,6 @@ export const DEFAULT_SETTINGS: Settings = {
   language: 'zh-CN',
   windowOpacity: 0.95,
   windowPosition: null,
-  windowSize: { width: 600, height: 400 },
   autoHide: true,
   searchDebounce: 300,
   maxResults: 6,

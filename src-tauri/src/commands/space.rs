@@ -14,24 +14,30 @@ pub async fn create_space(
     color: String,
     state: State<'_, AppState>,
 ) -> Result<Space, String> {
-    let storage = state.storage.write();
-    let mut data = storage.load().map_err(|e| e.to_string())?;
+    // 写入含双 fsync，放阻塞线程池执行，避免占用 tokio async worker
+    let storage = state.storage.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let storage = storage.write();
+        let mut data = storage.load().map_err(|e| e.to_string())?;
 
-    let now = Utc::now();
-    let new_space = Space {
-        id: Uuid::new_v4().to_string(),
-        name,
-        icon,
-        color,
-        order: data.spaces.len() as u32,
-        created_at: now,
-        updated_at: now,
-    };
+        let now = Utc::now();
+        let new_space = Space {
+            id: Uuid::new_v4().to_string(),
+            name,
+            icon,
+            color,
+            order: data.spaces.len() as u32,
+            created_at: now,
+            updated_at: now,
+        };
 
-    data.spaces.push(new_space.clone());
-    storage.save(data).map_err(|e| e.to_string())?;
+        data.spaces.push(new_space.clone());
+        storage.save(data).map_err(|e| e.to_string())?;
 
-    Ok(new_space)
+        Ok(new_space)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 更新空间
@@ -43,55 +49,65 @@ pub async fn update_space(
     color: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<Space, String> {
-    let storage = state.storage.write();
-    let mut data = storage.load().map_err(|e| e.to_string())?;
+    let storage = state.storage.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let storage = storage.write();
+        let mut data = storage.load().map_err(|e| e.to_string())?;
 
-    let index = data.spaces.iter().position(|s| s.id == id);
-    if let Some(i) = index {
-        let space = &mut data.spaces[i];
-        let now = Utc::now();
+        let index = data.spaces.iter().position(|s| s.id == id);
+        if let Some(i) = index {
+            let space = &mut data.spaces[i];
+            let now = Utc::now();
 
-        if let Some(n) = name {
-            space.name = n;
-        }
-        if let Some(ic) = icon {
-            space.icon = ic;
-        }
-        if let Some(c) = color {
-            space.color = c;
-        }
-        space.updated_at = now;
+            if let Some(n) = name {
+                space.name = n;
+            }
+            if let Some(ic) = icon {
+                space.icon = ic;
+            }
+            if let Some(c) = color {
+                space.color = c;
+            }
+            space.updated_at = now;
 
-        let updated = space.clone();
-        storage.save(data).map_err(|e| e.to_string())?;
-        Ok(updated)
-    } else {
-        Err("Space not found".to_string())
-    }
+            let updated = space.clone();
+            storage.save(data).map_err(|e| e.to_string())?;
+            Ok(updated)
+        } else {
+            Err("Space not found".to_string())
+        }
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 /// 删除空间
 #[tauri::command]
 pub async fn delete_space(id: String, state: State<'_, AppState>) -> Result<u32, String> {
-    let storage = state.storage.write();
-    let mut data = storage.load().map_err(|e| e.to_string())?;
+    let storage = state.storage.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let storage = storage.write();
+        let mut data = storage.load().map_err(|e| e.to_string())?;
 
-    // 不能删除默认空间
-    if id == "space_default" {
-        return Err("Cannot delete default space".to_string());
-    }
-
-    // 将该空间下的提示词移至默认空间（而非级联删除）
-    let moved_count = data.prompts.iter_mut().filter(|p| p.space_id == id).count() as u32;
-    for p in data.prompts.iter_mut() {
-        if p.space_id == id {
-            p.space_id = "space_default".to_string();
+        // 不能删除默认空间
+        if id == "space_default" {
+            return Err("Cannot delete default space".to_string());
         }
-    }
 
-    // 删除空间
-    data.spaces.retain(|s| s.id != id);
+        // 将该空间下的提示词移至默认空间（而非级联删除）
+        let moved_count = data.prompts.iter().filter(|p| p.space_id == id).count() as u32;
+        for p in data.prompts.iter_mut() {
+            if p.space_id == id {
+                p.space_id = "space_default".to_string();
+            }
+        }
 
-    storage.save(data).map_err(|e| e.to_string())?;
-    Ok(moved_count)
+        // 删除空间
+        data.spaces.retain(|s| s.id != id);
+
+        storage.save(data).map_err(|e| e.to_string())?;
+        Ok(moved_count)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }

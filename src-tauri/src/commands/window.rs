@@ -13,22 +13,6 @@ pub fn apply_opacity(app: &AppHandle, opacity: f32) {
     }
 }
 
-/// 显示/隐藏窗口（支持位置记忆）
-#[tauri::command]
-pub fn toggle_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    let window = app.get_webview_window("main").ok_or("Window not found")?;
-    if window.is_visible().unwrap_or(false) {
-        // 保存当前窗口位置
-        save_window_position_inner(&window, &state);
-        window.hide().map_err(|e| e.to_string())?;
-    } else {
-        restore_window_position(&window, state.inner());
-        window.show().map_err(|e| e.to_string())?;
-        window.set_focus().map_err(|e| e.to_string())?;
-    }
-    Ok(())
-}
-
 /// 显示并聚焦主窗口（错误横幅等场景专用：与 toggle 不同，已可见时不会隐藏）
 #[tauri::command]
 pub fn show_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
@@ -45,12 +29,13 @@ pub fn show_window(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
 pub fn restore_window_position(window: &tauri::WebviewWindow, state: &AppState) {
     use tauri::Position;
 
+    // load_arc 拿缓存共享快照即可，免整份克隆
     let saved_position = state
         .storage
         .read()
-        .load()
+        .load_arc()
         .ok()
-        .and_then(|data| data.settings.window_position);
+        .and_then(|data| data.settings.window_position.clone());
 
     let Some(pos) = saved_position else {
         center_on_monitor(window);
@@ -103,12 +88,16 @@ fn center_on_monitor(window: &tauri::WebviewWindow) {
     }
 }
 
-/// 隐藏窗口（隐藏前保存位置，供位置记忆恢复）
+/// 隐藏窗口（先隐藏让用户无感，再后台保存位置；失焦事件处理器检测到
+/// 已隐藏会跳过，不会重复保存）
 #[tauri::command]
 pub fn hide_window(app: AppHandle) -> Result<(), String> {
-    save_position(&app);
     let window = app.get_webview_window("main").ok_or("Window not found")?;
-    window.hide().map_err(|e| e.to_string())
+    window.hide().map_err(|e| e.to_string())?;
+    // 位置保存含双 fsync，放后台线程执行，避免阻塞调用线程
+    let app_bg = app.clone();
+    tauri::async_runtime::spawn_blocking(move || save_position(&app_bg));
+    Ok(())
 }
 
 /// 保存当前窗口位置（不依赖前端触发；失焦自动隐藏等内部路径共用）

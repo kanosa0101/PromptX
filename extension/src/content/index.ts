@@ -241,5 +241,3 @@ function insertTextToActiveElement(text: string): boolean {
   return false
 }
 
-// 初始化完成日志 (调试用)
-console.log('[PromptX] Content script loaded')

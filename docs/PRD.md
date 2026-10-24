@@ -67,7 +67,7 @@
 | 索引缓存 | Fuse 实例按列表引用失效，逐键搜索不重建索引 |
 | 列表排序 | 默认创建时间倒序（最新在前）；搜索时按相关度 |
 | 键盘导航 | ↑↓ 选择、Tab/Shift+Tab 切空间、Enter 输出、Esc 逐层关闭面板/隐藏窗口、Ctrl+N/E/D/, |
-| 搜索防抖 / 结果数 | `searchDebounce`（300ms）/ `maxResults`（6），⚠️ 桌面端暂无 UI 控件 |
+| 搜索防抖 / 结果数 | 桌面端读设置（默认 300ms / 6，设置面板可调）；扩展端固定 300ms 防抖、`maxResults` 默认 6 可调 |
 
 ### 2.3 变量注入 ✅
 
@@ -98,15 +98,17 @@
 
 ### 2.6 设置面板 ✅（双端各有）
 
-主题 / 全局快捷键 / AI 优化快捷键 / 剪贴板优化快捷键（桌面端）；主题 / 结果数（扩展端）；
-透明度 / 失焦隐藏 / 开机自启 / 导入导出（桌面端）；AI 配置双端一致：API Key / 服务地址 / 模型 /
-深度思考开关 / 优化模板（留空=默认，可「填入默认/恢复默认」）/ 测试连接（401/404/429 等分类提示）。
+主题 / 全局快捷键 / AI 优化快捷键 / 剪贴板优化快捷键 / 搜索防抖 / 最大结果数 / 透明度 /
+失焦隐藏 / 开机自启 / 导入导出（桌面端）；主题 / 结果数（扩展端）；AI 配置双端一致：
+API Key / 服务地址 / 模型 / 深度思考开关 / 优化模板（留空=默认，可「填入默认/恢复默认」）/
+测试连接（401/404/429 等分类提示）。
 
 ### 2.7 Chrome 扩展端 ✅
 
 | 功能 | 说明 |
 |------|------|
-| Side Panel | 图标 / 快捷键打开；⚙ 设置入口（AI 配置） |
+| Side Panel | 图标 / 快捷键打开；⚙ 设置 / ❓ 帮助入口；Ctrl+N 新建 |
+| 搜索 | 300ms 防抖；结果按 `maxResults` 截断；Esc 清空搜索（同步输入框） |
 | 页面选区 | content script 捕获选区与可编辑上下文 |
 | 原位替换 | 跨 AI 等待期保持选区边界；替换前校验原文未变 |
 | 消息安全 | `sender.id === chrome.runtime.id` 校验 |
@@ -158,7 +160,6 @@ interface Settings {
   language: string                // 存在但无 UI，默认 "zh-CN"
   windowOpacity: number           // 0.5 ~ 1.0
   windowPosition: Position | null
-  windowSize: Size
   autoHide: boolean
   searchDebounce: number          // 默认 300ms
   maxResults: number              // 默认 6
@@ -177,6 +178,9 @@ interface Settings {
 
 ### Space / Prompt / Variable
 
+反序列化字段级容错（serde default）：半截/缺字段的 `data.json` 逐字段回退默认值，
+不再整体解析失败（详见 Rust 模型 `#[serde(default)]`）。
+
 `Space { id, name, icon, color, order, createdAt, updatedAt }`；
 `Prompt { id, title, content, tags, spaceId, variables, usageCount, lastUsedAt, createdAt, updatedAt }`；
 `Variable { name, type: 'system'|'custom', defaultValue? }`。
@@ -184,7 +188,7 @@ interface Settings {
 
 ---
 
-## 4. API 清单（桌面端 Tauri Commands，23 个）
+## 4. API 清单（桌面端 Tauri Commands，22 个）
 
 | 分组 | 命令 |
 |------|------|
@@ -193,9 +197,9 @@ interface Settings {
 | 剪贴板（2） | `get_wakeup_clipboard` `paste_and_restore` |
 | AI 优化（5） | `optimize_apply_result` `optimize_cancel` `clipboard_optimize_apply_result` `clipboard_optimize_cancel` `ai_debug_log` |
 | 设置（4） | `get_settings` `update_settings` `register_hotkey` `get_hotkey_status` |
-| 窗口（3） | `toggle_window` `hide_window` `show_window` |
+| 窗口（2） | `hide_window` `show_window` |
 
-数据类命令均为 async（脱离主线程执行）；存储经内存缓存，写路径原子化。
+数据类命令均为 async，含磁盘写入/钥匙串访问的命令体经 `spawn_blocking` 在阻塞线程池执行（不占 async worker）；存储经 `Arc` 内存缓存（只读热路径零克隆），写路径原子化。
 
 ---
 
@@ -240,10 +244,8 @@ interface Settings {
 
 | 问题 | 严重度 | 说明 |
 |------|--------|------|
-| `searchDebounce`/`maxResults` 桌面端无 UI 控件 | 低 | 扩展端截断已生效（默认 6，与桌面端一致） |
 | Space 拖拽排序无 UI | 低 | `order` 字段存在 |
 | PromptEditor 无草稿保存 | 低 | 意外关闭丢失编辑 |
-| 扩展端 HelpPanel 未实现 | 低 | uiStore 有 stub 无组件 |
 | 扩展安装提示较宽 | 低 | 键盘触发的页面注入需全域 host 权限，无法用 activeTab 替代（有意取舍） |
 | 桌面端 AI 请求依赖服务端 CORS | 低 | webview 发起；如自建服务（Ollama 等）受限可改走 Rust 侧请求 |
 | 推理模型响应慢 | 低 | 思考计入 60s 超时，长文本可能偏紧 |
@@ -265,7 +267,7 @@ interface Settings {
 ## 8. 版本规划
 
 - **v1.2.0（当前）**：全面复查修复（自启静默、剪贴板恢复时序、并发防护、跨上下文存储原子化等）、AI 优化进度与取消、发布与安全扫描自动化
-- **v1.3 润色**：设置面板补 `searchDebounce`/`maxResults` 控件；扩展 HelpPanel；Space 排序 UI；PromptEditor 草稿
+- **v1.3 润色**：Space 排序 UI；PromptEditor 草稿
 - **v1.5 体验增强**：自动更新 + 签名；提示词收藏/置顶；使用统计；i18n
 - **v2.0 智能化与打通**：双端数据打通（Native Messaging）与 UI 层合并（见 [design.md](design.md)）；优化预览确认 / 流式输出 / 多风格预设；模板市场；云端同步（可选）
 

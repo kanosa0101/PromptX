@@ -89,17 +89,17 @@ const handleDelete = () => {
       </button>
     </div>
 
-    <!-- 标题 -->
+    <!-- 标题与内容摘要：内容经 highlightMatches 转义（shared/search.ts，有 XSS 测试覆盖） -->
+    <!-- eslint-disable vue/no-v-html -->
     <div
       class="font-medium text-sm text-[#1A1A2E] dark:text-[#E4E4E7]"
       v-html="formatTitle(prompt)"
     />
-
-    <!-- 内容摘要 -->
     <div
       class="text-xs text-[#71717A] mt-1 line-clamp-1"
       v-html="formatContent(prompt)"
     />
+    <!-- eslint-enable vue/no-v-html -->
 
     <!-- 标签 + 创建日期 -->
     <div class="flex items-center justify-between gap-2 mt-2">

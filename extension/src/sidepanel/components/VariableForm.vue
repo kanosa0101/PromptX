@@ -6,7 +6,11 @@
       </h3>
 
       <div class="space-y-3">
-        <div v-for="variable in variables" :key="variable.name" class="variable-input">
+        <div
+          v-for="variable in variables"
+          :key="variable.name"
+          class="variable-input"
+        >
           <label class="block text-sm font-medium mb-1">
             {{ variable.name }}
           </label>
@@ -16,15 +20,22 @@
             type="text"
             class="editor-input"
             @keydown.enter="onConfirm"
-          />
+          >
         </div>
       </div>
 
       <div class="flex gap-2 mt-4">
-        <button class="btn btn-secondary flex-1" @click="$emit('cancel')">
+        <button
+          class="btn btn-secondary flex-1"
+          @click="$emit('cancel')"
+        >
           取消
         </button>
-        <button class="btn btn-primary flex-1" :disabled="hasEmptyVariable" @click="onConfirm">
+        <button
+          class="btn btn-primary flex-1"
+          :disabled="hasEmptyVariable"
+          @click="onConfirm"
+        >
           确认输出
         </button>
       </div>

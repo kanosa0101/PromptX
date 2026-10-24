@@ -1,7 +1,6 @@
 //! 变量解析与替换工具
 
 use crate::models::{VarType, Variable};
-use chrono::Local;
 use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -38,42 +37,6 @@ pub fn parse_variables(content: &str) -> Vec<Variable> {
     variables
 }
 
-/// 替换变量为实际值
-#[allow(dead_code)]
-pub fn replace_variables(content: &str, values: HashMap<String, String>) -> String {
-    let mut result = content.to_string();
-
-    for (name, value) in values {
-        result = result.replace(&format!("{{{{{}}}}}", name), &value);
-    }
-
-    result
-}
-
-/// 获取系统变量的值
-#[allow(dead_code)]
-pub fn get_system_variable_value(name: &str, clipboard: Option<&str>) -> String {
-    match name {
-        "clipboard" => clipboard.unwrap_or("").to_string(),
-        "date" => Local::now().format("%Y-%m-%d").to_string(),
-        "time" => Local::now().format("%H:%M:%S").to_string(),
-        "timestamp" => Local::now().timestamp().to_string(),
-        _ => String::new(),
-    }
-}
-
-/// 获取所有系统变量的值
-#[allow(dead_code)]
-pub fn get_all_system_variables(clipboard: Option<&str>) -> HashMap<String, String> {
-    let mut values = HashMap::new();
-
-    for var in SYSTEM_VARIABLES {
-        values.insert(var.to_string(), get_system_variable_value(var, clipboard));
-    }
-
-    values
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -94,14 +57,6 @@ mod tests {
         assert_eq!(vars.len(), 1);
         assert_eq!(vars[0].name, "目标语言");
         assert_eq!(vars[0].var_type, VarType::Custom);
-    }
-
-    #[test]
-    fn test_replace_variables() {
-        let content = "解释 {{clipboard}}";
-        let values = HashMap::from([("clipboard".to_string(), "test code".to_string())]);
-        let result = replace_variables(content, values);
-        assert_eq!(result, "解释 test code");
     }
 
     #[test]
@@ -151,14 +106,4 @@ mod tests {
         assert_eq!(vars[1].name, "한국어");
     }
 
-    #[test]
-    fn test_replace_multiple_variables() {
-        let content = "{{greeting}} {{target}}";
-        let values = HashMap::from([
-            ("greeting".to_string(), "Hello".to_string()),
-            ("target".to_string(), "World".to_string()),
-        ]);
-        let result = replace_variables(content, values);
-        assert_eq!(result, "Hello World");
-    }
 }

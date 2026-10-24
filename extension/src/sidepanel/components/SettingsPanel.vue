@@ -1,7 +1,9 @@
 <template>
   <div class="settings-panel p-4 bg-white dark:bg-[#1A1A2E]">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">设置</h3>
+      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+        设置
+      </h3>
       <button
         class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
         @click="$emit('close')"
@@ -18,9 +20,15 @@
         class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
         @change="saveTheme"
       >
-        <option value="light">亮色</option>
-        <option value="dark">暗色</option>
-        <option value="system">跟随系统</option>
+        <option value="light">
+          亮色
+        </option>
+        <option value="dark">
+          暗色
+        </option>
+        <option value="system">
+          跟随系统
+        </option>
       </select>
     </div>
 
@@ -34,13 +42,15 @@
         max="50"
         class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent w-16 text-[#1A1A2E] dark:text-[#E4E4E7]"
         @change="saveSettings"
-      />
+      >
     </div>
 
     <!-- AI 优化设置 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
       <div class="flex items-center justify-between mb-2">
-        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">AI 快捷优化</h4>
+        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          AI 快捷优化
+        </h4>
         <button
           class="px-3 py-1 rounded text-xs border border-[#E4E4E7] dark:border-[#27272A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
           :disabled="isTestingAi"
@@ -58,7 +68,7 @@
           placeholder="sk-..."
           class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
           @blur="saveSettings"
-        />
+        >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
@@ -69,7 +79,7 @@
           placeholder="https://api.deepseek.com"
           class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
           @blur="saveSettings"
-        />
+        >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
@@ -80,7 +90,7 @@
           placeholder="deepseek-flash"
           class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
           @blur="saveSettings"
-        />
+        >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
@@ -91,7 +101,7 @@
             type="checkbox"
             class="w-4 h-4"
             @change="saveSettings"
-          />
+          >
           深度思考（更慢）
         </label>
       </div>
@@ -120,7 +130,7 @@
           placeholder="留空使用内置默认优化模板"
           class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
           @blur="saveSettings"
-        ></textarea>
+        />
       </div>
 
       <p class="text-xs text-[#71717A] leading-relaxed">
@@ -145,15 +155,22 @@
         </button>
       </div>
       <!-- 状态提示 -->
-      <div v-if="statusMessage" class="text-xs text-[#71717A] mb-2 text-center">
+      <div
+        v-if="statusMessage"
+        class="text-xs text-[#71717A] mb-2 text-center"
+      >
         {{ statusMessage }}
       </div>
     </div>
 
     <!-- 关于 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4 text-center">
-      <p class="text-xs text-[#71717A]">PromptX 浏览器插件 v{{ appVersion }}</p>
-      <p class="text-xs text-[#71717A] mt-1">AI 提示词剪贴板管理工具</p>
+      <p class="text-xs text-[#71717A]">
+        PromptX 浏览器插件 v{{ appVersion }}
+      </p>
+      <p class="text-xs text-[#71717A] mt-1">
+        AI 提示词剪贴板管理工具
+      </p>
     </div>
   </div>
 </template>

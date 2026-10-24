@@ -64,13 +64,21 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     /**
-     * 从存储刷新数据（其他上下文写入后由 onChanged 触发，保持两端视图一致）
+     * 从存储刷新数据（其他上下文写入后由 onChanged 触发，保持两端视图一致）。
+     * onChanged 对本上下文自己的写入同样触发：内容无变化时跳过替换，
+     * 避免数组引用变化导致 Fuse/拼音索引缓存全部失效重建
      */
     async refreshFromStorage() {
       const data = await loadAppData()
+      this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
+      if (
+        JSON.stringify(data.prompts) === JSON.stringify(this.prompts) &&
+        JSON.stringify(data.spaces) === JSON.stringify(this.spaces)
+      ) {
+        return
+      }
       this.spaces = data.spaces
       this.prompts = data.prompts
-      this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
     },
 
     /**

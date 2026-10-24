@@ -4,23 +4,43 @@
     <div class="search-bar">
       <input
         ref="searchInputRef"
-        v-model="searchQuery"
+        v-model="localQuery"
         type="text"
         placeholder="搜索提示词 (支持拼音)..."
         class="search-input"
         @input="onSearchInput"
-      />
+      >
       <div class="flex gap-2 mt-2">
-        <button class="btn btn-secondary text-xs" @click="openEditor">
+        <button
+          class="btn btn-secondary text-xs"
+          @click="openEditor"
+        >
           + 新建
         </button>
-        <button class="btn btn-secondary text-xs" @click="openSpaceEditor">
+        <button
+          class="btn btn-secondary text-xs"
+          @click="openSpaceEditor"
+        >
           + 空间
         </button>
-        <button class="btn btn-secondary text-xs" @click="refreshSelection">
+        <button
+          class="btn btn-secondary text-xs"
+          @click="refreshSelection"
+        >
           🔄 刷新选区
         </button>
-        <button class="btn btn-secondary text-xs ml-auto" @click="openSettingsPanel" title="设置（AI 配置）">
+        <button
+          class="btn btn-secondary text-xs ml-auto"
+          title="使用说明"
+          @click="openHelpPanel"
+        >
+          ❓ 帮助
+        </button>
+        <button
+          class="btn btn-secondary text-xs"
+          title="设置（AI 配置）"
+          @click="openSettingsPanel"
+        >
           ⚙ 设置
         </button>
       </div>
@@ -39,7 +59,10 @@
     </div>
 
     <!-- 选中文本提示 -->
-    <div v-if="pageSelection" class="p-2 mx-2 bg-blue-50 dark:bg-blue-900/30 rounded text-sm">
+    <div
+      v-if="pageSelection"
+      class="p-2 mx-2 bg-blue-50 dark:bg-blue-900/30 rounded text-sm"
+    >
       <span class="text-gray-500">当前选区:</span>
       <span class="text-blue-600 dark:text-blue-300 ml-1">{{ truncate(pageSelection, 50) }}</span>
     </div>
@@ -48,13 +71,15 @@
     <div class="result-list">
       <template v-if="isLoading">
         <div class="loading">
-          <div class="spinner"></div>
+          <div class="spinner" />
         </div>
       </template>
       <template v-else-if="filteredPrompts.length === 0">
         <div class="empty-state">
           <p>暂无匹配结果</p>
-          <p class="text-xs mt-2">按 Ctrl+N 创建新提示词</p>
+          <p class="text-xs mt-2">
+            按 Ctrl+N 创建新提示词
+          </p>
         </div>
       </template>
       <template v-else>
@@ -64,17 +89,31 @@
           :class="['prompt-item', { selected: index === selectedIndex }]"
           @click="selectPrompt(index)"
         >
-          <div class="prompt-title" v-html="highlightMatches(prompt.title, prompt.matches?.filter(m => m.key === 'title'))">
-          </div>
-          <div class="prompt-content" v-html="highlightMatches(truncate(prompt.content, 60), prompt.matches?.filter(m => m.key === 'content'))">
-          </div>
+          <!-- 内容经 highlightMatches 转义（shared/search.ts，有 XSS 测试覆盖） -->
+          <!-- eslint-disable vue/no-v-html -->
+          <div
+            class="prompt-title"
+            v-html="highlightMatches(prompt.title, prompt.matches?.filter(m => m.key === 'title'))"
+          />
+          <div
+            class="prompt-content"
+            v-html="highlightMatches(truncate(prompt.content, 60), prompt.matches?.filter(m => m.key === 'content'))"
+          />
+          <!-- eslint-enable vue/no-v-html -->
           <div class="flex items-center justify-between gap-2">
             <div class="prompt-tags min-w-0">
-              <span v-for="tag in prompt.tags" :key="tag" class="tag">
+              <span
+                v-for="tag in prompt.tags"
+                :key="tag"
+                class="tag"
+              >
                 {{ tag }}
               </span>
             </div>
-            <span class="shrink-0 text-xs text-gray-400 dark:text-gray-500" :title="'创建于 ' + prompt.createdAt">
+            <span
+              class="shrink-0 text-xs text-gray-400 dark:text-gray-500"
+              :title="'创建于 ' + prompt.createdAt"
+            >
               {{ formatDate(prompt.createdAt) }}
             </span>
           </div>
@@ -88,10 +127,16 @@
     </div>
 
     <!-- 输出状态提示 -->
-    <div v-if="outputStatus === 'success'" class="output-success">
+    <div
+      v-if="outputStatus === 'success'"
+      class="output-success"
+    >
       ✅ 已输出到页面
     </div>
-    <div v-if="outputStatus === 'clipboard'" class="output-clipboard">
+    <div
+      v-if="outputStatus === 'clipboard'"
+      class="output-clipboard"
+    >
       📋 已复制到剪贴板，请按 Ctrl+V 粘贴
     </div>
 
@@ -125,6 +170,12 @@
       @close="onSettingsClose"
     />
 
+    <!-- 使用说明 -->
+    <HelpPanel
+      v-if="showHelp"
+      @close="onHelpClose"
+    />
+
     <!-- 确认对话框 -->
     <ConfirmDialog
       v-if="showConfirmDialog"
@@ -133,7 +184,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { usePromptStore } from './stores/promptStore'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
@@ -144,14 +195,37 @@ import VariableForm from './components/VariableForm.vue'
 import PromptEditor from './components/PromptEditor.vue'
 import SpaceEditor from './components/SpaceEditor.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
+import HelpPanel from './components/HelpPanel.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 
 const promptStore = usePromptStore()
 const uiStore = useUiStore()
 
 const searchInputRef = ref<HTMLInputElement>()
-const searchQuery = ref('')
 const outputStatus = ref<'success' | 'clipboard' | null>(null)
+
+// 搜索输入：本地值防抖后推入 store（与桌面端行为一致，避免每键全量搜索）
+const SEARCH_DEBOUNCE_MS = 300
+const localQuery = ref('')
+let searchDebounceTimer: number | undefined
+
+const onSearchInput = () => {
+  window.clearTimeout(searchDebounceTimer)
+  searchDebounceTimer = window.setTimeout(() => {
+    promptStore.setSearchQuery(localQuery.value)
+  }, SEARCH_DEBOUNCE_MS)
+}
+
+// store 中的查询被外部清空（Esc 重置搜索）时同步回输入框，避免两者失协
+watch(
+  () => promptStore.searchQuery,
+  (q) => {
+    if (q !== localQuery.value) {
+      window.clearTimeout(searchDebounceTimer)
+      localQuery.value = q
+    }
+  }
+)
 
 // 从 store 获取数据
 const spaces = computed(() => promptStore.spaces)
@@ -171,15 +245,11 @@ const showEditor = computed(() => uiStore.showEditor)
 const editingPrompt = computed(() => uiStore.editingPrompt)
 const showSpaceEditor = computed(() => uiStore.showSpaceEditor)
 const showSettings = computed(() => uiStore.showSettings)
+const showHelp = computed(() => uiStore.showHelp)
 const showConfirmDialog = computed(() => uiStore.showConfirmDialog)
 
 // 键盘导航
 useKeyboardNavigation()
-
-// 搜索处理
-const onSearchInput = () => {
-  promptStore.setSearchQuery(searchQuery.value)
-}
 
 // 空间选择
 const selectSpace = (spaceId: string) => {
@@ -209,6 +279,16 @@ const openSpaceEditor = () => {
 // 打开设置面板（AI 配置、主题、导入导出）
 const openSettingsPanel = () => {
   uiStore.openSettings()
+}
+
+// 打开使用说明
+const openHelpPanel = () => {
+  uiStore.openHelp()
+}
+
+// 关闭使用说明
+const onHelpClose = () => {
+  uiStore.closeHelp()
 }
 
 // 编辑器保存
@@ -261,6 +341,12 @@ const onVariableCancel = () => {
 }
 
 // 初始化
+const onStorageChanged = (changes: Record<string, unknown>, area: string) => {
+  if (area === 'local' && changes[STORAGE_KEY]) {
+    promptStore.refreshFromStorage()
+  }
+}
+
 onMounted(async () => {
   // 打开侧边栏时立即应用已保存的主题（否则每次重开都是亮色）
   await applyStoredTheme()
@@ -271,11 +357,15 @@ onMounted(async () => {
   await promptStore.loadData()
   searchInputRef.value?.focus()
   // 其他上下文（如 background 写入 AI 优化历史）改动存储时刷新列表
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes[STORAGE_KEY]) {
-      promptStore.refreshFromStorage()
-    }
-  })
+  chrome.storage.onChanged.addListener(onStorageChanged)
+})
+
+onUnmounted(() => {
+  window.clearTimeout(searchDebounceTimer)
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .removeEventListener('change', applyStoredTheme)
+  chrome.storage.onChanged.removeListener(onStorageChanged)
 })
 
 // 读取存储中的主题设置并应用（system 模式跟随系统当前值）

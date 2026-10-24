@@ -33,6 +33,23 @@ const launchAtLogin = computed({
   get: () => settingsStore.launchAtLogin,
   set: (v: boolean) => { settingsStore.setLaunchAtLogin(v) }
 })
+const searchDebounce = computed(() => settingsStore.searchDebounce)
+const maxResults = computed(() => settingsStore.maxResults)
+
+// 数值输入在 change 时提交（避免每键一次全量保存），并把越界值钳回范围内
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+const commitNumber = (e: Event, lo: number, hi: number, fallback: number): number => {
+  const input = e.target as HTMLInputElement
+  const v = clamp(Number(input.value) || fallback, lo, hi)
+  input.value = String(v)
+  return v
+}
+const onDebounceChange = (e: Event) => {
+  settingsStore.updateSettings({ searchDebounce: commitNumber(e, 100, 1000, 300) })
+}
+const onMaxResultsChange = (e: Event) => {
+  settingsStore.updateSettings({ maxResults: commitNumber(e, 3, 20, 6) })
+}
 
 // 状态提示（本面板与 AI 设置区块共用）
 const importStatus = ref<string | null>(null)
@@ -219,6 +236,34 @@ onUnmounted(() => {
           {{ opt.label }}
         </option>
       </select>
+    </div>
+
+    <!-- 搜索防抖 -->
+    <div class="setting-item flex items-center justify-between py-2">
+      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">搜索防抖 (ms)</span>
+      <input
+        :value="searchDebounce"
+        type="number"
+        min="100"
+        max="1000"
+        step="50"
+        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent w-20 text-[#1A1A2E] dark:text-[#E4E4E7]"
+        @change="onDebounceChange"
+      >
+    </div>
+
+    <!-- 最大结果数 -->
+    <div class="setting-item flex items-center justify-between py-2">
+      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">最大结果数</span>
+      <input
+        :value="maxResults"
+        type="number"
+        min="3"
+        max="20"
+        step="1"
+        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent w-20 text-[#1A1A2E] dark:text-[#E4E4E7]"
+        @change="onMaxResultsChange"
+      >
     </div>
 
     <!-- 快捷键设置 -->
