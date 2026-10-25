@@ -238,12 +238,56 @@ const stats = computed(() => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleHotkeyCapture)
-  loadAppVersion()
+  loadAppVersionAndNm()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleHotkeyCapture)
 })
+
+// ===== 浏览器扩展同步（Native Messaging） =====
+const nmEnabled = ref(false)
+const nmRegistered = ref(false)
+const nmExtensionId = ref('')
+const nmIdInput = ref('')
+const nmBusy = ref(false)
+
+const loadNmStatus = async () => {
+  try {
+    const status = await invoke<{ enabled: boolean; extensionId: string; registered: boolean }>('get_nm_status')
+    nmEnabled.value = status.enabled
+    nmRegistered.value = status.registered
+    nmExtensionId.value = status.extensionId
+    nmIdInput.value = status.extensionId
+  } catch {
+    // 查询失败不打扰
+  }
+}
+
+const toggleNmSync = async () => {
+  nmBusy.value = true
+  try {
+    const status = await invoke<{ enabled: boolean; extensionId: string; registered: boolean }>(
+      'set_nm_sync',
+      { enabled: !nmEnabled.value, extensionId: nmIdInput.value },
+    )
+    nmEnabled.value = status.enabled
+    nmRegistered.value = status.registered
+    nmExtensionId.value = status.extensionId
+    importStatus.value = status.enabled
+      ? t('nm.registered')
+      : t('common.save')
+  } catch (error) {
+    importStatus.value = t('nm.applyFailed', { error: error instanceof Error ? error.message : String(error) })
+  } finally {
+    nmBusy.value = false
+  }
+}
+
+const loadAppVersionAndNm = async () => {
+  await loadAppVersion()
+  await loadNmStatus()
+}
 
 // ===== 软件更新 =====
 const appVersion = ref('')
@@ -529,6 +573,35 @@ const downloadAndInstall = async () => {
         >
           {{ updaterState === 'checking' ? t('settings.updater.checking') : t('settings.updater.check') }}
         </button>
+      </div>
+    </div>
+
+    <!-- 浏览器扩展同步 -->
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-1">
+        {{ t('nm.title') }}
+      </h4>
+      <p class="text-xs text-muted mb-2">
+        {{ t('nm.hint') }}
+      </p>
+      <div class="flex items-center gap-2 mb-2">
+        <input
+          v-model="nmIdInput"
+          type="text"
+          :disabled="nmEnabled"
+          :placeholder="t('nm.extensionIdPlaceholder')"
+          class="flex-1 px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark font-mono disabled:opacity-60"
+        >
+        <button
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-primary text-white hover:bg-primary-hover disabled:opacity-50"
+          :disabled="nmBusy || (!nmEnabled && nmIdInput.trim().length !== 32)"
+          @click="toggleNmSync"
+        >
+          {{ nmEnabled ? t('common.cancel') : t('nm.enable') }}
+        </button>
+      </div>
+      <div class="text-xs text-muted">
+        {{ nmRegistered ? t('nm.registered') : t('nm.notRegistered') }}
       </div>
     </div>
 

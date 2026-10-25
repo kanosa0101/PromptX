@@ -248,6 +248,7 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePromptStore } from './stores/promptStore'
+import { onNmDataChanged } from '@/lib/nm'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
 import { STORAGE_KEY, loadAppData } from '@/lib/storage'
@@ -490,6 +491,8 @@ const onPreviewCancel = () => {
   uiStore.closeOptimizePreview()
 }
 
+let nmUnlisten: (() => void) | undefined
+
 // background 的 AI 优化进度 / 预览推送（Side Panel 打开时才有接收方）
 const onRuntimeMessage = (message: { action?: string; text?: string; mode?: 'selection' | 'clipboard' }) => {
   switch (message.action) {
@@ -530,11 +533,15 @@ onMounted(async () => {
   // 长连接端口：background 据此判断 Side Panel 是否打开（预览确认仅此时可用）
   chrome.runtime.connect({ name: 'promptx-sidepanel' })
   chrome.runtime.onMessage.addListener(onRuntimeMessage)
+  // 桌面端数据变更推送（NM 连接期间）→ 静默刷新列表
+  nmUnlisten = onNmDataChanged(() => void promptStore.refreshFromStorage())
 })
+
 
 onUnmounted(() => {
   window.clearTimeout(searchDebounceTimer)
   chrome.runtime.onMessage.removeListener(onRuntimeMessage)
+  nmUnlisten?.()
   window
     .matchMedia('(prefers-color-scheme: dark)')
     .removeEventListener('change', applyStoredTheme)

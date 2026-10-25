@@ -26,6 +26,22 @@ export interface Prompt {
   favorite?: boolean
 }
 
+// 导入结果（双端一致的导入返回）
+export interface ImportResult {
+  importedPrompts: number
+  importedSpaces: number
+  skipped: number
+  conflicts: string[]
+}
+
+// 创建提示词输入（双端一致的创建载荷）
+export interface PromptInput {
+  title: string
+  content: string
+  tags: string[]
+  spaceId: string
+}
+
 // 命名空间模型
 export interface Space {
   id: string

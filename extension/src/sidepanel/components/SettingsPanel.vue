@@ -191,6 +191,46 @@
       </p>
     </div>
 
+    <!-- 桌面端同步 -->
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-1">
+        {{ t('nm.extTitle') }}
+      </h4>
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span
+          class="text-xs"
+          :class="nmConnected ? 'text-green-600 dark:text-green-400' : 'text-muted'"
+        >
+          {{ nmConnected ? t('nm.extConnected') : t('nm.extOffline') }}
+        </span>
+        <button
+          class="shrink-0 px-3 py-1 rounded text-xs bg-primary text-white hover:bg-primary-hover"
+          @click="nmConnected ? disconnectDesktop() : connectDesktop()"
+        >
+          {{ nmConnected ? t('nm.extDisconnect') : t('nm.extConnect') }}
+        </button>
+      </div>
+      <div class="flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <div class="text-xs text-muted">
+            {{ t('nm.extIdLabel') }}
+          </div>
+          <div class="text-xs font-mono truncate text-foreground dark:text-foreground-dark">
+            {{ extensionId }}
+          </div>
+        </div>
+        <button
+          class="shrink-0 px-2 py-1 rounded text-xs border border-surface dark:border-surface-dark hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
+          @click="copyExtensionId"
+        >
+          {{ copyState ? t('nm.copied') : t('nm.copy') }}
+        </button>
+      </div>
+      <p class="text-xs text-muted mt-2 leading-relaxed">
+        {{ t('nm.extHint') }}
+      </p>
+    </div>
+
     <!-- 使用统计 -->
     <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
@@ -292,15 +332,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
-import { loadAppData, mutateAppData, saveAppData } from '@/lib/storage'
+import { loadLocalAppData, loadAppData, mutateAppData, saveAppData } from '@/lib/storage'
 import { applyTheme, type ThemeSetting } from '@/lib/theme'
 import { setLocale } from '../i18n'
+import { isNmConnected, nmConnect, nmDisconnect, onNmStatusChanged } from '@/lib/nm'
+import { mergeLocalOnlyIntoDesktop } from '@/lib/storage'
 import { testAiConnection } from '@/lib/ai'
 import { DEFAULT_SETTINGS, DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
 import { OPTIMIZE_PRESETS } from '@shared/optimizePresets'
+
+onUnmounted(() => {
+  unsubscribeNm()
+})
 
 defineEmits<{
   close: []
@@ -338,6 +384,44 @@ const language = ref('system')
 const maxResults = ref(DEFAULT_SETTINGS.maxResults)
 const statusMessage = ref<string | null>(null)
 
+// 桌面端同步（Native Messaging）
+const nmConnected = ref(isNmConnected())
+const copyState = ref(false)
+const extensionId = chrome.runtime.id
+
+const unsubscribeNm = onNmStatusChanged((connected) => {
+  nmConnected.value = connected
+})
+
+const connectDesktop = async () => {
+  statusMessage.value = t('nm.extTitle') + '...'
+  const ok = await nmConnect()
+  if (ok) {
+    await mergeLocalOnlyIntoDesktop()
+    await promptStore.loadData()
+    statusMessage.value = t('nm.extConnected')
+  } else {
+    statusMessage.value = t('nm.extOffline')
+  }
+  setTimeout(() => statusMessage.value = null, 3000)
+}
+
+const disconnectDesktop = () => {
+  nmDisconnect()
+  statusMessage.value = t('nm.extOffline')
+  setTimeout(() => statusMessage.value = null, 3000)
+}
+
+const copyExtensionId = async () => {
+  try {
+    await navigator.clipboard.writeText(extensionId)
+    copyState.value = true
+    setTimeout(() => copyState.value = false, 2000)
+  } catch {
+    // 剪贴板不可用
+  }
+}
+
 // AI 优化设置（本地编辑，失焦保存）
 const aiBaseUrl = ref(DEFAULT_SETTINGS.aiBaseUrl)
 const aiApiKey = ref('')
@@ -348,7 +432,8 @@ const optimizePreview = ref(false)
 const isTestingAi = ref(false)
 
 onMounted(async () => {
-  const data = await loadAppData()
+  // 连接尝试放在面板打开时（用户主动操作路径），状态仍由后台连接事件驱动
+  const data = await loadLocalAppData()
   theme.value = data.settings?.theme || 'system'
   language.value = data.settings?.language || 'system'
   maxResults.value = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults

@@ -71,6 +71,11 @@ export const usePromptStore = defineStore('prompt', {
      * onChanged 对本上下文自己的写入同样触发：内容无变化时跳过替换，
      * 避免数组引用变化导致 Fuse/拼音索引缓存全部失效重建
      */
+    /** 桌面端数据变更推送（NM dataChanged）→ 静默刷新 */
+    async refreshFromNmChange() {
+      await this.refreshFromStorage()
+    },
+
     async refreshFromStorage() {
       const data = await loadAppData()
       this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults

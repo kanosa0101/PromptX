@@ -89,6 +89,12 @@ pub struct Settings {
     /// 优化结果预览确认：开启后优化完成先展示结果，用户确认后再替换
     #[serde(rename = "optimizePreview", default)]
     pub optimize_preview: bool,
+    /// 浏览器扩展数据同步（Native Messaging）：是否已启用注册
+    #[serde(rename = "nmEnabled", default)]
+    pub nm_enabled: bool,
+    /// 绑定的浏览器扩展 ID（chrome-extension://<ID>/）
+    #[serde(rename = "extensionId", default)]
+    pub extension_id: String,
 }
 
 impl Default for Settings {
@@ -111,6 +117,8 @@ impl Default for Settings {
             optimize_thinking: false,
             clipboard_optimize_hotkey: "Ctrl+Shift+B".to_string(),
             optimize_preview: false,
+            nm_enabled: false,
+            extension_id: String::new(),
         }
     }
 }

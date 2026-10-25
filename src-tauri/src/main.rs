@@ -5,6 +5,8 @@
 
 mod commands;
 mod models;
+mod nm_host;
+mod nm_registry;
 mod services;
 mod utils;
 
@@ -26,6 +28,12 @@ pub struct AppState {
 pub static HOTKEY_STATUS: Mutex<Vec<(String, String, bool)>> = Mutex::new(Vec::new());
 
 fn main() {
+    // Native Messaging host 模式：浏览器按注册清单拉起（--nm-host 参数），
+    // 纯 stdio 服务，不初始化窗口/插件/单实例（不与主实例冲突）
+    if std::env::args().any(|a| a == "--nm-host") {
+        std::process::exit(nm_host::run());
+    }
+
     tauri::Builder::default()
         // 单实例保护：重复启动时唤起已有实例的窗口并退出新进程，
         // 避免多个实例抢占全局快捷键（否则快捷键会静默失效）
@@ -160,6 +168,9 @@ fn main() {
             // 窗口
             commands::window::hide_window,
             commands::window::show_window,
+            // 浏览器扩展同步（Native Messaging）
+            commands::nm::get_nm_status,
+            commands::nm::set_nm_sync,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

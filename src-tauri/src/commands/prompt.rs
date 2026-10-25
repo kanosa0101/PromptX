@@ -1,6 +1,7 @@
 //! 提示词管理命令
 
 use crate::models::{AppData, Prompt, PromptInput, PromptUpdate};
+use crate::services::storage::StorageService;
 use crate::AppState;
 use chrono::Utc;
 use tauri::State;
@@ -14,6 +15,34 @@ pub async fn get_app_data(state: State<'_, AppState>) -> Result<AppData, String>
 }
 
 /// 创建提示词
+/// 创建提示词核心（Tauri 命令与 NM host 共用；调用方持有存储锁）
+pub fn create_prompt_core(
+    storage: &StorageService,
+    prompt: &PromptInput,
+) -> Result<Prompt, String> {
+    let mut data = storage.load().map_err(|e| e.to_string())?;
+
+    let now = Utc::now();
+    let content = prompt.content.clone();
+    let new_prompt = Prompt {
+        id: Uuid::new_v4().to_string(),
+        title: prompt.title.clone(),
+        content,
+        tags: prompt.tags.clone(),
+        space_id: prompt.space_id.clone(),
+        variables: crate::utils::variable::parse_variables(&prompt.content),
+        usage_count: 0,
+        last_used_at: None,
+        created_at: now,
+        updated_at: now,
+        favorite: false,
+    };
+
+    data.prompts.push(new_prompt.clone());
+    storage.save(data).map_err(|e| e.to_string())?;
+    Ok(new_prompt)
+}
+
 #[tauri::command]
 pub async fn create_prompt(
     prompt: PromptInput,
@@ -23,34 +52,51 @@ pub async fn create_prompt(
     let storage = state.storage.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let storage = storage.write();
-        let mut data = storage.load().map_err(|e| e.to_string())?;
-
-        let now = Utc::now();
-        let content = prompt.content.clone();
-        let new_prompt = Prompt {
-            id: Uuid::new_v4().to_string(),
-            title: prompt.title,
-            content,
-            tags: prompt.tags,
-            space_id: prompt.space_id,
-            variables: crate::utils::variable::parse_variables(&prompt.content),
-            usage_count: 0,
-            last_used_at: None,
-            created_at: now,
-            updated_at: now,
-            favorite: false,
-        };
-
-        data.prompts.push(new_prompt.clone());
-        storage.save(data).map_err(|e| e.to_string())?;
-
-        Ok(new_prompt)
+        create_prompt_core(&storage, &prompt)
     })
     .await
     .map_err(|e| e.to_string())?
 }
 
 /// 更新提示词
+/// 更新提示词核心（Tauri 命令与 NM host 共用）
+pub fn update_prompt_core(
+    storage: &StorageService,
+    id: &str,
+    updates: &PromptUpdate,
+) -> Result<Prompt, String> {
+    let mut data = storage.load().map_err(|e| e.to_string())?;
+    let index = data.prompts.iter().position(|p| p.id == id);
+    if let Some(i) = index {
+        let prompt = &mut data.prompts[i];
+        let now = Utc::now();
+
+        if let Some(title) = &updates.title {
+            prompt.title = title.clone();
+        }
+        if let Some(content) = &updates.content {
+            prompt.content = content.clone();
+            prompt.variables = crate::utils::variable::parse_variables(content);
+        }
+        if let Some(tags) = &updates.tags {
+            prompt.tags = tags.clone();
+        }
+        if let Some(space_id) = &updates.space_id {
+            prompt.space_id = space_id.clone();
+        }
+        if let Some(favorite) = updates.favorite {
+            prompt.favorite = favorite;
+        }
+        prompt.updated_at = now;
+
+        let updated = prompt.clone();
+        storage.save(data).map_err(|e| e.to_string())?;
+        Ok(updated)
+    } else {
+        Err("Prompt not found".to_string())
+    }
+}
+
 #[tauri::command]
 pub async fn update_prompt(
     id: String,
@@ -60,57 +106,30 @@ pub async fn update_prompt(
     let storage = state.storage.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let storage = storage.write();
-        let mut data = storage.load().map_err(|e| e.to_string())?;
-
-        let index = data.prompts.iter().position(|p| p.id == id);
-        if let Some(i) = index {
-            let prompt = &mut data.prompts[i];
-            let now = Utc::now();
-
-            if let Some(title) = updates.title {
-                prompt.title = title;
-            }
-            if let Some(content) = updates.content {
-                prompt.content = content.clone();
-                prompt.variables = crate::utils::variable::parse_variables(&content);
-            }
-            if let Some(tags) = updates.tags {
-                prompt.tags = tags;
-            }
-            if let Some(space_id) = updates.space_id {
-                prompt.space_id = space_id;
-            }
-            if let Some(favorite) = updates.favorite {
-                prompt.favorite = favorite;
-            }
-            prompt.updated_at = now;
-
-            let updated = prompt.clone();
-            storage.save(data).map_err(|e| e.to_string())?;
-            Ok(updated)
-        } else {
-            Err("Prompt not found".to_string())
-        }
+        update_prompt_core(&storage, &id, &updates)
     })
     .await
     .map_err(|e| e.to_string())?
 }
 
 /// 删除提示词
+/// 删除提示词核心（Tauri 命令与 NM host 共用）
+pub fn delete_prompt_core(storage: &StorageService, id: &str) -> Result<(), String> {
+    let mut data = storage.load().map_err(|e| e.to_string())?;
+    let before_len = data.prompts.len();
+    data.prompts.retain(|p| p.id != id);
+    if data.prompts.len() < before_len {
+        storage.save(data).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn delete_prompt(id: String, state: State<'_, AppState>) -> Result<(), String> {
     let storage = state.storage.clone();
     tauri::async_runtime::spawn_blocking(move || {
         let storage = storage.write();
-        let mut data = storage.load().map_err(|e| e.to_string())?;
-
-        let before_len = data.prompts.len();
-        data.prompts.retain(|p| p.id != id);
-        if data.prompts.len() < before_len {
-            storage.save(data).map_err(|e| e.to_string())?;
-        }
-
-        Ok(())
+        delete_prompt_core(&storage, &id)
     })
     .await
     .map_err(|e| e.to_string())?

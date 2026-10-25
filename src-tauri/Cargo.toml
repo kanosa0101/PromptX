@@ -26,11 +26,15 @@ thiserror = "1"
 regex = "1"
 enigo = "0.3"
 tokio = { version = "1", features = ["time"] }
+# 跨进程文件锁：Native Messaging host 与主进程串行化 data.json 读改写
+fs4 = "0.12"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }
 # API Key 安全存储：Windows 凭据管理器
 keyring = "3"
+# Native Messaging 主机注册表写入（HKCU）
+winreg = "0.56"
 
 [features]
 default = ["custom-protocol"]

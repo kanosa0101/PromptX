@@ -44,21 +44,11 @@ export interface HotkeyStatus {
   ok: boolean
 }
 
-// 导入结果
-export interface ImportResult {
-  importedPrompts: number
-  importedSpaces: number
-  skipped: number
-  conflicts: string[]
-}
+// 导入结果（单源在 shared/types.ts）
+export type { ImportResult } from '@shared/types'
 
-// 创建提示词输入
-export interface PromptInput {
-  title: string
-  content: string
-  tags: string[]
-  spaceId: string
-}
+// 创建提示词输入（单源在 shared/types.ts）
+export type { PromptInput } from '@shared/types'
 
 // 默认设置
 export const DEFAULT_SETTINGS: Settings = {

@@ -24,7 +24,8 @@
     "activeTab",
     "sidePanel",
     "notifications",
-    "clipboardWrite"
+    "clipboardWrite",
+    "nativeMessaging"
   ],
   "host_permissions": [
     "http://*/*",
@@ -55,8 +56,12 @@
   },
   "content_scripts": [
     {
-      "js": ["content.js"],
-      "matches": ["<all_urls>"]
+      "js": [
+        "content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
     }
   ],
   "background": {

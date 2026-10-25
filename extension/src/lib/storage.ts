@@ -1,16 +1,22 @@
 /**
  * chrome.storage 封装
+ *
+ * 存储后端：NM（Native Messaging）未连接时完全本地；连接期间 spaces/prompts
+ * 以桌面端为数据源（读经 NM、写经 replaceAll 回桌面），本地存储持续保存
+ * 一份镜像作为离线回退；settings 两种模式都只存本浏览器。
  */
 
 import type { ExtensionAppData } from '@/types'
 import { DEFAULT_APP_DATA, DEFAULT_SETTINGS } from '@/types'
+import type { Prompt, Space } from '@shared/types'
+import { isNmConnected, nmRequest } from './nm'
 
 export const STORAGE_KEY = 'promptx_data'
 
 /**
- * 加载应用数据
+ * 加载本地存储数据（设置 + 离线镜像）
  */
-export async function loadAppData(): Promise<ExtensionAppData> {
+export async function loadLocalAppData(): Promise<ExtensionAppData> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEY)
     if (result[STORAGE_KEY]) {
@@ -21,6 +27,59 @@ export async function loadAppData(): Promise<ExtensionAppData> {
     return DEFAULT_APP_DATA
   } catch {
     return DEFAULT_APP_DATA
+  }
+}
+
+/**
+ * 加载应用数据：NM 连接期间 spaces/prompts 取桌面端（失败回退本地镜像），
+ * settings 恒为本地
+ */
+export async function loadAppData(): Promise<ExtensionAppData> {
+  const local = await loadLocalAppData()
+  if (!isNmConnected()) return local
+  try {
+    const response = await nmRequest<{ data: { spaces?: Space[]; prompts?: Prompt[] } }>('getAppData')
+    return {
+      ...local,
+      spaces: response.data.spaces || [],
+      prompts: response.data.prompts || [],
+    }
+  } catch {
+    return local
+  }
+}
+
+/** NM 写路径：整组回写桌面端，并把合并结果镜像到本地（离线回退用） */
+async function replaceAllViaNm(spaces: Space[], prompts: Prompt[]): Promise<void> {
+  await nmRequest('replaceAll', { spaces, prompts })
+}
+
+/**
+ * 连接建立后的一次性合并：本地镜像中桌面端没有的提示词补录到桌面端
+ * （按内容新开条目；空间缺失时归入默认空间）
+ */
+export async function mergeLocalOnlyIntoDesktop(): Promise<void> {
+  if (!isNmConnected()) return
+  try {
+    const [local, remote] = await Promise.all([
+      loadLocalAppData(),
+      nmRequest<{ data: { spaces?: Space[]; prompts?: Prompt[] } }>('getAppData'),
+    ])
+    const remoteSpaceIds = new Set((remote.data.spaces || []).map((s) => s.id))
+    const remotePromptIds = new Set((remote.data.prompts || []).map((p) => p.id))
+    for (const prompt of local.prompts) {
+      if (remotePromptIds.has(prompt.id)) continue
+      await nmRequest('createPrompt', {
+        prompt: {
+          title: prompt.title,
+          content: prompt.content,
+          tags: prompt.tags,
+          spaceId: remoteSpaceIds.has(prompt.spaceId) ? prompt.spaceId : 'space_default',
+        },
+      })
+    }
+  } catch {
+    // 合并失败不阻断连接使用
   }
 }
 
@@ -40,7 +99,17 @@ export function enqueueWrite<T>(task: () => Promise<T>): Promise<T> {
 }
 
 export async function saveAppData(data: ExtensionAppData): Promise<void> {
-  await enqueueWrite(() => chrome.storage.local.set({ [STORAGE_KEY]: data }))
+  await enqueueWrite(async () => {
+    // NM 连接期间导入等整体写入同样同步桌面端（失败不影响本地）
+    if (isNmConnected()) {
+      try {
+        await replaceAllViaNm(data.spaces || [], data.prompts || [])
+      } catch {
+        // 本地仍写入，桌面端下次连接时经一次性合并补齐
+      }
+    }
+    await chrome.storage.local.set({ [STORAGE_KEY]: data })
+  })
 }
 
 /**
@@ -63,8 +132,31 @@ async function withStorageLock<T>(task: () => Promise<T>): Promise<T> {
 export function mutateAppData<T>(mutate: (data: ExtensionAppData) => T | Promise<T>): Promise<T> {
   return enqueueWrite(() =>
     withStorageLock(async () => {
-      const data = await loadAppData()
+      const local = await loadLocalAppData()
+      let data = local
+      let viaNm = false
+      if (isNmConnected()) {
+        try {
+          const remote = await nmRequest<{ data: { spaces?: Space[]; prompts?: Prompt[] } }>('getAppData')
+          data = {
+            ...local,
+            spaces: remote.data.spaces || [],
+            prompts: remote.data.prompts || [],
+          }
+          viaNm = true
+        } catch {
+          // NM 瞬时故障：退回本地读改写
+        }
+      }
       const result = await mutate(data)
+      if (viaNm) {
+        try {
+          await replaceAllViaNm(data.spaces || [], data.prompts || [])
+        } catch {
+          // 桌面端写失败：本地镜像仍更新，断线期间继续可用
+        }
+      }
+      // 本地始终保存合并结果（离线回退 + 下次连接的一次性合并基准）
       await chrome.storage.local.set({ [STORAGE_KEY]: data })
       return result
     }),

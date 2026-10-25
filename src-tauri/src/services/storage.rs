@@ -16,15 +16,25 @@ pub enum StorageError {
     Json(#[from] serde_json::Error),
 }
 
+/// 缓存条目：数据快照 + 建立缓存时的文件 mtime。
+/// Native Messaging host 等其他进程会直接写 data.json，
+/// mtime 变化即视为缓存失效需要重新读盘（本进程自己的写会同步更新两者）
+struct CacheEntry {
+    data: Arc<AppData>,
+    mtime: Option<std::time::SystemTime>,
+}
+
 /// 存储服务
 pub struct StorageService {
+    data_dir: PathBuf,
     data_path: PathBuf,
     backup_path: PathBuf,
     temp_path: PathBuf,
+    lock_path: PathBuf,
     /// 内存缓存：命中时免去磁盘读取与 JSON 解析。
     /// 所有读写都经过 AppState 上的 RwLock，缓存与磁盘始终一致。
     /// 存 Arc 共享快照：只读热路径（失焦检查、位置恢复）拿引用即可，免整份克隆
-    cache: parking_lot::Mutex<Option<Arc<AppData>>>,
+    cache: parking_lot::Mutex<Option<CacheEntry>>,
 }
 
 impl StorageService {
@@ -34,22 +44,57 @@ impl StorageService {
             .path()
             .app_data_dir()
             .expect("Failed to get app data directory");
+        Self::new_at_dir(data_dir)
+    }
 
+    /// 按数据目录构造（Native Messaging host 进程无 tauri App，走这条路径）
+    pub fn new_at_dir(data_dir: PathBuf) -> Self {
         // 确保目录存在
         if !data_dir.exists() {
             fs::create_dir_all(&data_dir).expect("Failed to create data directory");
         }
 
-        let data_path = data_dir.join("data.json");
-        let backup_path = data_dir.join("data.json.backup");
-        let temp_path = data_dir.join("data.json.tmp");
-
         Self {
-            data_path,
-            backup_path,
-            temp_path,
+            data_dir: data_dir.clone(),
+            data_path: data_dir.join("data.json"),
+            backup_path: data_dir.join("data.json.backup"),
+            temp_path: data_dir.join("data.json.tmp"),
+            lock_path: data_dir.join("data.json.lock"),
             cache: parking_lot::Mutex::new(None),
         }
+    }
+
+    /// 跨进程互斥锁：NM host 与主进程是两个进程，各自的内存锁互相不可见，
+    /// 用锁文件把「读取-修改-写入」整体串行化。进程退出时 OS 自动释放
+    fn with_file_lock<T>(
+        &self,
+        f: impl FnOnce() -> Result<T, StorageError>,
+    ) -> Result<T, StorageError> {
+        use fs4::fs_std::FileExt;
+        let lock_file = fs::OpenOptions::new()
+            .create(true)
+            .truncate(false)
+            .write(true)
+            .open(&self.lock_path)?;
+        lock_file.lock_exclusive().map_err(StorageError::Io)?;
+        let result = f();
+        let _ = lock_file.unlock();
+        result
+    }
+
+    /// 应用数据目录（NM 注册清单写入位置等）
+    pub fn data_path(&self) -> &std::path::Path {
+        &self.data_path
+    }
+
+    pub fn data_dir(&self) -> &std::path::Path {
+        &self.data_dir
+    }
+
+    fn file_mtime(&self) -> Option<std::time::SystemTime> {
+        fs::metadata(&self.data_path)
+            .and_then(|m| m.modified())
+            .ok()
     }
 
     /// 加载应用数据（优先内存缓存；需要可写副本时使用）
@@ -60,22 +105,38 @@ impl StorageService {
     /// 加载应用数据（优先内存缓存）：返回共享快照，只读热路径用，
     /// 避免每次热键唤醒/失焦检查都整份克隆全部提示词
     pub fn load_arc(&self) -> Result<Arc<AppData>, StorageError> {
-        if let Some(cached) = self.cache.lock().clone() {
-            return Ok(cached);
+        let mtime = self.file_mtime();
+        {
+            let cache = self.cache.lock();
+            if let Some(entry) = cache.as_ref() {
+                // mtime 一致 → 缓存有效；文件不存在（被删）→ 维持缓存（历史语义）
+                if entry.mtime == mtime || mtime.is_none() {
+                    return Ok(entry.data.clone());
+                }
+            }
         }
 
         let data = self.load_from_disk()?;
         let arc = Arc::new(data);
-        *self.cache.lock() = Some(arc.clone());
+        *self.cache.lock() = Some(CacheEntry {
+            data: arc.clone(),
+            mtime: self.file_mtime(),
+        });
         Ok(arc)
     }
 
-    /// 从磁盘加载（含损坏恢复与默认数据回退）；调用方负责填充缓存
+    /// 从磁盘加载（含损坏恢复与默认数据回退）；调用方负责填充缓存。
+    /// 全程持跨进程文件锁：恢复路径包含写入，须与 NM host 的写互斥
     fn load_from_disk(&self) -> Result<AppData, StorageError> {
+        self.with_file_lock(|| self.load_from_disk_locked())
+    }
+
+    fn load_from_disk_locked(&self) -> Result<AppData, StorageError> {
         if !self.data_path.exists() {
-            // 创建默认数据
+            // 创建默认数据。注意用无锁保存：本函数已持文件锁，
+            // save() 会再次加锁导致同进程死锁
             let default_data = AppData::default();
-            self.save(default_data.clone())?;
+            self.save_without_backup(default_data.clone())?;
             return Ok(default_data);
         }
 
@@ -134,8 +195,13 @@ impl StorageService {
         quarantine(&self.backup_path);
     }
 
-    /// 保存应用数据（先轮转备份，再原子写入主文件）
+    /// 保存应用数据（先轮转备份，再原子写入主文件）。
+    /// 全程持跨进程文件锁：备份轮转的读-写与 NM host 的读改写互斥
     pub fn save(&self, data: AppData) -> Result<(), StorageError> {
+        self.with_file_lock(|| self.save_locked(data))
+    }
+
+    fn save_locked(&self, data: AppData) -> Result<(), StorageError> {
         // 备份旧数据（同样走临时文件+重命名，避免崩溃留下半截备份）
         if self.data_path.exists() {
             let old_content = fs::read_to_string(&self.data_path)?;
@@ -151,8 +217,9 @@ impl StorageService {
 
     /// 恢复/重建场景专用保存：跳过备份轮转。
     /// 主文件已损坏时若照常轮转，会把坏内容覆盖到唯一完好的备份上；
-    /// 一旦本次主文件写入再失败，下次启动将主备皆坏、只能重置默认数据
-    pub fn save_without_backup(&self, data: AppData) -> Result<(), StorageError> {
+    /// 一旦本次主文件写入再失败，下次启动将主备皆坏、只能重置默认数据。
+    /// 仅在 load_from_disk_locked（已持文件锁）内调用，自身不加锁
+    fn save_without_backup(&self, data: AppData) -> Result<(), StorageError> {
         self.write_atomic(data)
     }
 
@@ -172,7 +239,10 @@ impl StorageService {
         // Windows 下如果目标文件存在，rename 会覆盖
         match fs::rename(&self.temp_path, &self.data_path) {
             Ok(()) => {
-                *self.cache.lock() = Some(Arc::new(data));
+                *self.cache.lock() = Some(CacheEntry {
+                    data: Arc::new(data),
+                    mtime: self.file_mtime(),
+                });
                 Ok(())
             }
             Err(e) => {
@@ -182,7 +252,10 @@ impl StorageService {
                 file.write_all(content.as_bytes())?;
                 file.sync_all()?; // 与主路径一致：确保数据落盘
                 let _ = fs::remove_file(&self.temp_path); // 清理临时文件
-                *self.cache.lock() = Some(Arc::new(data));
+                *self.cache.lock() = Some(CacheEntry {
+                    data: Arc::new(data),
+                    mtime: self.file_mtime(),
+                });
                 Ok(())
             }
         }
@@ -195,12 +268,7 @@ mod tests {
     use std::io::Write as IoWrite;
 
     fn make_service(dir: &std::path::Path) -> StorageService {
-        StorageService {
-            data_path: dir.join("data.json"),
-            backup_path: dir.join("data.json.backup"),
-            temp_path: dir.join("data.json.tmp"),
-            cache: parking_lot::Mutex::new(None),
-        }
+        StorageService::new_at_dir(dir.to_path_buf())
     }
 
     #[test]
@@ -280,6 +348,35 @@ mod tests {
             serde_json::from_str(&fs::read_to_string(&data_path).unwrap()).unwrap();
         assert_eq!(loaded.version, data.version);
         assert_eq!(loaded.settings.global_hotkey, data.settings.global_hotkey);
+    }
+
+    /// 其他进程直接改写 data.json（Native Messaging host 场景）：
+    /// mtime 变化必须使缓存失效，读到最新磁盘内容
+    #[test]
+    fn test_external_write_invalidates_cache() {
+        let dir = tempfile::tempdir().unwrap();
+        let svc = make_service(dir.path());
+        let _ = svc.load().unwrap(); // 建立缓存与默认文件
+
+        let data = AppData {
+            version: "7.7.7".to_string(),
+            ..Default::default()
+        };
+        std::fs::write(
+            dir.path().join("data.json"),
+            serde_json::to_string(&data).unwrap(),
+        )
+        .unwrap();
+        // 显式改 mtime，规避与缓存建立时刻同粒度的问题
+        let f = std::fs::File::options()
+            .write(true)
+            .open(dir.path().join("data.json"))
+            .unwrap();
+        f.set_modified(std::time::SystemTime::now() + std::time::Duration::from_secs(3600))
+            .unwrap();
+        drop(f);
+
+        assert_eq!(svc.load().unwrap().version, "7.7.7");
     }
 
     #[test]
