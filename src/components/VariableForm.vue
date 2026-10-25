@@ -1,11 +1,9 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { computed } from 'vue'
+import SharedVariableForm from '@shared/ui/components/VariableForm.vue'
 import type { Prompt } from '@/types'
 
 defineOptions({ name: 'VariableForm' })
-
-const { t } = useI18n()
 
 const props = defineProps<{
   prompt: Prompt | null
@@ -16,91 +14,21 @@ const emit = defineEmits<{
   cancel: []
 }>()
 
-// 自定义变量列表
+// 自定义变量列表（展示与填写逻辑在共享组件）
 const customVariables = computed(() =>
   props.prompt?.variables.filter((v) => v.type === 'custom') || []
 )
-
-// 变量值
-const values = ref<Record<string, string>>({})
-
-// 初始化默认值
-watch(() => props.prompt, (prompt) => {
-  if (prompt) {
-    values.value = {}
-    prompt.variables.forEach((v) => {
-      if (v.defaultValue) {
-        values.value[v.name] = v.defaultValue
-      }
-    })
-  }
-}, { immediate: true })
-
-// 检查是否有空的自定义变量
-const hasEmptyVariable = computed(() =>
-  customVariables.value.some((v) => !values.value[v.name]?.trim())
-)
-
-// 确认
-const handleConfirm = () => {
-  emit('confirm', values.value)
-}
-
-// 取消
-const handleCancel = () => {
-  emit('cancel')
-}
 </script>
 
 <template>
   <div
     v-if="prompt"
-    class="variable-form p-4 bg-background-light dark:bg-background-dark"
+    class="contents"
   >
-    <h3 class="text-base font-medium mb-4">
-      {{ t('variableForm.title') }}
-    </h3>
-
-    <!-- 变量输入 -->
-    <div
-      v-for="variable in customVariables"
-      :key="variable.name"
-      class="variable-input mb-4"
-    >
-      <label class="block text-sm font-medium mb-2">
-        {{ variable.name }}
-      </label>
-      <input
-        v-model="values[variable.name]"
-        :placeholder="variable.defaultValue"
-        type="text"
-        class="w-full px-3 py-2 rounded border border-surface-light dark:border-surface-dark bg-transparent focus:outline-none focus:border-primary"
-      >
-    </div>
-
-    <!-- 系统变量提示 -->
-    <div class="text-xs text-muted mb-4">
-      {{ t('variableForm.hint') }}
-      <span class="text-primary">
-        {{ prompt.variables.filter(v => v.type === 'system').map(v => v.name).join(', ') }}
-      </span>
-    </div>
-
-    <!-- 操作按钮 -->
-    <div class="flex justify-end gap-2">
-      <button
-        class="btn btn-secondary"
-        @click="handleCancel"
-      >
-        {{ t('common.cancel') }}
-      </button>
-      <button
-        class="btn btn-primary"
-        :disabled="hasEmptyVariable"
-        @click="handleConfirm"
-      >
-        {{ t('variableForm.confirmOutput') }}
-      </button>
-    </div>
+    <SharedVariableForm
+      :variables="customVariables"
+      @confirm="(values) => emit('confirm', values)"
+      @cancel="emit('cancel')"
+    />
   </div>
 </template>
