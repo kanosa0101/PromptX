@@ -223,6 +223,7 @@ fn spawn_change_watcher(
 
 /// NM host 主循环（main 中 `--nm-host` 分支调用）
 pub fn run() -> i32 {
+    eprintln!("PromptX NM host 启动: {}", NM_HOST_NAME);
     let storage = StorageService::new_at_dir(nm_data_dir());
     let stdout = Arc::new(Mutex::new(std::io::stdout()));
     let _watcher = spawn_change_watcher(&storage, stdout.clone());
