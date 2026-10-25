@@ -18,6 +18,8 @@ import HelpPanel from '@/components/HelpPanel.vue'
 import SpaceEditor from '@/components/SpaceEditor.vue'
 import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
 import OptimizePreviewPanel from '@shared/ui/components/OptimizePreviewPanel.vue'
+import TemplateMarketPanel from '@shared/ui/components/TemplateMarketPanel.vue'
+import type { MarketTemplate } from '@shared/templateMarket'
 import { clearDraft } from '@shared/draft'
 import { check as checkForAppUpdate } from '@tauri-apps/plugin-updater'
 
@@ -41,6 +43,23 @@ const handleSavePrompt = async (prompt: Prompt) => {
   } catch (error) {
     console.error('Failed to save prompt:', error)
     // 保持编辑器打开并提示，避免失败看起来像“保存按钮没反应”
+    uiStore.showSystemNotice(t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
+  }
+}
+
+// 模板库导入：以当前空间为目标创建提示词
+const handleMarketImport = async (template: MarketTemplate) => {
+  try {
+    await promptStore.createPrompt({
+      title: template.title,
+      content: template.content,
+      tags: template.tags,
+      spaceId: promptStore.currentSpaceId,
+    })
+    uiStore.closeTemplateMarket()
+    uiStore.showAiNotice(t('market.imported', { title: template.title }))
+    window.setTimeout(() => uiStore.clearAiNotice(), 3000)
+  } catch (error) {
     uiStore.showSystemNotice(t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   }
 }
@@ -74,7 +93,7 @@ const handlePreviewCancel = () => {
 // 处理键盘事件
 const handleKeyDown = async (e: KeyboardEvent) => {
   // 如果在弹窗状态，不处理导航键；Escape 逐层关闭（否则是键盘陷阱）
-  if (uiStore.showSettings || uiStore.showPromptEditor || uiStore.showVariableForm || uiStore.showHelp || uiStore.showSpaceEditor || uiStore.showConfirmDialog) {
+  if (uiStore.showSettings || uiStore.showPromptEditor || uiStore.showVariableForm || uiStore.showHelp || uiStore.showTemplateMarket || uiStore.showSpaceEditor || uiStore.showConfirmDialog) {
     if (e.key === 'Escape') {
       e.preventDefault()
       if (uiStore.showConfirmDialog) {
@@ -89,6 +108,8 @@ const handleKeyDown = async (e: KeyboardEvent) => {
         uiStore.hideSettings()
       } else if (uiStore.showHelp) {
         uiStore.closeHelp()
+      } else if (uiStore.showTemplateMarket) {
+        uiStore.closeTemplateMarket()
       }
     }
     return
@@ -301,7 +322,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 主界面 -->
-    <div v-if="!uiStore.showSettings && !uiStore.showPromptEditor && !uiStore.showVariableForm && !uiStore.showHelp && !uiStore.showSpaceEditor">
+    <div v-if="!uiStore.showSettings && !uiStore.showPromptEditor && !uiStore.showVariableForm && !uiStore.showHelp && !uiStore.showTemplateMarket && !uiStore.showSpaceEditor">
       <SearchBar />
       <SpaceTabs />
       <ResultList />
@@ -319,6 +340,13 @@ onUnmounted(() => {
     <HelpPanel
       v-if="uiStore.showHelp"
       @close="uiStore.closeHelp"
+    />
+
+    <!-- 模板库面板 -->
+    <TemplateMarketPanel
+      v-if="uiStore.showTemplateMarket"
+      @close="uiStore.closeTemplateMarket"
+      @import="handleMarketImport"
     />
 
     <!-- 变量表单 -->

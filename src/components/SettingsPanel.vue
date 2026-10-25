@@ -159,6 +159,12 @@ const showHelp = () => {
   uiStore.openHelp()
 }
 
+// 打开模板库
+const openTemplateMarket = () => {
+  emit('close')
+  uiStore.openTemplateMarket()
+}
+
 // 导出数据
 const handleExport = async () => {
   try {
@@ -549,12 +555,20 @@ const downloadAndInstall = async () => {
       >
         {{ importStatus }}
       </div>
-      <button
-        class="w-full px-3 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
-        @click="showHelp"
-      >
-        {{ t('common.help') }}
-      </button>
+      <div class="flex gap-2">
+        <button
+          class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
+          @click="openTemplateMarket"
+        >
+          {{ t('market.title') }}
+        </button>
+        <button
+          class="flex-1 px-3 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
+          @click="showHelp"
+        >
+          {{ t('common.help') }}
+        </button>
+      </div>
     </div>
   </div>
 </template>

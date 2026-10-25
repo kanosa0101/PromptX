@@ -7,6 +7,7 @@ export const useUiStore = defineStore('ui', {
     showPromptEditor: false,
     showVariableForm: false,
     showHelp: false,
+    showTemplateMarket: false,
     showSpaceEditor: false,
     showConfirmDialog: false,
     confirmDialogMessage: '',
@@ -124,6 +125,14 @@ export const useUiStore = defineStore('ui', {
 
     toggleHelp() {
       this.showHelp = !this.showHelp
+    },
+
+    openTemplateMarket() {
+      this.showTemplateMarket = true
+    },
+
+    closeTemplateMarket() {
+      this.showTemplateMarket = false
     },
 
     openSpaceEditor(space?: Space) {

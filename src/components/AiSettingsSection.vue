@@ -8,6 +8,7 @@ import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { testAiConnection } from '@/services/ai'
 import { DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
+import { OPTIMIZE_PRESETS } from '@shared/optimizePresets'
 import HotkeyRow from './HotkeyRow.vue'
 
 const props = defineProps<{
@@ -53,6 +54,17 @@ const resetTemplate = () => {
 // 把内置默认模板填入编辑框，便于在其基础上自定义（失焦后才保存）
 const fillDefaultTemplate = () => {
   optimizeTemplate.value = DEFAULT_OPTIMIZE_TEMPLATE
+}
+
+// 风格预设：选择即填入对应模板并立即保存（custom = 保留当前内容不动）
+const presetOptions = [{ id: 'custom', nameKey: 'presets.custom' }, ...OPTIMIZE_PRESETS]
+const selectedPreset = ref('custom')
+
+const applyPreset = () => {
+  const preset = OPTIMIZE_PRESETS.find((p) => p.id === selectedPreset.value)
+  if (!preset) return
+  optimizeTemplate.value = preset.template
+  saveAiField('optimizeTemplate', preset.template)
 }
 
 // 切换推理模式（即时保存）
@@ -170,6 +182,23 @@ const handleTestAi = async () => {
         class="w-4 h-4"
         @change="togglePreview"
       >
+    </div>
+
+    <div class="setting-item flex items-center justify-between py-1.5" :title="t('presets.hint')">
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('presets.label') }}</span>
+      <select
+        v-model="selectedPreset"
+        class="px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark"
+        @change="applyPreset"
+      >
+        <option
+          v-for="opt in presetOptions"
+          :key="opt.id"
+          :value="opt.id"
+        >
+          {{ t(opt.nameKey) }}
+        </option>
+      </select>
     </div>
 
     <div class="py-1.5">

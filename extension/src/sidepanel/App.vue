@@ -31,6 +31,13 @@
         </button>
         <button
           class="btn btn-secondary text-xs ml-auto"
+          :title="t('market.title')"
+          @click="openTemplateMarket"
+        >
+          📚
+        </button>
+        <button
+          class="btn btn-secondary text-xs"
           :title="t('help.title')"
           @click="openHelpPanel"
         >
@@ -223,6 +230,13 @@
       @close="onHelpClose"
     />
 
+    <!-- 模板库 -->
+    <TemplateMarketPanel
+      v-if="showTemplateMarket"
+      @close="uiStore.closeTemplateMarket"
+      @import="onMarketImport"
+    />
+
     <!-- 确认对话框 -->
     <ConfirmDialog
       v-if="showConfirmDialog"
@@ -248,6 +262,8 @@ import SettingsPanel from './components/SettingsPanel.vue'
 import HelpPanel from './components/HelpPanel.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
 import OptimizePreviewPanel from '@shared/ui/components/OptimizePreviewPanel.vue'
+import TemplateMarketPanel from '@shared/ui/components/TemplateMarketPanel.vue'
+import type { MarketTemplate } from '@shared/templateMarket'
 
 const promptStore = usePromptStore()
 const uiStore = useUiStore()
@@ -341,6 +357,7 @@ const editingPrompt = computed(() => uiStore.editingPrompt)
 const showSpaceEditor = computed(() => uiStore.showSpaceEditor)
 const showSettings = computed(() => uiStore.showSettings)
 const showHelp = computed(() => uiStore.showHelp)
+const showTemplateMarket = computed(() => uiStore.showTemplateMarket)
 const showConfirmDialog = computed(() => uiStore.showConfirmDialog)
 const aiOptimizing = computed(() => uiStore.aiOptimizing)
 const aiStreamText = computed(() => uiStore.aiStreamText)
@@ -382,6 +399,27 @@ const openSettingsPanel = () => {
 // 打开使用说明
 const openHelpPanel = () => {
   uiStore.openHelp()
+}
+
+// 打开模板库
+const openTemplateMarket = () => {
+  uiStore.openTemplateMarket()
+}
+
+// 模板库导入：以当前空间为目标创建提示词
+const onMarketImport = async (template: MarketTemplate) => {
+  try {
+    await promptStore.createPrompt({
+      title: template.title,
+      content: template.content,
+      tags: template.tags,
+      spaceId: promptStore.currentSpaceId,
+    })
+    uiStore.closeTemplateMarket()
+    outputStatus.value = null
+  } catch (error) {
+    console.error('Failed to import template:', error)
+  }
 }
 
 // 关闭使用说明

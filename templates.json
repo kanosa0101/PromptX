@@ -1,0 +1,160 @@
+{
+  "version": 1,
+  "updated": "2026-10-25",
+  "categories": [
+    {
+      "id": "dev",
+      "name": "开发",
+      "nameEn": "Development",
+      "templates": [
+        {
+          "id": "dev-code-explain",
+          "title": "代码解释",
+          "titleEn": "Code Explainer",
+          "description": "逐段解释代码的功能、逻辑与设计意图",
+          "descriptionEn": "Explain code functionality, logic and design intent step by step",
+          "content": "请解释以下代码：先一句话概括整体用途，再按逻辑分块说明关键实现，最后指出潜在问题或可改进之处。保留代码中的术语原文。\n\n```\n{{clipboard}}\n```",
+          "tags": ["开发", "代码"]
+        },
+        {
+          "id": "dev-code-review",
+          "title": "代码审查",
+          "titleEn": "Code Review",
+          "description": "按严重级别逐条列出问题与修改建议",
+          "descriptionEn": "List issues and fixes by severity",
+          "content": "请对以下代码做审查：按「严重 / 建议 / 风格」三级逐条列出问题（位置、影响、修改建议），没有问题的级别直接省略；最后给一句总体结论。只基于代码本身，不臆测未给出的上下文。\n\n```\n{{clipboard}}\n```",
+          "tags": ["开发", "审查"]
+        },
+        {
+          "id": "dev-debug",
+          "title": "报错诊断",
+          "titleEn": "Error Diagnosis",
+          "description": "根据报错与代码定位根因并给出修复",
+          "descriptionEn": "Locate root cause from the error and code, then fix it",
+          "content": "以下是报错信息与相关代码。请先依据报错内容定位根因并说明证据，再给出最小改动的修复方案（不重构无关部分）；若信息不足，列出还需要哪些信息。\n\n报错：\n{{clipboard}}\n\n相关代码：\n【粘贴代码】",
+          "tags": ["开发", "调试"]
+        },
+        {
+          "id": "dev-commit",
+          "title": "提交信息生成",
+          "titleEn": "Commit Message",
+          "description": "把改动说明转成规范的 Conventional Commit",
+          "descriptionEn": "Turn change notes into a conventional commit message",
+          "content": "请把以下改动说明改写为 Conventional Commits 规范的提交信息：类型（feat/fix/refactor/docs/test/chore）+ 一行摘要（50 字符内）+ 必要的正文分点。只输出提交信息本身。\n\n{{clipboard}}",
+          "tags": ["开发", "效率"]
+        }
+      ]
+    },
+    {
+      "id": "writing",
+      "name": "写作",
+      "nameEn": "Writing",
+      "templates": [
+        {
+          "id": "writing-polish",
+          "title": "文章润色",
+          "titleEn": "Polish",
+          "description": "提升表达的专业性与流畅度，不改变原意",
+          "descriptionEn": "Improve professionalism and flow without changing meaning",
+          "content": "请润色以下文字，使其更专业、清晰、简洁：保留原意与语气，修正语病与冗余，优化句式衔接；改动较大处用一句话说明理由。\n\n{{clipboard}}",
+          "tags": ["写作"]
+        },
+        {
+          "id": "writing-translate",
+          "title": "中英互译",
+          "titleEn": "Translate ZH↔EN",
+          "description": "通顺自然的双向翻译，术语一致",
+          "descriptionEn": "Natural bidirectional translation with consistent terminology",
+          "content": "请将以下内容在中文与英文之间互译（自动判断方向）：译文通顺自然、符合目标语言习惯，术语前后一致，代码、专有名词与格式保留原文。\n\n{{clipboard}}",
+          "tags": ["写作", "翻译"]
+        },
+        {
+          "id": "writing-summary",
+          "title": "要点总结",
+          "titleEn": "Summarize",
+          "description": "分层提炼要点与行动项",
+          "descriptionEn": "Distill key points and action items",
+          "content": "请总结以下内容：先用 1-2 句话概括主旨，再分条列出关键要点，最后单独列出「需要我做的事」（如没有则省略）。保持原文语言。\n\n{{clipboard}}",
+          "tags": ["写作", "总结"]
+        },
+        {
+          "id": "writing-email",
+          "title": "邮件改写",
+          "titleEn": "Email Rewrite",
+          "description": "按目标语气重写邮件",
+          "descriptionEn": "Rewrite an email in the target tone",
+          "content": "请把以下邮件改写为{{语气}}的语气：保留全部事实信息与诉求，结构清晰（背景/请求/期限），礼貌但不啰嗦。\n\n{{clipboard}}",
+          "tags": ["写作", "职场"]
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "name": "科研",
+      "nameEn": "Research",
+      "templates": [
+        {
+          "id": "research-review",
+          "title": "论文审稿意见",
+          "titleEn": "Paper Review",
+          "description": "按标准审稿结构组织意见",
+          "descriptionEn": "Structured peer review comments",
+          "content": "请以审稿人身份阅读以下内容并输出审稿意见：总体评价（含推荐等级）、主要问题（有效性/新颖性/实验设计）、次要问题（表述/图表）、给作者的具体修改建议。区分事实与推断，不确定处明说。\n\n{{clipboard}}",
+          "tags": ["科研", "审稿"]
+        },
+        {
+          "id": "research-related",
+          "title": "相关工作梳理",
+          "titleEn": "Related Work",
+          "description": "把文献笔记整理成相关工作段落",
+          "descriptionEn": "Turn reading notes into a related-work section",
+          "content": "请把以下文献笔记整理为「相关工作」段落：按主题（而非逐篇）组织，说明每类方法的核心思路、与我工作的差异与联系；禁止编造文献内容，笔记未覆盖的方面标注【待补充】。\n\n我的研究主题：【填写】\n\n文献笔记：\n{{clipboard}}",
+          "tags": ["科研", "论文"]
+        },
+        {
+          "id": "research-rebuttal",
+          "title": "审稿回复",
+          "titleEn": "Rebuttal",
+          "description": "逐条回应审稿意见",
+          "descriptionEn": "Respond to reviewer comments point by point",
+          "content": "请根据审稿意见与我的回应要点，撰写礼貌、有理有据的审稿回复：逐条回应（先复述意见要点再回应），可同意的部分明确接受并说明修改，不同意的部分给出依据；不夸大实验结果。\n\n审稿意见：\n{{clipboard}}\n\n我的回应要点：【填写】",
+          "tags": ["科研", "审稿"]
+        }
+      ]
+    },
+    {
+      "id": "productivity",
+      "name": "效率",
+      "nameEn": "Productivity",
+      "templates": [
+        {
+          "id": "prod-task-breakdown",
+          "title": "任务拆解",
+          "titleEn": "Task Breakdown",
+          "description": "把模糊目标拆成可执行步骤",
+          "descriptionEn": "Break a vague goal into actionable steps",
+          "content": "请把以下目标拆解为可执行的任务清单：按「先做什么」排序，每步一个动作、可验证完成；标注哪些步骤有依赖关系、哪些可以并行；识别最容易卡住的环节并给应对建议。\n\n{{clipboard}}",
+          "tags": ["效率", "规划"]
+        },
+        {
+          "id": "prod-meeting-notes",
+          "title": "会议纪要",
+          "titleEn": "Meeting Notes",
+          "description": "把速记整理成结构化纪要",
+          "descriptionEn": "Turn raw notes into structured minutes",
+          "content": "请把以下会议速记整理为结构化纪要：结论先行，然后分「决议 / 待办（负责人+期限）/ 遗留问题」三部分；口语与重复内容去除，不确定的归属标注【待确认】。\n\n{{clipboard}}",
+          "tags": ["效率", "职场"]
+        },
+        {
+          "id": "prod-explain-5",
+          "title": "五岁解释法",
+          "titleEn": "Explain Like I'm 5",
+          "description": "用最通俗的比喻解释复杂概念",
+          "descriptionEn": "Explain complex ideas with simple analogies",
+          "content": "请用「给完全外行解释」的方式说明以下概念：先用一个生活化比喻概括本质，再分 3 点展开，最后说明常见误解。避免术语，必须用的术语随即用一句话解释。\n\n{{clipboard}}",
+          "tags": ["效率", "学习"]
+        }
+      ]
+    }
+  ]
+}

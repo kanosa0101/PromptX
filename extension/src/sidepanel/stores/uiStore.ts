@@ -14,6 +14,7 @@ export const useUiStore = defineStore('ui', {
     editingPrompt: null as Prompt | null,
     showSettings: false,
     showHelp: false,
+    showTemplateMarket: false,
     showSpaceEditor: false,
     showConfirmDialog: false,
     confirmDialogTitle: '' as string,
@@ -87,6 +88,20 @@ export const useUiStore = defineStore('ui', {
      */
     closeHelp() {
       this.showHelp = false
+    },
+
+    /**
+     * 打开模板库
+     */
+    openTemplateMarket() {
+      this.showTemplateMarket = true
+    },
+
+    /**
+     * 关闭模板库
+     */
+    closeTemplateMarket() {
+      this.showTemplateMarket = false
     },
 
     /**

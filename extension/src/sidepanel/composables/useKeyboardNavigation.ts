@@ -11,11 +11,19 @@ export function useKeyboardNavigation() {
   const uiStore = useUiStore()
 
   const handleKeyDown = (e: KeyboardEvent) => {
-    // 帮助面板打开时：Esc 关闭，其余按键不处理
+    // 帮助/模板库面板打开时：Esc 关闭，其余按键不处理
     if (uiStore.showHelp) {
       if (e.key === 'Escape') {
         e.preventDefault()
         uiStore.closeHelp()
+      }
+      return
+    }
+
+    if (uiStore.showTemplateMarket) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        uiStore.closeTemplateMarket()
       }
       return
     }
@@ -27,6 +35,7 @@ export function useKeyboardNavigation() {
       uiStore.showSpaceEditor ||
       uiStore.showSettings ||
       uiStore.showHelp ||
+      uiStore.showTemplateMarket ||
       uiStore.showConfirmDialog
     ) {
       return
