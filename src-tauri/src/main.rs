@@ -42,6 +42,10 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
         ))
+        // 自动更新：检查/下载/安装由前端触发（设置面板 + 启动后台检查）
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        // 更新安装完成后重启应用
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // 初始化应用状态（必须在注册快捷键之前）
             let storage = Arc::new(RwLock::new(StorageService::new(app)));
@@ -138,6 +142,7 @@ fn main() {
             commands::space::create_space,
             commands::space::update_space,
             commands::space::delete_space,
+            commands::space::reorder_spaces,
             // 剪贴板
             commands::clipboard::get_wakeup_clipboard,
             commands::clipboard::paste_and_restore,

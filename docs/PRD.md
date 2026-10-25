@@ -1,8 +1,8 @@
 # 产品需求文档（PRD）：PromptX
 
-**文档版本**: v4.0（三版合并版）
-**对齐应用版本**: v1.2.0（2026-10-24）
-**文档历史**: v1.0 初版规划（2026-05-15）→ v2.0 MVP 总结（2026-05-16）→ v3.x 实态对齐（2026-06 ~ 09）→ v4.0 合并为单份文档并对齐 v1.2.0
+**文档版本**: v4.1（三版合并版）
+**对齐应用版本**: v1.3.0（2026-10-25）
+**文档历史**: v1.0 初版规划（2026-05-15）→ v2.0 MVP 总结（2026-05-16）→ v3.x 实态对齐（2026-06 ~ 09）→ v4.0 合并为单份文档并对齐 v1.2.0 → v4.1 对齐 v1.3.0
 
 > 本文是产品唯一 PRD：既有规划（用户/价值/边界）也有实态对齐（功能/数据/API 均经代码验证）。
 > 历史版本（PRD v1.0 / 2.0 / 3.x）已并入本文，不再单独保留。
@@ -13,7 +13,7 @@
 
 ### 1.1 定位
 
-**PromptX** —— 轻量级 AI 提示词管理工具：键盘优先、极速唤醒、变量注入、AI 快捷优化、纯本地存储。桌面端（Windows）+ Chrome 扩展双形态，共享同一套核心逻辑（`shared/`：类型 / AI 客户端 / 搜索 / 变量解析 / AI 历史约定 / 确认对话框 / 空间选项）。
+**PromptX** —— 轻量级 AI 提示词管理工具：键盘优先、极速唤醒、变量注入、AI 快捷优化、纯本地存储。桌面端（Windows）+ Chrome 扩展双形态，共享同一套核心逻辑（`shared/`：类型 / AI 客户端 / 搜索 / 变量解析 / AI 历史约定 / 确认对话框 / 空间选项 / 编辑器草稿）。
 
 ### 1.2 核心价值
 
@@ -65,7 +65,7 @@
 | 拼音匹配 | `pinyin-pro` 首字母 / 全拼；索引按对象缓存，跨按键复用 |
 | 高亮 | XSS 转义后插入高亮 span（双端共用，含测试覆盖） |
 | 索引缓存 | Fuse 实例按列表引用失效，逐键搜索不重建索引 |
-| 列表排序 | 默认创建时间倒序（最新在前）；搜索时按相关度 |
+| 列表排序 | 收藏置顶（★ 切换，收藏项在默认列表与搜索结果中优先）；默认创建时间倒序（最新在前）；搜索时按相关度 |
 | 键盘导航 | ↑↓ 选择、Tab/Shift+Tab 切空间、Enter 输出、Esc 逐层关闭面板/隐藏窗口、Ctrl+N/E/D/, |
 | 搜索防抖 / 结果数 | 桌面端读设置（默认 300ms / 6，设置面板可调）；扩展端固定 300ms 防抖、`maxResults` 默认 6 可调 |
 
@@ -91,17 +91,29 @@
 | 功能 | 说明 |
 |------|------|
 | Prompt / Space CRUD | 空间删除时提示词移至默认空间（双端一致） |
+| 空间拖拽排序 | 双端标签条拖拽即排序，`order` 字段持久化（后端校验 ID 集合完整性） |
+| 编辑器草稿 | 双端：编辑过程中草稿持续写入本地，意外关闭后再次打开自动恢复（可丢弃），保存成功自动清除 |
 | JSON 导出/导入 | merge=true 覆盖冲突 / false 跳过 |
 | 原子写入 | 临时文件 + fsync + rename；备份同步原子化 |
 | 损坏自愈 | 主文件损坏 → 备份恢复；双损坏 → 隔离 `.corrupt` 后回退默认数据 |
-| 内存缓存 | 全部读写经缓存，磁盘 IO 只发生在保存；11 个数据命令异步执行（不卡 UI） |
+| 内存缓存 | 全部读写经缓存，磁盘 IO 只发生在保存；数据命令异步执行（不卡 UI） |
 
 ### 2.6 设置面板 ✅（双端各有）
 
 主题 / 全局快捷键 / AI 优化快捷键 / 剪贴板优化快捷键 / 搜索防抖 / 最大结果数 / 透明度 /
-失焦隐藏 / 开机自启 / 导入导出（桌面端）；主题 / 结果数（扩展端）；AI 配置双端一致：
+失焦隐藏 / 开机自启 / 使用统计 / 导入导出（桌面端）；主题 / 结果数 / 使用统计（扩展端）；
+AI 配置双端一致：
 API Key / 服务地址 / 模型 / 深度思考开关 / 优化模板（留空=默认，可「填入默认/恢复默认」）/
-测试连接（401/404/429 等分类提示）。
+测试连接（401/404/429 等分类提示）。桌面端另有「软件更新」（见 2.10）。
+
+### 2.10 自动更新（桌面端）✅
+
+| 功能 | 说明 |
+|------|------|
+| 启动检查 | 应用启动后台检查新版本（失败静默），发现新版在主窗口提示，安装由用户确认 |
+| 手动更新 | 设置 → 「软件更新」：检查 / 下载安装（NSIS passive 模式）/ 自动重启 |
+| 更新分发 | GitHub Releases 托管 `latest.json`（版本/下载地址/minisign 签名），客户端安装前校验签名 |
+| 签名体系 | 安装包用 minisign 私钥签名（私钥存本机 + GitHub Actions Secrets）；Windows Authenticode 代码签名仍暂缓（需购买证书） |
 
 ### 2.7 Chrome 扩展端 ✅
 
@@ -140,10 +152,10 @@ API Key / 服务地址 / 模型 / 深度思考开关 / 优化模板（留空=默
 
 | 项 | 说明 |
 |----|------|
-| 测试 | 118 个前端（搜索/高亮转义/变量/AI 客户端含取消/store 契约）+ 35 个 Rust（热键解析/存储原子性与损坏恢复/密钥存取/历史清理） |
+| 测试 | 129 个前端（搜索/高亮转义/变量/AI 客户端含取消/store 契约/编辑器草稿/收藏排序）+ 42 个 Rust（热键解析/存储原子性与损坏恢复/密钥存取/历史清理/空间排序校验/收藏字段兼容） |
 | CI | 8 个 job：双端 lint/typecheck/test/build + clippy -D warnings + rustfmt + macOS 编译 |
-| 发布 | 推 `v*` 标签自动构建 NSIS/MSI/扩展 zip 并发布 Release |
-| 安全 | CodeQL 每周扫描；API Key 钥匙串存储；CSP 收敛 |
+| 发布 | 推 `v*` 标签自动构建 NSIS/MSI/扩展 zip 并发布 Release；更新包 minisign 签名 + `latest.json` 自动更新清单 |
+| 安全 | CodeQL 每周扫描；API Key 钥匙串存储；CSP 收敛；更新包签名校验 |
 
 ---
 
@@ -182,18 +194,18 @@ interface Settings {
 不再整体解析失败（详见 Rust 模型 `#[serde(default)]`）。
 
 `Space { id, name, icon, color, order, createdAt, updatedAt }`；
-`Prompt { id, title, content, tags, spaceId, variables, usageCount, lastUsedAt, createdAt, updatedAt }`；
+`Prompt { id, title, content, tags, spaceId, variables, usageCount, lastUsedAt, createdAt, updatedAt, favorite? }`；
 `Variable { name, type: 'system'|'custom', defaultValue? }`。
-空间图标/颜色选项双端共用（`shared/spaceOptions.ts`）。
+空间图标/颜色选项双端共用（`shared/spaceOptions.ts`）；`favorite` 缺省视为未收藏（旧数据兼容）。
 
 ---
 
-## 4. API 清单（桌面端 Tauri Commands，22 个）
+## 4. API 清单（桌面端 Tauri Commands，23 个）
 
 | 分组 | 命令 |
 |------|------|
 | 提示词（6） | `get_app_data` `create_prompt` `update_prompt` `delete_prompt` `update_prompt_usage` `import_data` |
-| 空间（3） | `create_space` `update_space` `delete_space` |
+| 空间（4） | `create_space` `update_space` `delete_space` `reorder_spaces` |
 | 剪贴板（2） | `get_wakeup_clipboard` `paste_and_restore` |
 | AI 优化（5） | `optimize_apply_result` `optimize_cancel` `clipboard_optimize_apply_result` `clipboard_optimize_cancel` `ai_debug_log` |
 | 设置（4） | `get_settings` `update_settings` `register_hotkey` `get_hotkey_status` |
@@ -228,13 +240,13 @@ interface Settings {
 
 ## 6. 性能指标
 
-| 指标 | 目标 | 实测（v1.2.0） | 状态 |
+| 指标 | 目标 | 实测 | 状态 |
 |------|------|---------------|------|
 | 启动时间 | < 500ms | ~300ms | ✅ |
 | 唤醒延迟 | < 50ms | ~30ms | ✅ |
 | 搜索响应 | < 50ms | ~20ms（索引缓存后逐键无重建） | ✅ |
 | 内存占用 | < 50MB | ~35MB | ✅ |
-| 安装包 | < 10MB | NSIS 2.8MB / MSI 4.1MB | ✅ |
+| 安装包 | < 10MB | NSIS 2.6MB / MSI 3.5MB（v1.3.0，`[profile.release]` 体积优化后） | ✅ |
 
 ---
 
@@ -244,11 +256,10 @@ interface Settings {
 
 | 问题 | 严重度 | 说明 |
 |------|--------|------|
-| Space 拖拽排序无 UI | 低 | `order` 字段存在 |
-| PromptEditor 无草稿保存 | 低 | 意外关闭丢失编辑 |
 | 扩展安装提示较宽 | 低 | 键盘触发的页面注入需全域 host 权限，无法用 activeTab 替代（有意取舍） |
 | 桌面端 AI 请求依赖服务端 CORS | 低 | webview 发起；如自建服务（Ollama 等）受限可改走 Rust 侧请求 |
 | 推理模型响应慢 | 低 | 思考计入 60s 超时，长文本可能偏紧 |
+| 自动更新需 v1.3.0+ | 低 | 更旧安装包无法自更新，需手动下载一次 |
 
 ### 7.2 明确不做的事
 
@@ -256,7 +267,7 @@ interface Settings {
 |------|------|------|
 | 唤醒窗口时自动 Ctrl+C | ❌ | 窗口显示抢焦点，时序不可靠；自动截取已由独立后台快捷键路径实现 |
 | 多版本历史轮转 | ❌ | 单备份 + 损坏自愈已满足 |
-| 自动更新 / 安装包签名 | ❌ 暂缓 | 需证书与发布基础设施 |
+| Windows Authenticode 代码签名 | ❌ 暂缓 | 需购买证书；更新包已用自管 minisign 密钥签名防篡改 |
 | 数据加密 / 错误上报 | ❌ | 本地威胁模型不成立 / 无服务端 |
 | E2E / 组件快照测试 | ❌ | 项目规模不值得 |
 | 替换 `execCommand`（扩展插入） | ❌ | 仍可用，等浏览器真正移除 |
@@ -266,13 +277,13 @@ interface Settings {
 
 ## 8. 版本规划
 
-- **v1.2.0（当前）**：全面复查修复（自启静默、剪贴板恢复时序、并发防护、跨上下文存储原子化等）、AI 优化进度与取消、发布与安全扫描自动化
-- **v1.3 润色**：Space 排序 UI；PromptEditor 草稿
-- **v1.5 体验增强**：自动更新 + 签名；提示词收藏/置顶；使用统计；i18n
-- **v2.0 智能化与打通**：双端数据打通（Native Messaging）与 UI 层合并（见 [design.md](design.md)）；优化预览确认 / 流式输出 / 多风格预设；模板市场；云端同步（可选）
+- **v1.3.0（当前）**：v1.3 润色全量落地（空间拖拽排序、编辑器草稿）+ v1.5 部分（收藏/置顶、使用统计、应用内自动更新）+ 二轮复查修复（截取会话竞态、备份污染、扩展 maxResults、阻塞 I/O 入池、死代码与 lint 清零）
+- **v1.4 润色**：双端 UI 层合并第一步（design token 统一，见 design.md Step 1）
+- **v1.5 体验增强**：i18n；Windows Authenticode 签名；优化预览确认 / 流式输出
+- **v2.0 智能化与打通**：双端数据打通（Native Messaging）与 UI 层合并（见 [design.md](design.md)）；多风格预设；模板市场；云端同步（可选）
 
 ---
 
 **文档结束**
 
-> 本文反映截至 2026-10-24 的代码实态（应用 v1.2.0）。所有"已实现"条目均经代码 + 构建 + 测试验证。
+> 本文反映截至 2026-10-25 的代码实态（应用 v1.3.0）。所有"已实现"条目均经代码 + 构建 + 测试验证。

@@ -4,6 +4,20 @@
       {{ prompt ? '编辑提示词' : '新建提示词' }}
     </h3>
 
+    <!-- 草稿恢复提示 -->
+    <div
+      v-if="draftBanner"
+      class="mb-3 px-3 py-2 rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-2"
+    >
+      <span>已恢复未保存的草稿</span>
+      <button
+        class="shrink-0 underline hover:no-underline"
+        @click="discardDraft"
+      >
+        丢弃
+      </button>
+    </div>
+
     <div class="space-y-3">
       <div>
         <label class="block text-sm font-medium mb-1">标题</label>
@@ -84,8 +98,9 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch, nextTick } from 'vue'
 import { useUiStore } from '../stores/uiStore'
+import { loadDraft, saveDraft, clearDraft, type EditorDraft } from '@shared/draft'
 import type { Prompt, Space } from '@/types'
 
 const uiStore = useUiStore()
@@ -108,6 +123,46 @@ const form = reactive({
 })
 
 const tagsInput = ref(props.prompt?.tags.join(', ') || '')
+
+// ===== 草稿（意外关闭后再次打开同一提示词时恢复） =====
+const draftId = props.prompt?.id || 'new'
+const draftBanner = ref<EditorDraft | null>(null)
+
+// 恢复草稿；内容全空的草稿视为无意义，直接清掉不打扰
+const draft = loadDraft(draftId)
+if (draft && (draft.title.trim() !== '' || draft.content.trim() !== '')) {
+  form.title = draft.title
+  form.content = draft.content
+  if (draft.spaceId) {
+    form.spaceId = draft.spaceId
+  }
+  tagsInput.value = draft.tags.join(', ')
+  draftBanner.value = draft
+} else if (draft) {
+  clearDraft(draftId)
+}
+
+// 草稿自动保存：字段变化即写入 localStorage（组件每次打开重新挂载，无初始赋值干扰）
+watch([() => form.title, () => form.content, () => form.spaceId, tagsInput], () => {
+  saveDraft(draftId, {
+    title: form.title,
+    content: form.content,
+    tags: tagsInput.value.split(',').map((t) => t.trim()).filter((t) => t.length > 0),
+    spaceId: form.spaceId
+  })
+})
+
+// 丢弃草稿：恢复原始值并清除。表单重置会触发自动保存，
+// 需等它执行完（nextTick 后 watcher 已 flush）再清除，否则清除会被覆盖
+const discardDraft = async () => {
+  form.title = props.prompt?.title || ''
+  form.content = props.prompt?.content || ''
+  form.spaceId = props.prompt?.spaceId || props.spaces[0]?.id || 'space_default'
+  tagsInput.value = props.prompt?.tags.join(', ') || ''
+  await nextTick()
+  clearDraft(draftId)
+  draftBanner.value = null
+}
 
 const onSave = () => {
   const tags = tagsInput.value

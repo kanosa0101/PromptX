@@ -1,6 +1,6 @@
 {
   "productName": "PromptX",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "identifier": "com.promptx.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -27,9 +27,21 @@
       "csp": "default-src 'self'; connect-src 'self' ipc.localhost http://ipc.localhost https: http://localhost:* http://127.0.0.1:*; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEyMkE3NzUwMjhFQkZBNTEKUldSUit1c29VSGNxRXRtU2lmOEhPZ1BxaHlhYkVPSkNEaVRaYXZsaWFQN3dyckI4NisrSkdwSTYK",
+      "endpoints": [
+        "https://github.com/kanosa0101/PromptX/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

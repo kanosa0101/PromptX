@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { getVersion } from '@tauri-apps/api/app'
+import { check, type Update } from '@tauri-apps/plugin-updater'
+import { relaunch } from '@tauri-apps/plugin-process'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { usePromptStore } from '@/stores/promptStore'
@@ -198,13 +201,85 @@ const themeOptions = [
   { value: 'system', label: '跟随系统' },
 ]
 
+// 使用统计（从当前数据即时计算，不额外落盘）
+const stats = computed(() => {
+  const prompts = promptStore.prompts
+  const totalUses = prompts.reduce((sum, p) => sum + (p.usageCount || 0), 0)
+  const top = [...prompts]
+    .filter((p) => (p.usageCount || 0) > 0)
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5)
+    .map((p) => ({ id: p.id, title: p.title, usageCount: p.usageCount }))
+  const lastUsed = prompts.reduce<string | null>(
+    (latest, p) => (p.lastUsedAt && (!latest || p.lastUsedAt > latest) ? p.lastUsedAt : latest),
+    null,
+  )
+  return {
+    count: prompts.length,
+    spaces: promptStore.spaces.length,
+    totalUses,
+    favorites: prompts.filter((p) => p.favorite).length,
+    top,
+    lastUsed,
+  }
+})
+
 onMounted(() => {
   window.addEventListener('keydown', handleHotkeyCapture)
+  loadAppVersion()
 })
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleHotkeyCapture)
 })
+
+// ===== 软件更新 =====
+const appVersion = ref('')
+const updaterState = ref<'idle' | 'checking' | 'available' | 'downloading' | 'uptodate' | 'error'>('idle')
+const updaterMessage = ref('')
+let pendingUpdate: Update | null = null
+
+const loadAppVersion = async () => {
+  try {
+    appVersion.value = await getVersion()
+  } catch {
+    appVersion.value = ''
+  }
+}
+
+const checkForUpdate = async () => {
+  updaterState.value = 'checking'
+  updaterMessage.value = ''
+  try {
+    const update = await check()
+    if (update) {
+      pendingUpdate = update
+      updaterState.value = 'available'
+      updaterMessage.value = `发现新版本 v${update.version}（当前 v${appVersion.value}）`
+    } else {
+      pendingUpdate = null
+      updaterState.value = 'uptodate'
+      updaterMessage.value = '已是最新版本'
+    }
+  } catch (error) {
+    pendingUpdate = null
+    updaterState.value = 'error'
+    updaterMessage.value = '检查更新失败：' + (error instanceof Error ? error.message : String(error))
+  }
+}
+
+const downloadAndInstall = async () => {
+  if (!pendingUpdate) return
+  updaterState.value = 'downloading'
+  updaterMessage.value = '正在下载并安装更新，完成后应用将自动重启…'
+  try {
+    await pendingUpdate.downloadAndInstall()
+    await relaunch()
+  } catch (error) {
+    updaterState.value = 'error'
+    updaterMessage.value = '更新失败：' + (error instanceof Error ? error.message : String(error))
+  }
+}
 </script>
 
 <template>
@@ -317,6 +392,114 @@ onUnmounted(() => {
       @cancel="cancelHotkeyCapture"
       @status="(message) => (importStatus = message)"
     />
+
+    <!-- 使用统计 -->
+    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+        📊 使用统计
+      </h4>
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.count }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            提示词
+          </div>
+        </div>
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.spaces }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            空间
+          </div>
+        </div>
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.totalUses }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            累计输出
+          </div>
+        </div>
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.favorites }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            收藏
+          </div>
+        </div>
+      </div>
+      <div
+        v-if="stats.top.length"
+        class="mt-3"
+      >
+        <div class="text-xs text-[#71717A] mb-1">
+          最常用
+        </div>
+        <div
+          v-for="(p, i) in stats.top"
+          :key="p.id"
+          class="flex justify-between gap-2 text-xs py-0.5"
+        >
+          <span class="truncate text-[#1A1A2E] dark:text-[#E4E4E7]">{{ i + 1 }}. {{ p.title }}</span>
+          <span class="shrink-0 text-[#71717A]">{{ p.usageCount }} 次</span>
+        </div>
+      </div>
+      <div
+        v-if="stats.lastUsed"
+        class="text-xs text-[#71717A] mt-2"
+      >
+        最近使用：{{ stats.lastUsed.slice(0, 16).replace('T', ' ') }}
+      </div>
+    </div>
+
+    <!-- 软件更新 -->
+    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          🔄 软件更新
+        </h4>
+        <span
+          v-if="appVersion"
+          class="text-xs text-[#71717A]"
+        >当前版本 v{{ appVersion }}</span>
+      </div>
+      <div class="flex items-center justify-between gap-2 mt-2">
+        <span
+          v-if="updaterMessage"
+          class="text-xs text-[#71717A] truncate"
+        >{{ updaterMessage }}</span>
+        <span
+          v-else
+          class="text-xs text-[#71717A]"
+        >检查并安装新版本（安装后自动重启）</span>
+        <button
+          v-if="updaterState === 'available'"
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+          @click="downloadAndInstall"
+        >
+          下载并安装
+        </button>
+        <button
+          v-else-if="updaterState === 'downloading'"
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-[#3B82F6] text-white opacity-60 cursor-not-allowed"
+          disabled
+        >
+          安装中…
+        </button>
+        <button
+          v-else
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
+          :disabled="updaterState === 'checking'"
+          @click="checkForUpdate"
+        >
+          {{ updaterState === 'checking' ? '检查中…' : '检查更新' }}
+        </button>
+      </div>
+    </div>
 
     <!-- 导入导出 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">

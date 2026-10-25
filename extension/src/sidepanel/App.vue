@@ -46,13 +46,23 @@
       </div>
     </div>
 
-    <!-- 命名空间标签 -->
+    <!-- 命名空间标签（可拖拽排序） -->
     <div class="space-tabs">
       <button
-        v-for="space in spaces"
+        v-for="(space, index) in spaces"
         :key="space.id"
-        :class="['space-tab', { active: space.id === currentSpaceId }]"
+        :class="['space-tab', {
+          active: space.id === currentSpaceId,
+          'opacity-40': dragIndex === index,
+          'ring-2 ring-blue-400': dragOverIndex === index && dragIndex !== index
+        }]"
+        draggable="true"
+        title="拖拽调整空间顺序"
         @click="selectSpace(space.id)"
+        @dragstart="onDragStart(index, $event)"
+        @dragover="onDragOver(index, $event)"
+        @drop="onDrop(index)"
+        @dragend="resetDragState"
       >
         {{ space.icon }} {{ space.name }}
       </button>
@@ -110,12 +120,25 @@
                 {{ tag }}
               </span>
             </div>
-            <span
-              class="shrink-0 text-xs text-gray-400 dark:text-gray-500"
-              :title="'创建于 ' + prompt.createdAt"
-            >
-              {{ formatDate(prompt.createdAt) }}
-            </span>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button
+                class="text-sm leading-none transition-colors"
+                :class="prompt.favorite
+                  ? 'text-amber-400'
+                  : 'text-gray-400 dark:text-gray-500 hover:text-amber-400'"
+                :aria-label="prompt.favorite ? '取消收藏' : '收藏'"
+                :title="prompt.favorite ? '取消收藏' : '收藏（列表优先展示）'"
+                @click.stop="toggleFavorite(prompt)"
+              >
+                {{ prompt.favorite ? '★' : '☆' }}
+              </button>
+              <span
+                class="text-xs text-gray-400 dark:text-gray-500"
+                :title="'创建于 ' + prompt.createdAt"
+              >
+                {{ formatDate(prompt.createdAt) }}
+              </span>
+            </div>
           </div>
         </div>
       </template>
@@ -191,6 +214,8 @@ import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
 import { STORAGE_KEY, loadAppData } from '@/lib/storage'
 import { applyTheme } from '@/lib/theme'
 import { highlightMatches, truncate } from './composables/useSearch'
+import { clearDraft } from '@shared/draft'
+import type { Prompt } from '@/types'
 import VariableForm from './components/VariableForm.vue'
 import PromptEditor from './components/PromptEditor.vue'
 import SpaceEditor from './components/SpaceEditor.vue'
@@ -226,6 +251,49 @@ watch(
     }
   }
 )
+
+// ===== 空间拖拽排序 =====
+// 拖起某个标签放到另一个标签上即交换顺序，order 字段随后持久化
+const dragIndex = ref<number | null>(null)
+const dragOverIndex = ref<number | null>(null)
+
+const resetDragState = () => {
+  dragIndex.value = null
+  dragOverIndex.value = null
+}
+
+const onDragStart = (index: number, e: DragEvent) => {
+  dragIndex.value = index
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    // 部分浏览器要求设置数据后拖拽才会真正开始
+    e.dataTransfer.setData('text/plain', String(index))
+  }
+}
+
+const onDragOver = (index: number, e: DragEvent) => {
+  e.preventDefault()
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'move'
+  }
+  dragOverIndex.value = index
+}
+
+const onDrop = (index: number) => {
+  const from = dragIndex.value
+  if (from !== null && from !== index) {
+    const ids = promptStore.spaces.map((s) => s.id)
+    const [moved] = ids.splice(from, 1)
+    ids.splice(index, 0, moved)
+    promptStore.reorderSpaces(ids)
+  }
+  resetDragState()
+}
+
+// 收藏/取消收藏（收藏项在列表中置顶展示）
+const toggleFavorite = (prompt: Prompt) => {
+  promptStore.updatePrompt(prompt.id, { favorite: !prompt.favorite })
+}
 
 // 从 store 获取数据
 const spaces = computed(() => promptStore.spaces)
@@ -295,8 +363,11 @@ const onHelpClose = () => {
 const onEditorSave = async (promptData: { title: string; content: string; tags: string[]; spaceId: string }) => {
   if (editingPrompt.value) {
     await promptStore.updatePrompt(editingPrompt.value.id, promptData)
+    // 保存成功后清除编辑器草稿（失败抛错时保留，再次打开可恢复）
+    clearDraft(editingPrompt.value.id)
   } else {
     await promptStore.createPrompt(promptData)
+    clearDraft('new')
   }
   uiStore.closeEditor()
 }

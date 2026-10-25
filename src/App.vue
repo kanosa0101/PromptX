@@ -16,6 +16,8 @@ import PromptEditor from '@/components/PromptEditor.vue'
 import HelpPanel from '@/components/HelpPanel.vue'
 import SpaceEditor from '@/components/SpaceEditor.vue'
 import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
+import { clearDraft } from '@shared/draft'
+import { check as checkForAppUpdate } from '@tauri-apps/plugin-updater'
 
 const promptStore = usePromptStore()
 const settingsStore = useSettingsStore()
@@ -30,6 +32,8 @@ const handleSavePrompt = async (prompt: Prompt) => {
     await promptStore.savePrompt(prompt)
     // 重新加载数据确保同步
     await promptStore.loadPrompts()
+    // 保存成功后清除编辑器草稿（失败时保留，再次打开可恢复）
+    clearDraft(prompt.id?.trim() || 'new')
     uiStore.closePromptEditor()
   } catch (error) {
     console.error('Failed to save prompt:', error)
@@ -163,12 +167,27 @@ const checkHotkeyStatus = async () => {
   }
 }
 
+// 启动时后台检查应用更新（失败静默；有新版本时提示，安装由用户在设置中确认）
+const checkAppUpdate = async () => {
+  try {
+    const update = await checkForAppUpdate()
+    // 快捷键冲突提示优先级更高，有通知时不覆盖
+    if (update && !uiStore.systemNotice) {
+      uiStore.showSystemNotice(`发现新版本 v${update.version}：按 Ctrl+, 打开设置 → 「软件更新」下载安装`)
+    }
+  } catch {
+    // 离线等场景检查失败不打扰用户
+  }
+}
+
 // 初始化应用并注册键盘监听
 onMounted(async () => {
   await promptStore.loadPrompts()
   await settingsStore.loadSettings()
   await checkHotkeyStatus()
   await aiOptimizer.start()
+  // 后台检查更新（不阻塞界面初始化）
+  checkAppUpdate()
   window.addEventListener('keydown', handleKeyDown)
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange)
 })

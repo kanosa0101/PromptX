@@ -111,3 +111,119 @@ pub async fn delete_space(id: String, state: State<'_, AppState>) -> Result<u32,
     .await
     .map_err(|e| e.to_string())?
 }
+
+/// 应用空间排序：校验 ID 集合与现有空间完全一致后重写 order 字段并按其排序。
+/// 独立函数便于单元测试（命令体需要 Tauri State，无法直接测）
+pub fn apply_space_order(spaces: &mut [Space], ordered_ids: &[String]) -> Result<(), String> {
+    if spaces.len() != ordered_ids.len() {
+        return Err("排序列表与空间数量不一致".to_string());
+    }
+    let mut order_map: std::collections::HashMap<&str, usize> =
+        std::collections::HashMap::with_capacity(ordered_ids.len());
+    for (i, id) in ordered_ids.iter().enumerate() {
+        if order_map.insert(id.as_str(), i).is_some() {
+            return Err(format!("排序列表存在重复 ID: {id}"));
+        }
+    }
+    if !spaces.iter().all(|s| order_map.contains_key(s.id.as_str())) {
+        return Err("排序列表包含未知空间".to_string());
+    }
+
+    let now = Utc::now();
+    for space in spaces.iter_mut() {
+        if let Some(&i) = order_map.get(space.id.as_str()) {
+            space.order = i as u32;
+            space.updated_at = now;
+        }
+    }
+    spaces.sort_by_key(|s| s.order);
+    Ok(())
+}
+
+/// 空间排序（拖拽后持久化）：按给定 ID 顺序重写 order 字段
+#[tauri::command]
+pub async fn reorder_spaces(
+    space_ids: Vec<String>,
+    state: State<'_, AppState>,
+) -> Result<Vec<Space>, String> {
+    let storage = state.storage.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        let storage = storage.write();
+        let mut data = storage.load().map_err(|e| e.to_string())?;
+
+        apply_space_order(&mut data.spaces, &space_ids)?;
+
+        let spaces = data.spaces.clone();
+        storage.save(data).map_err(|e| e.to_string())?;
+        Ok(spaces)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_spaces() -> Vec<Space> {
+        let now = Utc::now();
+        (0..3)
+            .map(|i| Space {
+                id: format!("space_{i}"),
+                name: format!("s{i}"),
+                icon: String::new(),
+                color: String::new(),
+                order: i,
+                created_at: now,
+                updated_at: now,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn test_reorder_rewrites_order_and_sorts() {
+        let mut spaces = make_spaces();
+        let ids = ["space_2", "space_0", "space_1"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+        apply_space_order(&mut spaces, &ids).unwrap();
+
+        let order: Vec<(String, u32)> = spaces.iter().map(|s| (s.id.clone(), s.order)).collect();
+        assert_eq!(
+            order,
+            vec![
+                ("space_2".to_string(), 0),
+                ("space_0".to_string(), 1),
+                ("space_1".to_string(), 2),
+            ]
+        );
+    }
+
+    #[test]
+    fn test_reorder_rejects_unknown_id() {
+        let mut spaces = make_spaces();
+        let ids = ["space_0", "space_1", "space_999"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+        assert!(apply_space_order(&mut spaces, &ids).is_err());
+    }
+
+    #[test]
+    fn test_reorder_rejects_duplicate_id() {
+        let mut spaces = make_spaces();
+        let ids = ["space_0", "space_0", "space_1"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>();
+        assert!(apply_space_order(&mut spaces, &ids).is_err());
+    }
+
+    #[test]
+    fn test_reorder_rejects_count_mismatch() {
+        let mut spaces = make_spaces();
+        let ids = vec!["space_0".to_string(), "space_1".to_string()];
+        assert!(apply_space_order(&mut spaces, &ids).is_err());
+    }
+}

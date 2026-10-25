@@ -11,10 +11,10 @@
 
 ### 桌面端（Windows）
 
-1. 打开 [Releases 页面](https://github.com/kanosa0101/PromptX/releases)，下载最新版的 `PromptX_1.1.0_x64-setup.exe`
+1. 打开 [Releases 页面](https://github.com/kanosa0101/PromptX/releases)，下载最新版的 `PromptX_x64-setup.exe`（或 `PromptX_x64_en-US.msi`）
 2. 双击运行安装，完成后按 `Alt+Space` 即可唤起
 
-> 也可以下载 `PromptX_1.1.0_x64_en-US.msi` 使用 MSI 方式安装，或下载 `PromptX.exe` 免安装直接运行。
+> v1.3.0 起支持应用内自动更新：设置（Ctrl+,）→ 「软件更新」即可检查并升级，无需重新下载安装包。
 
 ### 浏览器扩展（Chrome / Edge）
 

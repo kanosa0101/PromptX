@@ -226,3 +226,35 @@ describe('导入导出', () => {
     expect(store.prompts).toEqual([PROMPT])
   })
 })
+
+describe('reorderSpaces', () => {
+  it('按给定 ID 顺序调用 reorder_spaces（spaceIds 参数名契约）并用返回值更新 spaces', async () => {
+    const { store } = getStore()
+    const reordered: Space[] = [
+      { ...SPACE, id: 'space_work', name: '工作', order: 0 },
+      { ...SPACE, order: 1 },
+    ]
+    mockedInvoke.mockResolvedValue(reordered)
+
+    await store.reorderSpaces(['space_work', 'space_default'])
+
+    expect(mockedInvoke).toHaveBeenCalledWith('reorder_spaces', {
+      spaceIds: ['space_work', 'space_default'],
+    })
+    expect(store.spaces).toEqual(reordered)
+  })
+})
+
+describe('loadPrompts 空间排序', () => {
+  it('加载后 spaces 按 order 字段排序（与拖拽排序持久化的顺序一致）', async () => {
+    const { store } = getStore()
+    const s2 = { ...SPACE, id: 'a', order: 2 }
+    const s0 = { ...SPACE, id: 'b', order: 0 }
+    const s1 = { ...SPACE, id: 'c', order: 1 }
+    mockedInvoke.mockResolvedValue({ ...APP_DATA, spaces: [s2, s0, s1] })
+
+    await store.loadPrompts()
+
+    expect(store.spaces.map((s) => s.id)).toEqual(['b', 'c', 'a'])
+  })
+})

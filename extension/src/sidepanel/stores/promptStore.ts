@@ -34,10 +34,12 @@ export const usePromptStore = defineStore('prompt', {
     },
 
     // 使用 useSearch composable 进行搜索（支持拼音匹配；搜索时按相关度排序）
-    // 与桌面端一致：结果始终按设置里的 maxResults 截断
+    // 与桌面端一致：结果始终按设置里的 maxResults 截断；收藏项置顶（组内保持原有顺序）
     filteredPrompts(): SearchResult[] {
       const results = useSearch(this.sortedByCreated, this.searchQuery, this.currentSpaceId)
-      return results.slice(0, this.maxResults)
+      const favorites = results.filter((p) => p.favorite)
+      const others = results.filter((p) => !p.favorite)
+      return [...favorites, ...others].slice(0, this.maxResults)
     },
 
     selectedPrompt(): SearchResult | null {
@@ -53,7 +55,8 @@ export const usePromptStore = defineStore('prompt', {
       this.isLoading = true
       try {
         const data = await loadAppData()
-        this.spaces = data.spaces
+        // 空间按 order 字段排序（与拖拽排序持久化的顺序一致）
+        this.spaces = [...data.spaces].sort((a, b) => a.order - b.order)
         this.prompts = data.prompts
         this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
         this.pageSelection = await getSelectionFromActiveTab()
@@ -71,13 +74,15 @@ export const usePromptStore = defineStore('prompt', {
     async refreshFromStorage() {
       const data = await loadAppData()
       this.maxResults = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
+      // 与 store 内已排序的 spaces 对齐后再比较，避免存储数组顺序不同导致每次都替换
+      const sortedSpaces = [...data.spaces].sort((a, b) => a.order - b.order)
       if (
         JSON.stringify(data.prompts) === JSON.stringify(this.prompts) &&
-        JSON.stringify(data.spaces) === JSON.stringify(this.spaces)
+        JSON.stringify(sortedSpaces) === JSON.stringify(this.spaces)
       ) {
         return
       }
-      this.spaces = data.spaces
+      this.spaces = sortedSpaces
       this.prompts = data.prompts
     },
 
@@ -210,7 +215,7 @@ export const usePromptStore = defineStore('prompt', {
     /**
      * 更新提示词
      */
-    async updatePrompt(id: string, data: Partial<{ title: string; content: string; tags: string[]; spaceId: string }>) {
+    async updatePrompt(id: string, data: Partial<{ title: string; content: string; tags: string[]; spaceId: string; favorite: boolean }>) {
       const index = this.prompts.findIndex((p) => p.id === id)
       if (index !== -1) {
         const updated: Prompt = {
@@ -282,6 +287,22 @@ export const usePromptStore = defineStore('prompt', {
       })
       this.spaces = this.spaces.filter(s => s.id !== id)
       if (this.currentSpaceId === id) this.currentSpaceId = 'space_default'
+      await this.saveData()
+    },
+
+    /**
+     * 空间拖拽排序：按给定 ID 顺序重排并重写 order 字段后持久化
+     */
+    async reorderSpaces(orderedIds: string[]) {
+      const byId = new Map(this.spaces.map((s) => [s.id, s]))
+      const next = orderedIds.map((id) => byId.get(id)).filter((s): s is Space => !!s)
+      if (next.length !== this.spaces.length) return
+      const now = new Date().toISOString()
+      next.forEach((s, i) => {
+        s.order = i
+        s.updatedAt = now
+      })
+      this.spaces = next
       await this.saveData()
     },
 

@@ -436,6 +436,7 @@ fn save_ai_history(app: &tauri::AppHandle, original: &str, optimized: &str) {
             last_used_at: None,
             created_at: now,
             updated_at: now,
+            favorite: false,
         });
 
         // 条数超限时清理最旧条目
@@ -480,6 +481,7 @@ mod tests {
                 last_used_at: None,
                 created_at: base - chrono::Duration::seconds(1000 - i as i64),
                 updated_at: base,
+                favorite: false,
             })
             .collect();
         // 其他空间的条目不受影响
@@ -494,6 +496,7 @@ mod tests {
             last_used_at: None,
             created_at: base - chrono::Duration::seconds(2000),
             updated_at: base,
+            favorite: false,
         });
 
         trim_ai_history(&mut prompts);

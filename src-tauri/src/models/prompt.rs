@@ -41,6 +41,9 @@ pub struct Prompt {
     pub created_at: DateTime<Utc>,
     #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
+    /// 收藏（置顶展示）；旧数据缺字段时回退 false
+    #[serde(rename = "favorite")]
+    pub favorite: bool,
 }
 
 impl Default for Prompt {
@@ -57,6 +60,7 @@ impl Default for Prompt {
             last_used_at: None,
             created_at: now,
             updated_at: now,
+            favorite: false,
         }
     }
 }
@@ -79,4 +83,36 @@ pub struct PromptUpdate {
     pub tags: Option<Vec<String>>,
     #[serde(rename = "spaceId")]
     pub space_id: Option<String>,
+    #[serde(rename = "favorite")]
+    pub favorite: Option<bool>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 旧版 data.json 无 favorite 字段 → 回退 false（收藏功能向后兼容）
+    #[test]
+    fn test_prompt_missing_favorite_defaults_false() {
+        let json = r#"{
+            "id": "p1", "title": "t", "content": "c", "tags": [],
+            "spaceId": "s", "variables": [], "usageCount": 0, "lastUsedAt": null,
+            "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z"
+        }"#;
+        let prompt: Prompt = serde_json::from_str(json).unwrap();
+        assert!(!prompt.favorite);
+    }
+
+    /// favorite 正常序列化/反序列化往返
+    #[test]
+    fn test_prompt_favorite_roundtrip() {
+        let prompt = Prompt {
+            favorite: true,
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&prompt).unwrap();
+        assert!(json.contains("\"favorite\":true"));
+        let back: Prompt = serde_json::from_str(&json).unwrap();
+        assert!(back.favorite);
+    }
 }

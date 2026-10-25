@@ -22,6 +22,8 @@ export interface Prompt {
   lastUsedAt: string | null
   createdAt: string
   updatedAt: string
+  // 收藏（置顶）：列表中收藏项优先展示。旧数据无此字段，按未收藏处理
+  favorite?: boolean
 }
 
 // 命名空间模型

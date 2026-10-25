@@ -38,6 +38,7 @@ pub async fn create_prompt(
             last_used_at: None,
             created_at: now,
             updated_at: now,
+            favorite: false,
         };
 
         data.prompts.push(new_prompt.clone());
@@ -78,6 +79,9 @@ pub async fn update_prompt(
             }
             if let Some(space_id) = updates.space_id {
                 prompt.space_id = space_id;
+            }
+            if let Some(favorite) = updates.favorite {
+                prompt.favorite = favorite;
             }
             prompt.updated_at = now;
 

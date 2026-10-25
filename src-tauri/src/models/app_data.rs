@@ -82,6 +82,7 @@ impl Default for AppData {
                     last_used_at: None,
                     created_at: now,
                     updated_at: now,
+                    favorite: false,
                 },
                 Prompt {
                     id: "prompt_002".to_string(),
@@ -98,6 +99,7 @@ impl Default for AppData {
                     last_used_at: None,
                     created_at: now,
                     updated_at: now,
+                    favorite: false,
                 },
             ],
         }

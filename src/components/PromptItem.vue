@@ -42,6 +42,11 @@ const handleEdit = () => {
   uiStore.openPromptEditor(props.prompt)
 }
 
+// 收藏/取消收藏（收藏项在列表中置顶展示）
+const handleToggleFavorite = () => {
+  promptStore.updatePrompt(props.prompt.id, { favorite: !props.prompt.favorite })
+}
+
 // 删除
 const handleDelete = () => {
   uiStore.openConfirmDialog(
@@ -112,6 +117,15 @@ const handleDelete = () => {
           {{ tag }}
         </span>
       </div>
+      <button
+        class="shrink-0 text-sm leading-none transition-colors"
+        :class="prompt.favorite ? 'text-amber-400' : 'text-[#71717A]/50 hover:text-amber-400'"
+        :aria-label="prompt.favorite ? '取消收藏' : '收藏'"
+        :title="prompt.favorite ? '取消收藏' : '收藏（列表优先展示）'"
+        @click.stop="handleToggleFavorite"
+      >
+        {{ prompt.favorite ? '★' : '☆' }}
+      </button>
       <span
         class="shrink-0 text-xs text-[#71717A]/60"
         :title="'创建于 ' + prompt.createdAt"

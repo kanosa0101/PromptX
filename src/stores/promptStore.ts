@@ -30,7 +30,10 @@ export const usePromptStore = defineStore('prompt', {
       const settingsStore = useSettingsStore()
       const maxResults = settingsStore.maxResults || 6
       const results = useSearch(this.sortedByCreated, this.searchQuery, this.currentSpaceId)
-      return results.slice(0, maxResults)
+      // 收藏置顶：收藏项排在结果前部（组内保持原有顺序——相关度/创建时间）
+      const favorites = results.filter((p) => p.favorite)
+      const others = results.filter((p) => !p.favorite)
+      return [...favorites, ...others].slice(0, maxResults)
     },
     selectedPrompt(): Prompt | undefined {
       return this.filteredPrompts[this.selectedIndex]
@@ -44,7 +47,8 @@ export const usePromptStore = defineStore('prompt', {
       this.isLoading = true
       try {
         const data = await invoke('get_app_data') as AppData
-        this.spaces = data.spaces || []
+        // 空间按 order 字段排序（与拖拽排序持久化的顺序一致）
+        this.spaces = [...(data.spaces || [])].sort((a, b) => a.order - b.order)
         this.prompts = data.prompts || []
       } catch (error) {
         console.error('Failed to load prompts:', error)
@@ -262,6 +266,17 @@ export const usePromptStore = defineStore('prompt', {
         }
       } catch (error) {
         console.error('Failed to delete space:', error)
+        throw error
+      }
+    },
+
+    // 空间拖拽排序：传入完整 ID 顺序，后端校验并持久化
+    async reorderSpaces(orderedIds: string[]) {
+      try {
+        const spaces = await invoke<Space[]>('reorder_spaces', { spaceIds: orderedIds })
+        this.spaces = spaces
+      } catch (error) {
+        console.error('Failed to reorder spaces:', error)
         throw error
       }
     },

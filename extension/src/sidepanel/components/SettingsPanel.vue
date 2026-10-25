@@ -138,6 +138,69 @@
       </p>
     </div>
 
+    <!-- 使用统计 -->
+    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+        📊 使用统计
+      </h4>
+      <div class="grid grid-cols-4 gap-2 text-center">
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.count }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            提示词
+          </div>
+        </div>
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.spaces }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            空间
+          </div>
+        </div>
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.totalUses }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            累计输出
+          </div>
+        </div>
+        <div>
+          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+            {{ stats.favorites }}
+          </div>
+          <div class="text-xs text-[#71717A]">
+            收藏
+          </div>
+        </div>
+      </div>
+      <div
+        v-if="stats.top.length"
+        class="mt-3"
+      >
+        <div class="text-xs text-[#71717A] mb-1">
+          最常用
+        </div>
+        <div
+          v-for="(p, i) in stats.top"
+          :key="p.id"
+          class="flex justify-between gap-2 text-xs py-0.5"
+        >
+          <span class="truncate text-[#1A1A2E] dark:text-[#E4E4E7]">{{ i + 1 }}. {{ p.title }}</span>
+          <span class="shrink-0 text-[#71717A]">{{ p.usageCount }} 次</span>
+        </div>
+      </div>
+      <div
+        v-if="stats.lastUsed"
+        class="text-xs text-[#71717A] mt-2"
+      >
+        最近使用：{{ stats.lastUsed.slice(0, 16).replace('T', ' ') }}
+      </div>
+    </div>
+
     <!-- 导入导出 -->
     <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
       <div class="flex gap-2 mb-3">
@@ -176,7 +239,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
 import { loadAppData, mutateAppData, saveAppData } from '@/lib/storage'
 import { applyTheme, type ThemeSetting } from '@/lib/theme'
@@ -189,6 +252,29 @@ defineEmits<{
 
 const promptStore = usePromptStore()
 const appVersion = chrome.runtime.getManifest().version
+
+// 使用统计（从当前数据即时计算，不额外落盘）
+const stats = computed(() => {
+  const prompts = promptStore.prompts
+  const totalUses = prompts.reduce((sum, p) => sum + (p.usageCount || 0), 0)
+  const top = [...prompts]
+    .filter((p) => (p.usageCount || 0) > 0)
+    .sort((a, b) => b.usageCount - a.usageCount)
+    .slice(0, 5)
+    .map((p) => ({ id: p.id, title: p.title, usageCount: p.usageCount }))
+  const lastUsed = prompts.reduce<string | null>(
+    (latest, p) => (p.lastUsedAt && (!latest || p.lastUsedAt > latest) ? p.lastUsedAt : latest),
+    null
+  )
+  return {
+    count: prompts.length,
+    spaces: promptStore.spaces.length,
+    totalUses,
+    favorites: prompts.filter((p) => p.favorite).length,
+    top,
+    lastUsed
+  }
+})
 
 const theme = ref('system')
 const maxResults = ref(DEFAULT_SETTINGS.maxResults)

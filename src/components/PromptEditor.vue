@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import type { Prompt, Variable } from '@/types'
 import { usePromptStore } from '@/stores/promptStore'
 import { parseVariables } from '@shared/variable'
+import { loadDraft, saveDraft, clearDraft, type EditorDraft } from '@shared/draft'
 
 const props = defineProps<{
   prompt?: Prompt | null
@@ -22,23 +23,79 @@ const tagsInput = ref('')
 const tags = ref<string[]>([])
 const spaceId = ref('space_default')
 
+// 草稿：按提示词 ID 隔离（新建共用 'new'）
+const draftId = computed(() => props.prompt?.id || 'new')
+const draftBanner = ref<EditorDraft | null>(null)
+
 // 可用空间列表
 const spaces = computed(() => promptStore.spaces)
 
-// 初始化表单
-watch(() => props.prompt, (prompt) => {
-  if (prompt) {
-    title.value = prompt.title
-    content.value = prompt.content
-    tags.value = prompt.tags
-    spaceId.value = prompt.spaceId
+// 表单初始化：编辑现有 / 新建（拷贝数组，避免编辑中途改动 store 内对象）
+const initFormValues = () => {
+  if (props.prompt) {
+    title.value = props.prompt.title
+    content.value = props.prompt.content
+    tags.value = [...props.prompt.tags]
+    spaceId.value = props.prompt.spaceId
   } else {
     title.value = ''
     content.value = ''
     tags.value = []
     spaceId.value = promptStore.currentSpaceId
   }
+}
+
+// 初始化表单
+watch(() => props.prompt, () => {
+  initFormValues()
+  // 恢复未保存草稿（意外关闭后再次打开同一提示词时）。
+  // 内容全空的草稿视为无意义，直接清掉不提示
+  const draft = loadDraft(draftId.value)
+  if (draft && (draft.title.trim() !== '' || draft.content.trim() !== '')) {
+    title.value = draft.title
+    content.value = draft.content
+    tags.value = [...draft.tags]
+    if (draft.spaceId) {
+      spaceId.value = draft.spaceId
+    }
+    draftBanner.value = draft
+  } else {
+    if (draft) {
+      clearDraft(draftId.value)
+    }
+    draftBanner.value = null
+  }
 }, { immediate: true })
+
+// 草稿自动保存：任意字段变化即写入 localStorage（廉价写，无需防抖）。
+// 初始赋值发生在上方 immediate watch 内，先于本 watcher 注册，不会产生"空草稿"
+const persistDraft = () => {
+  saveDraft(draftId.value, {
+    title: title.value,
+    content: content.value,
+    tags: tags.value,
+    spaceId: spaceId.value,
+  })
+}
+watch([title, content, spaceId], persistDraft)
+watch(tags, persistDraft, { deep: true })
+
+// 丢弃草稿：恢复原始值并清除。表单重置会触发上面的自动保存，
+// 需等它执行完（nextTick 后 watcher 已 flush）再清除，否则清除会被覆盖
+const discardDraft = async () => {
+  initFormValues()
+  await nextTick()
+  clearDraft(draftId.value)
+  draftBanner.value = null
+}
+
+// 草稿保存时间（MM-DD HH:mm）
+const formatDraftTime = (ts: number) => {
+  if (!ts) return '早前'
+  const d = new Date(ts)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
 
 // 解析出的变量（复用 shared/variable.ts，与保存到后端的解析保持同一实现）
 const parsedVariables = computed<Variable[]>(() => parseVariables(content.value))
@@ -98,6 +155,20 @@ const handleClose = () => {
         @click="handleClose"
       >
         ✕
+      </button>
+    </div>
+
+    <!-- 草稿恢复提示 -->
+    <div
+      v-if="draftBanner"
+      class="mb-4 px-3 py-2 rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-2"
+    >
+      <span>已恢复 {{ formatDraftTime(draftBanner.savedAt) }} 的未保存草稿</span>
+      <button
+        class="shrink-0 underline hover:no-underline"
+        @click="discardDraft"
+      >
+        丢弃
       </button>
     </div>
 

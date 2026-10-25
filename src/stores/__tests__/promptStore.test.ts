@@ -220,3 +220,53 @@ describe('filteredPrompts ordering', () => {
     expect(ids).toContain('b')
   })
 })
+
+describe('filteredPrompts 收藏置顶', () => {
+  const makePrompt = (id: string, createdAt: string, favorite = false) => ({
+    id,
+    title: id,
+    content: 'c',
+    tags: [],
+    spaceId: 'space_default',
+    variables: [],
+    usageCount: 0,
+    lastUsedAt: null,
+    createdAt,
+    updatedAt: createdAt,
+    favorite,
+  })
+
+  it('收藏项排在未收藏项之前，组内保持创建时间倒序', () => {
+    const store = getStore()
+    store.currentSpaceId = 'space_default'
+    store.prompts = [
+      makePrompt('p1', '2024-01-01T00:00:00.000Z'),
+      makePrompt('p2', '2024-03-01T00:00:00.000Z', true),
+      makePrompt('p3', '2024-02-01T00:00:00.000Z', true),
+      makePrompt('p4', '2024-04-01T00:00:00.000Z'),
+    ]
+
+    expect(store.filteredPrompts.map((p) => p.id)).toEqual(['p2', 'p3', 'p4', 'p1'])
+  })
+
+  it('无收藏时保持创建时间倒序（行为不变）', () => {
+    const store = getStore()
+    store.currentSpaceId = 'space_default'
+    store.prompts = [
+      makePrompt('old', '2024-01-01T00:00:00.000Z'),
+      makePrompt('new', '2024-04-01T00:00:00.000Z'),
+    ]
+
+    expect(store.filteredPrompts.map((p) => p.id)).toEqual(['new', 'old'])
+  })
+
+  it('旧数据无 favorite 字段时按未收藏处理（不抛错）', () => {
+    const store = getStore()
+    store.currentSpaceId = 'space_default'
+    const legacy = makePrompt('legacy', '2024-01-01T00:00:00.000Z')
+    delete (legacy as Partial<typeof legacy>).favorite
+    store.prompts = [legacy]
+
+    expect(store.filteredPrompts.map((p) => p.id)).toEqual(['legacy'])
+  })
+})
