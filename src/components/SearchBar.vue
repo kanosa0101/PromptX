@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/stores/promptStore'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 
+const { t } = useI18n()
 const promptStore = usePromptStore()
 const settingsStore = useSettingsStore()
 const uiStore = useUiStore()
@@ -69,8 +71,8 @@ onMounted(() => {
         ref="inputRef"
         v-model="localQuery"
         type="text"
-        placeholder="搜索提示词..."
-        aria-label="搜索提示词"
+        :placeholder="t('search.placeholderDesktop')"
+        :aria-label="t('search.placeholderDesktop')"
         class="flex-1 bg-transparent outline-none text-base placeholder:text-muted text-foreground dark:text-foreground-dark"
         @input="onInput"
       >
@@ -79,14 +81,14 @@ onMounted(() => {
       <div class="flex items-center gap-1">
         <button
           class="p-1.5 rounded hover:bg-surface dark:hover:bg-surface-dark text-muted hover:text-foreground dark:hover:text-foreground-dark"
-          aria-label="帮助"
+          :aria-label="t('common.help')"
           @click="showHelp"
         >
           ?
         </button>
         <button
           class="p-1.5 rounded hover:bg-surface dark:hover:bg-surface-dark text-muted hover:text-foreground dark:hover:text-foreground-dark"
-          aria-label="设置"
+          :aria-label="t('common.settings')"
           @click="showSettings"
         >
           ⚙️

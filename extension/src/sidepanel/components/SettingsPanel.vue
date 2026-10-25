@@ -2,7 +2,7 @@
   <div class="settings-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
-        设置
+        {{ t('common.settings') }}
       </h3>
       <button
         class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
@@ -14,27 +14,47 @@
 
     <!-- 主题设置 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">主题</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('theme.label') }}</span>
       <select
         v-model="theme"
         class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
         @change="saveTheme"
       >
         <option value="light">
-          亮色
+          {{ t('theme.light') }}
         </option>
         <option value="dark">
-          暗色
+          {{ t('theme.dark') }}
         </option>
         <option value="system">
-          跟随系统
+          {{ t('theme.system') }}
+        </option>
+      </select>
+    </div>
+
+    <!-- 语言 -->
+    <div class="setting-item flex items-center justify-between py-2">
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('common.language') }}</span>
+      <select
+        v-model="language"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
+        @change="saveLanguage"
+      >
+        <option value="system">
+          {{ t('language.system') }}
+        </option>
+        <option value="zh-CN">
+          中文
+        </option>
+        <option value="en">
+          English
         </option>
       </select>
     </div>
 
     <!-- 最大结果数 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">最大结果数</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('settings.maxResults') }}</span>
       <input
         v-model.number="maxResults"
         type="number"
@@ -49,19 +69,19 @@
     <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <div class="flex items-center justify-between mb-2">
         <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark">
-          AI 快捷优化
+          {{ t('aiSettings.sectionTitle') }}
         </h4>
         <button
           class="px-3 py-1 rounded text-xs border border-surface dark:border-surface-dark hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark disabled:opacity-50"
           :disabled="isTestingAi"
           @click="handleTestAi"
         >
-          {{ isTestingAi ? '测试中...' : '测试连接' }}
+          {{ isTestingAi ? t('aiSettings.testing') : t('aiSettings.testConnection') }}
         </button>
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">API Key</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.apiKey') }}</span>
         <input
           v-model="aiApiKey"
           type="password"
@@ -72,7 +92,7 @@
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">服务地址</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.baseUrl') }}</span>
         <input
           v-model="aiBaseUrl"
           type="text"
@@ -83,7 +103,7 @@
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">模型</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.model') }}</span>
         <input
           v-model="aiModel"
           type="text"
@@ -94,7 +114,7 @@
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">推理模式</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.thinkingMode') }}</span>
         <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
           <input
             v-model="optimizeThinking"
@@ -102,46 +122,46 @@
             class="w-4 h-4"
             @change="saveSettings"
           >
-          深度思考（更慢）
+          {{ t('aiSettings.thinkingLabel') }}
         </label>
       </div>
 
       <div class="py-1.5">
         <div class="flex items-center justify-between">
-          <span class="setting-label text-xs text-muted">优化指令模板（失焦自动保存）</span>
+          <span class="setting-label text-xs text-muted">{{ t('aiSettings.templateLabel') }}</span>
           <div class="flex gap-3">
             <button
               class="text-xs text-primary hover:underline"
               @click="fillDefaultTemplate"
             >
-              填入默认
+              {{ t('aiSettings.fillDefault') }}
             </button>
             <button
               class="text-xs text-primary hover:underline"
               @click="resetTemplate"
             >
-              恢复默认
+              {{ t('aiSettings.resetDefault') }}
             </button>
           </div>
         </div>
         <textarea
           v-model="optimizeTemplate"
           rows="3"
-          placeholder="留空使用内置默认优化模板"
+          :placeholder="t('aiSettings.templatePlaceholder')"
           class="w-full mt-1 px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark resize-none"
           @blur="saveSettings"
         />
       </div>
 
       <p class="text-xs text-muted leading-relaxed">
-        在网页输入框中选中文本，按 Alt+Shift+O 自动 AI 优化并原位替换（快捷键可在 chrome://extensions/shortcuts 修改）
+        {{ t('aiSettings.extHint') }}
       </p>
     </div>
 
     <!-- 使用统计 -->
     <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
-        📊 使用统计
+        {{ t('settings.stats.title') }}
       </h4>
       <div class="grid grid-cols-4 gap-2 text-center">
         <div>
@@ -149,7 +169,7 @@
             {{ stats.count }}
           </div>
           <div class="text-xs text-muted">
-            提示词
+            {{ t('settings.stats.prompts') }}
           </div>
         </div>
         <div>
@@ -157,7 +177,7 @@
             {{ stats.spaces }}
           </div>
           <div class="text-xs text-muted">
-            空间
+            {{ t('settings.stats.spaces') }}
           </div>
         </div>
         <div>
@@ -165,7 +185,7 @@
             {{ stats.totalUses }}
           </div>
           <div class="text-xs text-muted">
-            累计输出
+            {{ t('settings.stats.totalUses') }}
           </div>
         </div>
         <div>
@@ -173,7 +193,7 @@
             {{ stats.favorites }}
           </div>
           <div class="text-xs text-muted">
-            收藏
+            {{ t('settings.stats.favorites') }}
           </div>
         </div>
       </div>
@@ -182,7 +202,7 @@
         class="mt-3"
       >
         <div class="text-xs text-muted mb-1">
-          最常用
+          {{ t('settings.stats.topUsed') }}
         </div>
         <div
           v-for="(p, i) in stats.top"
@@ -190,14 +210,14 @@
           class="flex justify-between gap-2 text-xs py-0.5"
         >
           <span class="truncate text-foreground dark:text-foreground-dark">{{ i + 1 }}. {{ p.title }}</span>
-          <span class="shrink-0 text-muted">{{ p.usageCount }} 次</span>
+          <span class="shrink-0 text-muted">{{ t('settings.stats.times', { count: p.usageCount }) }}</span>
         </div>
       </div>
       <div
         v-if="stats.lastUsed"
         class="text-xs text-muted mt-2"
       >
-        最近使用：{{ stats.lastUsed.slice(0, 16).replace('T', ' ') }}
+        {{ t('settings.stats.lastUsed', { time: stats.lastUsed.slice(0, 16).replace('T', ' ') }) }}
       </div>
     </div>
 
@@ -208,13 +228,13 @@
           class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleExport"
         >
-          导出数据
+          {{ t('settings.importExport.export') }}
         </button>
         <button
           class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleImport"
         >
-          导入数据
+          {{ t('settings.importExport.import') }}
         </button>
       </div>
       <!-- 状态提示 -->
@@ -229,10 +249,10 @@
     <!-- 关于 -->
     <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4 text-center">
       <p class="text-xs text-muted">
-        PromptX 浏览器插件 v{{ appVersion }}
+        {{ t('settings.aboutExt', { version: appVersion }) }}
       </p>
       <p class="text-xs text-muted mt-1">
-        AI 提示词剪贴板管理工具
+        {{ t('settings.aboutTagline') }}
       </p>
     </div>
   </div>
@@ -240,9 +260,11 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
 import { loadAppData, mutateAppData, saveAppData } from '@/lib/storage'
 import { applyTheme, type ThemeSetting } from '@/lib/theme'
+import { setLocale } from '../i18n'
 import { testAiConnection } from '@/lib/ai'
 import { DEFAULT_SETTINGS, DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
 
@@ -250,6 +272,7 @@ defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
 const promptStore = usePromptStore()
 const appVersion = chrome.runtime.getManifest().version
 
@@ -277,6 +300,7 @@ const stats = computed(() => {
 })
 
 const theme = ref('system')
+const language = ref('system')
 const maxResults = ref(DEFAULT_SETTINGS.maxResults)
 const statusMessage = ref<string | null>(null)
 
@@ -291,6 +315,7 @@ const isTestingAi = ref(false)
 onMounted(async () => {
   const data = await loadAppData()
   theme.value = data.settings?.theme || 'system'
+  language.value = data.settings?.language || 'system'
   maxResults.value = data.settings?.maxResults ?? DEFAULT_SETTINGS.maxResults
   aiBaseUrl.value = data.settings?.aiBaseUrl || DEFAULT_SETTINGS.aiBaseUrl
   aiApiKey.value = data.settings?.aiApiKey || ''
@@ -304,6 +329,11 @@ const saveTheme = () => {
   saveSettings()
 }
 
+const saveLanguage = () => {
+  setLocale(language.value)
+  saveSettings()
+}
+
 const saveSettings = async () => {
   // 原子化读改写：只更新设置字段，空间/提示词保留锁内最新快照，
   // 避免覆盖 background 正在写入的 AI 优化历史
@@ -311,6 +341,7 @@ const saveSettings = async () => {
     data.settings = {
       ...data.settings,
       theme: theme.value as ThemeSetting,
+      language: language.value,
       maxResults: maxResults.value,
       aiBaseUrl: aiBaseUrl.value,
       aiApiKey: aiApiKey.value,
@@ -335,12 +366,12 @@ const fillDefaultTemplate = () => {
 // 测试 AI 连接（使用当前表单值，无需先保存）
 const handleTestAi = async () => {
   isTestingAi.value = true
-  statusMessage.value = '正在测试 AI 连接...'
+  statusMessage.value = t('aiSettings.testingConn')
   try {
     const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
-    statusMessage.value = '连接成功，模型回复：' + reply.slice(0, 30)
+    statusMessage.value = t('aiSettings.testSuccess', { reply: reply.slice(0, 30) })
   } catch (err) {
-    statusMessage.value = '连接失败：' + (err as Error).message
+    statusMessage.value = t('aiSettings.testFailed', { error: (err as Error).message })
   } finally {
     isTestingAi.value = false
   }
@@ -356,7 +387,7 @@ const handleExport = async () => {
   a.download = `promptx-extension-export-${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
-  statusMessage.value = '导出成功！'
+  statusMessage.value = t('settings.importExport.exported')
   setTimeout(() => statusMessage.value = null, 2000)
 }
 
@@ -373,9 +404,9 @@ const handleImport = async () => {
       const data = JSON.parse(text)
       await saveAppData(data)
       await promptStore.loadData()
-      statusMessage.value = `导入成功！${data.prompts?.length || 0} 个提示词`
+      statusMessage.value = t('settings.importExport.importSuccessExt', { count: data.prompts?.length || 0 })
     } catch (err) {
-      statusMessage.value = '导入失败：' + (err as Error).message
+      statusMessage.value = t('settings.importExport.importFailed', { error: (err as Error).message })
     }
     setTimeout(() => statusMessage.value = null, 3000)
   }

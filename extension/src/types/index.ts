@@ -8,9 +8,10 @@ import { DEFAULT_AI_SETTINGS } from '@shared/types'
 // SystemVariableName / AppData / AI 常量 / AiSettings
 export * from '@shared/types'
 
-// 设置模型（扩展端：主题与结果数 + AI 公共子集）
+// 设置模型（扩展端：主题/语言/结果数 + AI 公共子集）
 export interface Settings extends AiSettings {
   theme: 'light' | 'dark' | 'system'
+  language: string
   maxResults: number
 }
 
@@ -21,6 +22,7 @@ export type ExtensionAppData = SharedAppData<Settings>
 export const DEFAULT_SETTINGS: Settings = {
   ...DEFAULT_AI_SETTINGS,
   theme: 'system',
+  language: 'system',
   maxResults: 6
 }
 

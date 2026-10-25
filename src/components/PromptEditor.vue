@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Prompt, Variable } from '@/types'
 import { usePromptStore } from '@/stores/promptStore'
 import { parseVariables } from '@shared/variable'
@@ -14,6 +15,7 @@ const emit = defineEmits<{
   close: []
 }>()
 
+const { t } = useI18n()
 const promptStore = usePromptStore()
 
 // 表单状态
@@ -91,7 +93,7 @@ const discardDraft = async () => {
 
 // 草稿保存时间（MM-DD HH:mm）
 const formatDraftTime = (ts: number) => {
-  if (!ts) return '早前'
+  if (!ts) return t('editor.draftTimeFallback')
   const d = new Date(ts)
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
@@ -148,7 +150,7 @@ const handleClose = () => {
   <div class="prompt-editor p-4 bg-background-light dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-medium">
-        {{ prompt ? '编辑提示词' : '新建提示词' }}
+        {{ prompt ? t('editor.editPrompt') : t('editor.newPrompt') }}
       </h3>
       <button
         class="icon-btn"
@@ -163,32 +165,32 @@ const handleClose = () => {
       v-if="draftBanner"
       class="mb-4 px-3 py-2 rounded border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-xs text-amber-700 dark:text-amber-300 flex items-center justify-between gap-2"
     >
-      <span>已恢复 {{ formatDraftTime(draftBanner.savedAt) }} 的未保存草稿</span>
+      <span>{{ t('editor.draftRestoredAt', { time: formatDraftTime(draftBanner.savedAt) }) }}</span>
       <button
         class="shrink-0 underline hover:no-underline"
         @click="discardDraft"
       >
-        丢弃
+        {{ t('common.discard') }}
       </button>
     </div>
 
     <!-- 标题 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">标题</label>
+      <label class="block text-sm font-medium mb-2">{{ t('common.title') }}</label>
       <input
         v-model="title"
         type="text"
-        placeholder="提示词标题"
+        :placeholder="t('editor.titlePlaceholder')"
         class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary"
       >
     </div>
 
     <!-- 内容 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">内容</label>
+      <label class="block text-sm font-medium mb-2">{{ t('common.content') }}</label>
       <textarea
         v-model="content"
-        placeholder="提示词内容，支持 {{变量名}} 语法"
+        :placeholder="t('editor.contentPlaceholder', { syntax: '{{变量名}}' })"
         rows="4"
         class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary resize-none"
       />
@@ -197,7 +199,7 @@ const handleClose = () => {
         v-if="parsedVariables.length > 0"
         class="text-xs text-muted mt-2"
       >
-        已识别变量:
+        {{ t('editor.variablesDetected') }}:
         <span class="text-primary">
           {{ formattedVariables }}
         </span>
@@ -206,7 +208,7 @@ const handleClose = () => {
 
     <!-- 标签 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">标签</label>
+      <label class="block text-sm font-medium mb-2">{{ t('common.tags') }}</label>
       <div class="flex gap-1 mb-2">
         <span
           v-for="(tag, index) in tags"
@@ -220,7 +222,7 @@ const handleClose = () => {
       <input
         v-model="tagsInput"
         type="text"
-        placeholder="输入标签后按 Enter 添加"
+        :placeholder="t('editor.tagsPlaceholder')"
         class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary"
         @keyup.enter="addTag"
       >
@@ -228,7 +230,7 @@ const handleClose = () => {
 
     <!-- 空间选择 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">所属空间</label>
+      <label class="block text-sm font-medium mb-2">{{ t('editor.spaceLabel') }}</label>
       <select
         v-model="spaceId"
         class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary"
@@ -249,14 +251,14 @@ const handleClose = () => {
         class="btn btn-secondary"
         @click="handleClose"
       >
-        取消
+        {{ t('common.cancel') }}
       </button>
       <button
         class="btn btn-primary"
         :disabled="!title.trim()"
         @click="handleSave"
       >
-        {{ prompt ? '保存' : '创建' }}
+        {{ prompt ? t('common.save') : t('common.create') }}
       </button>
     </div>
   </div>

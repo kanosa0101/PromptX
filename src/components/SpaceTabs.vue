@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/stores/promptStore'
 import { useUiStore } from '@/stores/uiStore'
 
+const { t } = useI18n()
 const promptStore = usePromptStore()
 const uiStore = useUiStore()
 
@@ -28,14 +30,14 @@ const deleteSpace = (spaceId: string) => {
   if (spaceId === 'space_default') return
   const promptCount = promptStore.prompts.filter(p => p.spaceId === spaceId).length
   const msg = promptCount > 0
-    ? `确定删除此空间吗？空间内的 ${promptCount} 个提示词将移至默认空间。`
-    : '确定删除此空间吗？'
+    ? t('spaceTabs.confirmDeleteWithPrompts', { count: promptCount })
+    : t('spaceTabs.confirmDelete')
   uiStore.openConfirmDialog(
     msg,
     () => {
       promptStore.deleteSpace(spaceId)
     },
-    '删除空间'
+    t('spaceTabs.deleteSpace')
   )
 }
 
@@ -90,7 +92,7 @@ const onDrop = (index: number) => {
       role="tab"
       :aria-selected="space.id === currentSpaceId"
       draggable="true"
-      title="拖拽调整空间顺序"
+      :title="t('spaceTabs.dragToReorder')"
       class="px-3.5 py-1.5 rounded-full text-sm transition-all duration-150 group relative cursor-grab active:cursor-grabbing"
       :class="[
         space.id === currentSpaceId
@@ -114,14 +116,14 @@ const onDrop = (index: number) => {
       <!-- 编辑按钮（悬停时显示） -->
       <span
         class="ml-1 opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
-        title="编辑空间"
+        :title="t('spaceTabs.editSpace')"
         @click.stop="editSpace(space.id)"
       >✎</span>
       <!-- 删除按钮（悬停时显示，默认空间不可删除） -->
       <span
         v-if="space.id !== 'space_default'"
         class="ml-1 opacity-0 group-hover:opacity-100 hover:text-error transition-opacity"
-        title="删除空间"
+        :title="t('spaceTabs.deleteSpace')"
         @click.stop="deleteSpace(space.id)"
       >✕</span>
     </button>
@@ -129,7 +131,7 @@ const onDrop = (index: number) => {
     <!-- 新建空间按钮 -->
     <button
       class="px-3 py-1.5 rounded text-sm text-muted hover:bg-surface dark:hover:bg-surface-dark"
-      aria-label="新建空间"
+      :aria-label="t('spaceTabs.create')"
       @click="showCreateSpace"
     >
       ➕

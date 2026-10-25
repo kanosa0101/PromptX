@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/stores/promptStore'
 import PromptItem from '@/components/PromptItem.vue'
 
+const { t } = useI18n()
 const promptStore = usePromptStore()
 
 const filteredPrompts = computed(() => promptStore.filteredPrompts)
@@ -18,7 +20,7 @@ const onItemClick = (index: number) => {
   <div
     class="result-list overflow-y-auto bg-white dark:bg-background-dark"
     role="listbox"
-    aria-label="提示词列表"
+    :aria-label="t('search.listLabel')"
   >
     <!-- 结果列表 -->
     <PromptItem
@@ -41,10 +43,10 @@ const onItemClick = (index: number) => {
         🔍
       </div>
       <p class="text-muted text-sm">
-        暂无匹配结果
+        {{ t('search.noResults') }}
       </p>
       <p class="text-xs text-muted/70 mt-1.5">
-        按 Ctrl+N 创建新提示词
+        {{ t('search.createHint') }}
       </p>
     </div>
   </div>

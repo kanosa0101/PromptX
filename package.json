@@ -22,7 +22,8 @@
     "fuse.js": "^7.0.0",
     "pinia": "^2.1.7",
     "pinyin-pro": "^3.28.1",
-    "vue": "^3.4.21"
+    "vue": "^3.4.21",
+    "vue-i18n": "^9.14.4"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

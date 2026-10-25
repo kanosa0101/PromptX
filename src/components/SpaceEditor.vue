@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/stores/promptStore'
 import { SPACE_ICON_OPTIONS, SPACE_COLOR_OPTIONS } from '@shared/spaceOptions'
 import type { Space } from '@/types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   space?: Space | null
@@ -70,7 +73,7 @@ const handleClose = () => {
   <div class="p-4 bg-white dark:bg-background-dark text-foreground dark:text-foreground-dark">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-medium">
-        {{ isEditing ? '编辑空间' : '新建空间' }}
+        {{ isEditing ? t('spaceEditor.editSpace') : t('spaceEditor.newSpace') }}
       </h3>
       <button
         class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark"
@@ -82,18 +85,18 @@ const handleClose = () => {
 
     <!-- 名称 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">名称</label>
+      <label class="block text-sm font-medium mb-2">{{ t('common.name') }}</label>
       <input
         v-model="name"
         type="text"
-        placeholder="空间名称"
+        :placeholder="t('spaceEditor.namePlaceholder')"
         class="w-full px-3 py-2 rounded border border-surface dark:border-surface-dark bg-transparent focus:outline-none focus:border-primary text-sm"
       >
     </div>
 
     <!-- 图标 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">图标</label>
+      <label class="block text-sm font-medium mb-2">{{ t('common.icon') }}</label>
       <div class="flex gap-2">
         <button
           v-for="ic in iconOptions"
@@ -113,7 +116,7 @@ const handleClose = () => {
 
     <!-- 颜色 -->
     <div class="mb-4">
-      <label class="block text-sm font-medium mb-2">颜色</label>
+      <label class="block text-sm font-medium mb-2">{{ t('common.color') }}</label>
       <div class="flex gap-2">
         <button
           v-for="c in colorOptions"
@@ -137,14 +140,14 @@ const handleClose = () => {
         class="px-4 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark"
         @click="handleClose"
       >
-        取消
+        {{ t('common.cancel') }}
       </button>
       <button
         class="px-4 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
         :disabled="!name.trim()"
         @click="handleSave"
       >
-        {{ isEditing ? '保存' : '创建' }}
+        {{ isEditing ? t('common.save') : t('common.create') }}
       </button>
     </div>
   </div>

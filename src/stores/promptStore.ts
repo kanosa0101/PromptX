@@ -6,6 +6,7 @@ import {
 } from '@shared/variable'
 import type { Prompt, Space, Variable, AppData, ImportResult, PromptInput } from '@/types'
 import { useSearch } from '@/composables/useSearch'
+import { t } from '@/i18n'
 import { useSettingsStore } from './settingsStore'
 import { useUiStore } from './uiStore'
 
@@ -58,7 +59,7 @@ export const usePromptStore = defineStore('prompt', {
         this.prompts = []
         const uiStore = useUiStore()
         uiStore.showSystemNotice(
-          '数据加载失败：' + (error instanceof Error ? error.message : String(error))
+          t('settings.loadFailed', { error: error instanceof Error ? error.message : String(error) })
         )
       } finally {
         this.isLoading = false

@@ -4,6 +4,9 @@
 -->
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 defineProps<{
   title?: string
@@ -69,13 +72,13 @@ onUnmounted(() => {
           class="px-3 py-1.5 rounded text-sm bg-surface dark:bg-surface-dark text-foreground dark:text-foreground-dark hover:bg-surface-hover-light dark:hover:bg-surface-soft-dark"
           @click="emit('cancel')"
         >
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button
           class="px-3 py-1.5 rounded text-sm bg-error text-white hover:bg-error-hover"
           @click="emit('confirm')"
         >
-          {{ confirmText || '删除' }}
+          {{ confirmText || t('confirmDialog.deleteDefault') }}
         </button>
       </div>
     </div>

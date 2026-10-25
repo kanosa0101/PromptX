@@ -2,7 +2,7 @@
  * shared/ai.ts 单元测试：端点拼接、代码围栏剥离、重试与错误分类
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { chatEndpoint, stripCodeFence, optimizeText, testAiConnection } from '../ai'
+import { chatEndpoint, stripCodeFence, optimizeText, testAiConnection, consumeSseLines } from '../ai'
 import { DEFAULT_OPTIMIZE_TEMPLATE } from '../types'
 
 const CONFIG = {
@@ -216,5 +216,99 @@ describe('testAiConnection', () => {
     expect(reply).toBe('OK')
     const body = await requestBodyOf(0)
     expect(body.messages).toEqual([{ role: 'user', content: '请只回复两个字符：OK' }])
+  })
+})
+
+describe('optimizeText 流式输出', () => {
+  /** 构造 SSE 流式响应（多个 chunk） */
+  function sseResponse(chunks: string[]): Response {
+    const encoder = new TextEncoder()
+    const stream = new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(encoder.encode(chunk))
+        controller.close()
+      },
+    })
+    return new Response(stream, {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    })
+  }
+
+  const sseData = (content: string) =>
+    `data: ${JSON.stringify({ choices: [{ delta: { content } }] })}\n\n`
+
+  it('请求体带 stream: true 并逐段回调增量与累计全文', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      sseResponse([sseData('你好'), sseData('，'), sseData('世界'), 'data: [DONE]\n\n'])
+    )
+    const deltas: Array<[string, string]> = []
+    const result = await optimizeText(CONFIG, '原文', undefined, (delta, full) =>
+      deltas.push([delta, full])
+    )
+    expect(result).toBe('你好，世界')
+    expect(deltas).toEqual([
+      ['你好', '你好'],
+      ['，', '你好，'],
+      ['世界', '你好，世界'],
+    ])
+    const body = await requestBodyOf(0)
+    expect(body.stream).toBe(true)
+  })
+
+  it('未传回调时请求体仍为 stream: false（行为不变）', async () => {
+    vi.mocked(fetch).mockResolvedValue(okResponse('结果'))
+    await optimizeText(CONFIG, '原文')
+    const body = await requestBodyOf(0)
+    expect(body.stream).toBe(false)
+  })
+
+  it('跨 chunk 的半行 data 能正确拼接', async () => {
+    const line = sseData('完整消息')
+    vi.mocked(fetch).mockResolvedValue(
+      sseResponse([line.slice(0, 10), line.slice(10), 'data: [DONE]\n\n'])
+    )
+    const result = await optimizeText(CONFIG, '原文', undefined, () => {})
+    expect(result).toBe('完整消息')
+  })
+
+  it('服务端忽略 stream 参数返回 JSON 时回退整体解析并回调一次', async () => {
+    vi.mocked(fetch).mockResolvedValue(okResponse('整体结果'))
+    let received = ''
+    const result = await optimizeText(CONFIG, '原文', undefined, (delta) => {
+      received = delta
+    })
+    expect(result).toBe('整体结果')
+    expect(received).toBe('整体结果')
+  })
+
+  it('流式结果同样剥离代码围栏', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      sseResponse([sseData('```\n'), sseData('内容'), sseData('\n```'), 'data: [DONE]\n\n'])
+    )
+    const result = await optimizeText(CONFIG, '原文', undefined, () => {})
+    expect(result).toBe('内容')
+  })
+})
+
+describe('consumeSseLines', () => {
+  it('解析完整 data 行并保留不完整行到下一轮', () => {
+    const [delta, rest] = consumeSseLines(
+      'data: {"choices":[{"delta":{"content":"A"}}]}\n\ndata: {"choices":[{"del'
+    )
+    expect(delta).toBe('A')
+    expect(rest).toBe('data: {"choices":[{"del')
+  })
+
+  it('忽略注释行与 [DONE]', () => {
+    const [delta, rest] = consumeSseLines(': comment\ndata: [DONE]\n\n')
+    expect(delta).toBe('')
+    expect(rest).toBe('')
+  })
+
+  it('无法解析的 JSON 行静默跳过', () => {
+    const [delta, rest] = consumeSseLines('data: {broken\n\n')
+    expect(delta).toBe('')
+    expect(rest).toBe('')
   })
 })

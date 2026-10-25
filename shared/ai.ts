@@ -63,12 +63,46 @@ const RETRY_DELAY_MS = 1_000
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-/** 调用 OpenAI 兼容 Chat Completions 接口（超时/网络/5xx/429 自动重试一次）
- * @param signal 外部取消信号（用户主动取消）：中止后抛出「已取消」且不重试 */
+/** 流式回调：delta 为本次增量，fullText 为已累计全文（重试会从头重放） */
+export type StreamDeltaHandler = (delta: string, fullText: string) => void
+
+/**
+ * 从 SSE 缓冲中提取并消费完整的 data: 行。
+ * 返回 [增量文本, 剩余不完整行]；无法解析的行静默跳过
+ */
+export function consumeSseLines(buffer: string): [string, string] {
+  const lines = buffer.split('\n')
+  const remainder = lines.pop() ?? ''
+  let delta = ''
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (!trimmed.startsWith('data:')) continue
+    const payload = trimmed.slice(5).trim()
+    if (!payload || payload === '[DONE]') continue
+    try {
+      const json = JSON.parse(payload) as { choices?: Array<{ delta?: { content?: unknown } }> }
+      const content = json?.choices?.[0]?.delta?.content
+      if (typeof content === 'string') {
+        delta += content
+      }
+    } catch {
+      // 半截/非 JSON 行忽略（跨 chunk 的行由 remainder 保留到下一轮）
+    }
+  }
+  return [delta, remainder]
+}
+
+/**
+ * 调用 OpenAI 兼容 Chat Completions 接口（超时/网络/5xx/429 自动重试一次）
+ * @param signal 外部取消信号（用户主动取消）：中止后抛出「已取消」且不重试
+ * @param onDelta 传入时启用流式（stream: true）：每收到增量回调一次；
+ *                流式下超时为「60s 无数据」而非总时长（推理模型思考阶段不计入）
+ */
 async function chat(
   config: AiConfig,
   messages: ChatMessage[],
   signal?: AbortSignal,
+  onDelta?: StreamDeltaHandler,
 ): Promise<string> {
   if (!config.aiApiKey.trim()) {
     throw new Error('未配置 API Key，请先在设置中填写')
@@ -87,7 +121,12 @@ async function chat(
     const controller = new AbortController()
     const onExternalAbort = () => controller.abort()
     signal?.addEventListener('abort', onExternalAbort, { once: true })
-    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+    // 流式模式下收到数据即重置计时（空闲超时）；非流式为总时长超时
+    let timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+    const resetTimer = () => {
+      clearTimeout(timer)
+      timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+    }
 
     try {
       let response: Response
@@ -102,7 +141,7 @@ async function chat(
             model: config.aiModel.trim(),
             messages,
             temperature: 0.5,
-            stream: false,
+            stream: Boolean(onDelta),
             // 推理模式关闭时请求跳过思考（DeepSeek 等混合推理模型）
             ...(config.optimizeThinking ? {} : { thinking: { type: 'disabled' as const } }),
           } satisfies ChatRequestBody),
@@ -140,6 +179,33 @@ async function chat(
         throw new Error(message)
       }
 
+      const contentType = response.headers.get('content-type') || ''
+      if (onDelta && contentType.includes('text/event-stream') && response.body) {
+        // 流式路径：逐块读取 SSE，聚合成全文
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let buffer = ''
+        let full = ''
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          resetTimer()
+          buffer += decoder.decode(value, { stream: true })
+          const [delta, remainder] = consumeSseLines(buffer)
+          buffer = remainder
+          if (delta) {
+            full += delta
+            onDelta(delta, full)
+          }
+        }
+        const optimized = stripCodeFence(full)
+        if (!optimized) {
+          throw new Error('AI 返回了空内容')
+        }
+        return optimized
+      }
+
+      // 非流式路径（未请求流式，或服务端忽略 stream 参数返回整体 JSON）
       const data = await response.json().catch(() => {
         throw new Error('AI 响应解析失败')
       })
@@ -147,6 +213,9 @@ async function chat(
       const optimized = stripCodeFence(content)
       if (!optimized) {
         throw new Error('AI 返回了空内容')
+      }
+      if (onDelta) {
+        onDelta(optimized, optimized)
       }
       return optimized
     } catch (error) {
@@ -169,18 +238,19 @@ async function chat(
   throw lastError
 }
 
-/** 用模板优化文本（system=优化模板，user=选中的原文） */
+/** 用模板优化文本（system=优化模板，user=选中的原文）；传 onDelta 启用流式增量回调 */
 export async function optimizeText(
   config: AiConfig,
   text: string,
   signal?: AbortSignal,
+  onDelta?: StreamDeltaHandler,
 ): Promise<string> {
   const userText =
     text.length > MAX_INPUT_CHARS ? text.slice(0, MAX_INPUT_CHARS) : text
   return chat(config, [
     { role: 'system', content: config.optimizeTemplate || DEFAULT_OPTIMIZE_TEMPLATE },
     { role: 'user', content: userText },
-  ], signal)
+  ], signal, onDelta)
 }
 
 /** 测试连接：发送一条最小请求，返回模型回复 */

@@ -2,7 +2,7 @@
   <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
     <div class="bg-background-light dark:bg-background-dark p-4 rounded-lg shadow-lg max-w-md w-full">
       <h3 class="text-lg font-bold mb-4 text-foreground-light dark:text-foreground-dark">
-        填写变量值
+        {{ t('variableForm.title') }}
       </h3>
 
       <div class="space-y-3">
@@ -16,7 +16,7 @@
           </label>
           <input
             v-model="values[variable.name]"
-            :placeholder="variable.defaultValue || `输入 ${variable.name} 的值`"
+            :placeholder="variable.defaultValue || t('variableForm.inputLabel', { name: variable.name })"
             type="text"
             class="editor-input"
             @keydown.enter="onConfirm"
@@ -29,14 +29,14 @@
           class="btn btn-secondary flex-1"
           @click="$emit('cancel')"
         >
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button
           class="btn btn-primary flex-1"
           :disabled="hasEmptyVariable"
           @click="onConfirm"
         >
-          确认输出
+          {{ t('variableForm.confirmOutput') }}
         </button>
       </div>
     </div>
@@ -45,7 +45,10 @@
 
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Variable } from '@/types'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   variables: Variable[]

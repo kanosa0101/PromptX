@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { check, type Update } from '@tauri-apps/plugin-updater'
@@ -10,6 +11,7 @@ import { usePromptStore } from '@/stores/promptStore'
 import HotkeyRow from './HotkeyRow.vue'
 import AiSettingsSection from './AiSettingsSection.vue'
 
+const { t } = useI18n()
 const settingsStore = useSettingsStore()
 const uiStore = useUiStore()
 const promptStore = usePromptStore()
@@ -22,6 +24,10 @@ const emit = defineEmits<{
 const theme = computed({
   get: () => settingsStore.theme,
   set: (v: 'light' | 'dark' | 'system') => { settingsStore.setTheme(v) }
+})
+const language = computed({
+  get: () => settingsStore.language,
+  set: (v: string) => { settingsStore.updateSettings({ language: v }) }
 })
 const hotkey = computed(() => settingsStore.globalHotkey)
 const windowOpacity = computed({
@@ -104,10 +110,10 @@ const handleHotkeyCapture = async (e: KeyboardEvent) => {
       } else {
         await settingsStore.updateSettings({ clipboardOptimizeHotkey: fullHotkey })
       }
-      importStatus.value = '快捷键已更新为 ' + fullHotkey
+      importStatus.value = t('settings.hotkey.updated', { hotkey: fullHotkey })
       await refreshHotkeyStatus()
     } catch (error) {
-      importStatus.value = '快捷键注册失败：' + (error instanceof Error ? error.message : String(error))
+      importStatus.value = t('settings.hotkey.registerFailed', { error: error instanceof Error ? error.message : String(error) })
     }
 
     capturingField.value = null
@@ -117,7 +123,7 @@ const handleHotkeyCapture = async (e: KeyboardEvent) => {
 // 开始捕获快捷键
 const startHotkeyCapture = (field: HotkeyField) => {
   capturingField.value = field
-  importStatus.value = '请按下新的快捷键组合...'
+  importStatus.value = t('settings.hotkey.capturePrompt')
 }
 
 // 取消捕获
@@ -132,8 +138,8 @@ const refreshHotkeyStatus = async () => {
     const status = await invoke<{ name: string; hotkey: string; ok: boolean }[]>('get_hotkey_status')
     const failed = status.filter((s) => !s.ok)
     importStatus.value = failed.length
-      ? failed.map((s) => `「${s.name}」${s.hotkey} 注册失败（可能被占用）`).join('；')
-      : '全部快捷键注册正常'
+      ? failed.map((s) => t('settings.hotkey.registerFailedStatus', { name: s.name, hotkey: s.hotkey })).join('；')
+      : t('settings.hotkey.allNormal')
   } catch {
     // 查询失败忽略
   }
@@ -165,9 +171,9 @@ const handleExport = async () => {
     a.download = `promptx-export-${new Date().toISOString().split('T')[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
-    importStatus.value = '导出成功！'
+    importStatus.value = t('settings.importExport.exported')
   } catch (error) {
-    importStatus.value = '导出失败：' + (error as Error).message
+    importStatus.value = t('settings.importExport.exportFailed', { error: (error as Error).message })
   }
 }
 
@@ -186,20 +192,20 @@ const handleImport = () => {
       const data = JSON.parse(text)
 
       const result = await promptStore.importData(data, true)
-      importStatus.value = `导入成功！导入 ${result.importedPrompts} 个提示词，${result.importedSpaces} 个空间`
+      importStatus.value = t('settings.importExport.importSuccess', { prompts: result.importedPrompts, spaces: result.importedSpaces })
     } catch (error) {
-      importStatus.value = '导入失败：' + (error instanceof Error ? error.message : String(error))
+      importStatus.value = t('settings.importExport.importFailed', { error: error instanceof Error ? error.message : String(error) })
     }
   }
   input.click()
 }
 
-// 主题选项
-const themeOptions = [
-  { value: 'light', label: '亮色' },
-  { value: 'dark', label: '暗色' },
-  { value: 'system', label: '跟随系统' },
-]
+// 主题选项（computed 保证切换语言后标签即时更新）
+const themeOptions = computed(() => [
+  { value: 'light', label: t('theme.light') },
+  { value: 'dark', label: t('theme.dark') },
+  { value: 'system', label: t('theme.system') },
+])
 
 // 使用统计（从当前数据即时计算，不额外落盘）
 const stats = computed(() => {
@@ -255,29 +261,29 @@ const checkForUpdate = async () => {
     if (update) {
       pendingUpdate = update
       updaterState.value = 'available'
-      updaterMessage.value = `发现新版本 v${update.version}（当前 v${appVersion.value}）`
+      updaterMessage.value = t('settings.updater.found', { version: update.version, current: appVersion.value })
     } else {
       pendingUpdate = null
       updaterState.value = 'uptodate'
-      updaterMessage.value = '已是最新版本'
+      updaterMessage.value = t('settings.updater.upToDate')
     }
   } catch (error) {
     pendingUpdate = null
     updaterState.value = 'error'
-    updaterMessage.value = '检查更新失败：' + (error instanceof Error ? error.message : String(error))
+    updaterMessage.value = t('settings.updater.checkFailed', { error: error instanceof Error ? error.message : String(error) })
   }
 }
 
 const downloadAndInstall = async () => {
   if (!pendingUpdate) return
   updaterState.value = 'downloading'
-  updaterMessage.value = '正在下载并安装更新，完成后应用将自动重启…'
+  updaterMessage.value = t('settings.updater.downloading')
   try {
     await pendingUpdate.downloadAndInstall()
     await relaunch()
   } catch (error) {
     updaterState.value = 'error'
-    updaterMessage.value = '更新失败：' + (error instanceof Error ? error.message : String(error))
+    updaterMessage.value = t('settings.updater.updateFailed', { error: error instanceof Error ? error.message : String(error) })
   }
 }
 </script>
@@ -286,7 +292,7 @@ const downloadAndInstall = async () => {
   <div class="settings-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
-        设置
+        {{ t('settings.title') }}
       </h3>
       <button
         class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
@@ -298,7 +304,7 @@ const downloadAndInstall = async () => {
 
     <!-- 主题设置 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">主题</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('theme.label') }}</span>
       <select
         v-model="theme"
         class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
@@ -313,9 +319,28 @@ const downloadAndInstall = async () => {
       </select>
     </div>
 
+    <!-- 语言 -->
+    <div class="setting-item flex items-center justify-between py-2">
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('common.language') }}</span>
+      <select
+        v-model="language"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
+      >
+        <option value="system">
+          {{ t('language.system') }}
+        </option>
+        <option value="zh-CN">
+          中文
+        </option>
+        <option value="en">
+          English
+        </option>
+      </select>
+    </div>
+
     <!-- 搜索防抖 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">搜索防抖 (ms)</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('settings.searchDebounce') }}</span>
       <input
         :value="searchDebounce"
         type="number"
@@ -329,7 +354,7 @@ const downloadAndInstall = async () => {
 
     <!-- 最大结果数 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">最大结果数</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('settings.maxResults') }}</span>
       <input
         :value="maxResults"
         type="number"
@@ -343,7 +368,7 @@ const downloadAndInstall = async () => {
 
     <!-- 快捷键设置 -->
     <HotkeyRow
-      label="全局快捷键"
+      :label="t('settings.globalHotkey')"
       :hotkey="hotkey"
       :capturing="capturingField === 'globalHotkey'"
       @start="startHotkeyCapture('globalHotkey')"
@@ -352,7 +377,7 @@ const downloadAndInstall = async () => {
 
     <!-- 窗口透明度 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">窗口透明度</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('settings.windowOpacity') }}</span>
       <input
         v-model.number="windowOpacity"
         type="range"
@@ -367,7 +392,7 @@ const downloadAndInstall = async () => {
 
     <!-- 失去焦点自动隐藏 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">失去焦点自动隐藏</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('settings.autoHide') }}</span>
       <input
         v-model="autoHide"
         type="checkbox"
@@ -377,7 +402,7 @@ const downloadAndInstall = async () => {
 
     <!-- 开机自启动 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">开机自启动</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('settings.launchAtLogin') }}</span>
       <input
         v-model="launchAtLogin"
         type="checkbox"
@@ -396,7 +421,7 @@ const downloadAndInstall = async () => {
     <!-- 使用统计 -->
     <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
-        📊 使用统计
+        {{ t('settings.stats.title') }}
       </h4>
       <div class="grid grid-cols-4 gap-2 text-center">
         <div>
@@ -404,7 +429,7 @@ const downloadAndInstall = async () => {
             {{ stats.count }}
           </div>
           <div class="text-xs text-muted">
-            提示词
+            {{ t('settings.stats.prompts') }}
           </div>
         </div>
         <div>
@@ -412,7 +437,7 @@ const downloadAndInstall = async () => {
             {{ stats.spaces }}
           </div>
           <div class="text-xs text-muted">
-            空间
+            {{ t('settings.stats.spaces') }}
           </div>
         </div>
         <div>
@@ -420,7 +445,7 @@ const downloadAndInstall = async () => {
             {{ stats.totalUses }}
           </div>
           <div class="text-xs text-muted">
-            累计输出
+            {{ t('settings.stats.totalUses') }}
           </div>
         </div>
         <div>
@@ -428,7 +453,7 @@ const downloadAndInstall = async () => {
             {{ stats.favorites }}
           </div>
           <div class="text-xs text-muted">
-            收藏
+            {{ t('settings.stats.favorites') }}
           </div>
         </div>
       </div>
@@ -437,7 +462,7 @@ const downloadAndInstall = async () => {
         class="mt-3"
       >
         <div class="text-xs text-muted mb-1">
-          最常用
+          {{ t('settings.stats.topUsed') }}
         </div>
         <div
           v-for="(p, i) in stats.top"
@@ -445,14 +470,14 @@ const downloadAndInstall = async () => {
           class="flex justify-between gap-2 text-xs py-0.5"
         >
           <span class="truncate text-foreground dark:text-foreground-dark">{{ i + 1 }}. {{ p.title }}</span>
-          <span class="shrink-0 text-muted">{{ p.usageCount }} 次</span>
+          <span class="shrink-0 text-muted">{{ t('settings.stats.times', { count: p.usageCount }) }}</span>
         </div>
       </div>
       <div
         v-if="stats.lastUsed"
         class="text-xs text-muted mt-2"
       >
-        最近使用：{{ stats.lastUsed.slice(0, 16).replace('T', ' ') }}
+        {{ t('settings.stats.lastUsed', { time: stats.lastUsed.slice(0, 16).replace('T', ' ') }) }}
       </div>
     </div>
 
@@ -460,7 +485,7 @@ const downloadAndInstall = async () => {
     <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark">
-          🔄 软件更新
+          {{ t('settings.updater.title') }}
         </h4>
         <span
           v-if="appVersion"
@@ -481,14 +506,14 @@ const downloadAndInstall = async () => {
           class="shrink-0 px-3 py-1.5 rounded text-xs bg-primary text-white hover:bg-primary-hover"
           @click="downloadAndInstall"
         >
-          下载并安装
+          {{ t('settings.updater.downloadAndInstall') }}
         </button>
         <button
           v-else-if="updaterState === 'downloading'"
           class="shrink-0 px-3 py-1.5 rounded text-xs bg-primary text-white opacity-60 cursor-not-allowed"
           disabled
         >
-          安装中…
+          {{ t('settings.updater.installing') }}
         </button>
         <button
           v-else
@@ -496,7 +521,7 @@ const downloadAndInstall = async () => {
           :disabled="updaterState === 'checking'"
           @click="checkForUpdate"
         >
-          {{ updaterState === 'checking' ? '检查中…' : '检查更新' }}
+          {{ updaterState === 'checking' ? t('settings.updater.checking') : t('settings.updater.check') }}
         </button>
       </div>
     </div>
@@ -508,13 +533,13 @@ const downloadAndInstall = async () => {
           class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleExport"
         >
-          导出数据
+          {{ t('settings.importExport.export') }}
         </button>
         <button
           class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleImport"
         >
-          导入数据
+          {{ t('settings.importExport.import') }}
         </button>
       </div>
       <!-- 状态提示 -->
@@ -528,7 +553,7 @@ const downloadAndInstall = async () => {
         class="w-full px-3 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
         @click="showHelp"
       >
-        使用说明
+        {{ t('common.help') }}
       </button>
     </div>
   </div>

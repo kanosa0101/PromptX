@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { SearchResult } from '@/types'
 import { highlightMatches, truncate } from '@/composables/useSearch'
 import { useUiStore } from '@/stores/uiStore'
@@ -13,6 +14,7 @@ defineEmits<{
   click: []
 }>()
 
+const { t } = useI18n()
 const uiStore = useUiStore()
 const promptStore = usePromptStore()
 
@@ -50,11 +52,11 @@ const handleToggleFavorite = () => {
 // 删除
 const handleDelete = () => {
   uiStore.openConfirmDialog(
-    '确定删除此提示词吗？',
+    t('confirmDialog.confirmDeletePrompt'),
     () => {
       promptStore.deletePrompt(props.prompt.id)
     },
-    '删除提示词'
+    t('confirmDialog.deletePromptTitle')
   )
 }
 </script>
@@ -78,16 +80,16 @@ const handleDelete = () => {
     >
       <button
         class="p-1 rounded transition-colors hover:bg-primary/20 text-muted hover:text-primary"
-        aria-label="编辑"
-        title="编辑 (Ctrl+E)"
+        :aria-label="t('common.edit')"
+        :title="t('promptItem.editTooltip')"
         @click.stop="handleEdit"
       >
         ✏️
       </button>
       <button
         class="p-1 rounded transition-colors hover:bg-error/20 text-muted hover:text-error"
-        aria-label="删除"
-        title="删除 (Ctrl+D)"
+        :aria-label="t('common.delete')"
+        :title="t('promptItem.deleteTooltip')"
         @click.stop="handleDelete"
       >
         🗑️
@@ -120,15 +122,15 @@ const handleDelete = () => {
       <button
         class="shrink-0 text-sm leading-none transition-colors"
         :class="prompt.favorite ? 'text-amber-400' : 'text-muted/50 hover:text-amber-400'"
-        :aria-label="prompt.favorite ? '取消收藏' : '收藏'"
-        :title="prompt.favorite ? '取消收藏' : '收藏（列表优先展示）'"
+        :aria-label="prompt.favorite ? t('promptItem.unfavorite') : t('promptItem.favorite')"
+        :title="prompt.favorite ? t('promptItem.unfavorite') : t('promptItem.favoriteHint')"
         @click.stop="handleToggleFavorite"
       >
         {{ prompt.favorite ? '★' : '☆' }}
       </button>
       <span
         class="shrink-0 text-xs text-muted/60"
-        :title="'创建于 ' + prompt.createdAt"
+        :title="t('promptItem.createdAt', { date: prompt.createdAt })"
       >{{ formatDate(prompt.createdAt) }}</span>
     </div>
 

@@ -2,7 +2,7 @@
   <div class="space-editor-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
-        空间管理
+        {{ t('spaceEditor.manageSpaces') }}
       </h3>
       <button
         class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
@@ -28,14 +28,14 @@
             class="px-2 py-1 text-xs rounded hover:bg-surface dark:hover:bg-surface-dark text-muted"
             @click="editSpace(space)"
           >
-            编辑
+            {{ t('common.edit') }}
           </button>
           <button
             v-if="space.id !== 'space_default'"
             class="px-2 py-1 text-xs rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500"
             @click="deleteSpace(space.id)"
           >
-            删除
+            {{ t('common.delete') }}
           </button>
         </div>
       </div>
@@ -46,7 +46,7 @@
       class="w-full px-3 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
       @click="showCreateForm = true"
     >
-      + 新建空间
+      + {{ t('spaceEditor.newSpace') }}
     </button>
 
     <!-- 创建/编辑表单 -->
@@ -56,7 +56,7 @@
     >
       <div class="space-y-3">
         <div>
-          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">图标</label>
+          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">{{ t('common.icon') }}</label>
           <select
             v-model="form.icon"
             class="w-full px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent"
@@ -71,16 +71,16 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">名称</label>
+          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">{{ t('common.name') }}</label>
           <input
             v-model="form.name"
             type="text"
             class="w-full px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent"
-            placeholder="空间名称"
+            :placeholder="t('spaceEditor.namePlaceholder')"
           >
         </div>
         <div>
-          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">颜色</label>
+          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">{{ t('common.color') }}</label>
           <div class="flex gap-2">
             <button
               v-for="color in colorOptions"
@@ -97,14 +97,14 @@
           class="flex-1 px-2 py-1 text-sm rounded bg-surface dark:bg-surface-hover-dark"
           @click="cancelEdit"
         >
-          取消
+          {{ t('common.cancel') }}
         </button>
         <button
           class="flex-1 px-2 py-1 text-sm rounded bg-primary text-white"
           :disabled="!form.name"
           @click="saveSpace"
         >
-          保存
+          {{ t('common.save') }}
         </button>
       </div>
     </div>
@@ -113,10 +113,13 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from '@/sidepanel/stores/promptStore'
 import { useUiStore } from '../stores/uiStore'
 import { SPACE_ICON_OPTIONS, SPACE_COLOR_OPTIONS } from '@shared/spaceOptions'
 import type { Space } from '@/types'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   close: []
@@ -150,13 +153,13 @@ const editSpace = (space: Space) => {
 
 const deleteSpace = (id: string) => {
   uiStore.openConfirmDialog(
-    '确定删除此空间？其中的提示词将移至默认空间。',
+    t('spaceEditor.confirmDeleteWithPrompts'),
     async () => {
       // 走 store 动作：统一处理提示词迁移、当前空间切换与持久化
       // （此前内联实现漏了 currentSpaceId 重置，删除当前空间后列表空白）
       await promptStore.deleteSpace(id)
     },
-    '删除空间'
+    t('spaceTabs.deleteSpace')
   )
 }
 

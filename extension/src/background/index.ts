@@ -4,8 +4,9 @@
  */
 
 import { optimizeText } from '@/lib/ai'
-import { mutateAppData, STORAGE_KEY } from '@/lib/storage'
+import { loadAppData, mutateAppData, STORAGE_KEY } from '@/lib/storage'
 import { buildHistoryTitle, MAX_AI_HISTORY } from '@shared/aiHistory'
+import { flatTranslate, resolveLocale } from '@shared/locales'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
 import type { AiSettings } from '@/types'
 
@@ -63,13 +64,24 @@ function clearBadgeLater(delayMs = 2000): void {
   }, delayMs)
 }
 
+/** 当前语言设置（系统通知用；SW 无 Vue，经 flatTranslate 翻译） */
+async function currentLocale() {
+  try {
+    const data = await loadAppData()
+    return resolveLocale(data.settings?.language || 'system')
+  } catch {
+    return resolveLocale('system')
+  }
+}
+
 /** 失败时弹系统通知（红叹号徽标不足以传达失败原因，如「未配置 API Key」） */
 async function notifyFailure(message: string): Promise<void> {
   try {
+    const locale = await currentLocale()
     await chrome.notifications.create({
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon128.png'),
-      title: 'PromptX AI 优化失败',
+      title: flatTranslate(locale, 'background.optimizeFailedTitle'),
       message: message.slice(0, 180),
     })
   } catch {

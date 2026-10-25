@@ -80,7 +80,8 @@ describe('loadPrompts', () => {
     expect(store.spaces).toEqual([])
     expect(store.prompts).toEqual([])
     expect(store.isLoading).toBe(false)
-    expect(ui.systemNotice).toContain('数据加载失败')
+    // 通知文案经 i18n 翻译，断言不依赖运行环境语言
+    expect(['数据加载失败', 'Failed to load data'].some((m) => ui.systemNotice?.includes(m))).toBe(true)
     expect(ui.systemNotice).toContain('disk error')
   })
 })

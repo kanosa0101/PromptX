@@ -9,6 +9,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { optimizeText } from '@/services/ai'
+import { t } from '@/i18n'
 
 /** 错误横幅自动消失时长 */
 const ERROR_DISMISS_MS = 8000
@@ -72,7 +73,7 @@ export function useAiOptimizer() {
       const optimized = await optimizeText(aiSettings(), text, optimizeController.signal)
       log(`AI 返回 ${optimized.length} 字符，回调 Rust 贴回`)
       await invoke('optimize_apply_result', { text: optimized })
-      showNotice('✨ AI 优化完成，已贴回原位置')
+      showNotice(t('optimizer.donePasted'))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       log(`AI 流程失败: ${message}`)

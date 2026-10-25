@@ -6,7 +6,7 @@
         ref="searchInputRef"
         v-model="localQuery"
         type="text"
-        placeholder="搜索提示词 (支持拼音)..."
+        :placeholder="t('search.placeholder')"
         class="search-input"
         @input="onSearchInput"
       >
@@ -15,33 +15,33 @@
           class="btn btn-secondary text-xs"
           @click="openEditor"
         >
-          + 新建
+          {{ t('app.newButton') }}
         </button>
         <button
           class="btn btn-secondary text-xs"
           @click="openSpaceEditor"
         >
-          + 空间
+          {{ t('app.newSpaceButton') }}
         </button>
         <button
           class="btn btn-secondary text-xs"
           @click="refreshSelection"
         >
-          🔄 刷新选区
+          {{ t('app.refreshSelection') }}
         </button>
         <button
           class="btn btn-secondary text-xs ml-auto"
-          title="使用说明"
+          :title="t('help.title')"
           @click="openHelpPanel"
         >
-          ❓ 帮助
+          {{ t('app.helpButton') }}
         </button>
         <button
           class="btn btn-secondary text-xs"
-          title="设置（AI 配置）"
+          :title="t('common.settings')"
           @click="openSettingsPanel"
         >
-          ⚙ 设置
+          {{ t('app.settingsButton') }}
         </button>
       </div>
     </div>
@@ -57,7 +57,7 @@
           'ring-2 ring-blue-400': dragOverIndex === index && dragIndex !== index
         }]"
         draggable="true"
-        title="拖拽调整空间顺序"
+        :title="t('spaceTabs.dragToReorder')"
         @click="selectSpace(space.id)"
         @dragstart="onDragStart(index, $event)"
         @dragover="onDragOver(index, $event)"
@@ -73,7 +73,7 @@
       v-if="pageSelection"
       class="p-2 mx-2 bg-blue-50 dark:bg-blue-900/30 rounded text-sm"
     >
-      <span class="text-gray-500">当前选区:</span>
+      <span class="text-gray-500">{{ t('app.currentSelection') }}</span>
       <span class="text-blue-600 dark:text-blue-300 ml-1">{{ truncate(pageSelection, 50) }}</span>
     </div>
 
@@ -86,9 +86,9 @@
       </template>
       <template v-else-if="filteredPrompts.length === 0">
         <div class="empty-state">
-          <p>暂无匹配结果</p>
+          <p>{{ t('search.noResults') }}</p>
           <p class="text-xs mt-2">
-            按 Ctrl+N 创建新提示词
+            {{ t('search.createHint') }}
           </p>
         </div>
       </template>
@@ -126,15 +126,15 @@
                 :class="prompt.favorite
                   ? 'text-amber-400'
                   : 'text-gray-400 dark:text-gray-500 hover:text-amber-400'"
-                :aria-label="prompt.favorite ? '取消收藏' : '收藏'"
-                :title="prompt.favorite ? '取消收藏' : '收藏（列表优先展示）'"
+                :aria-label="prompt.favorite ? t('promptItem.unfavorite') : t('promptItem.favorite')"
+                :title="prompt.favorite ? t('promptItem.unfavorite') : t('promptItem.favoriteHint')"
                 @click.stop="toggleFavorite(prompt)"
               >
                 {{ prompt.favorite ? '★' : '☆' }}
               </button>
               <span
                 class="text-xs text-gray-400 dark:text-gray-500"
-                :title="'创建于 ' + prompt.createdAt"
+                :title="t('promptItem.createdAt', { date: prompt.createdAt })"
               >
                 {{ formatDate(prompt.createdAt) }}
               </span>
@@ -146,7 +146,7 @@
 
     <!-- 状态栏 -->
     <div class="status-bar">
-      <span>↑↓ 选择 | Enter 输出 | Tab 切换空间 | Esc 关闭</span>
+      <span>{{ t('statusBar.extLegend') }}</span>
     </div>
 
     <!-- 输出状态提示 -->
@@ -154,13 +154,13 @@
       v-if="outputStatus === 'success'"
       class="output-success"
     >
-      ✅ 已输出到页面
+      {{ t('app.outputSuccess') }}
     </div>
     <div
       v-if="outputStatus === 'clipboard'"
       class="output-clipboard"
     >
-      📋 已复制到剪贴板，请按 Ctrl+V 粘贴
+      {{ t('app.outputClipboard') }}
     </div>
 
     <!-- 变量表单 -->
@@ -208,6 +208,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { usePromptStore } from './stores/promptStore'
 import { useUiStore } from './stores/uiStore'
 import { useKeyboardNavigation } from './composables/useKeyboardNavigation'
@@ -225,6 +226,7 @@ import ConfirmDialog from './components/ConfirmDialog.vue'
 
 const promptStore = usePromptStore()
 const uiStore = useUiStore()
+const { t } = useI18n()
 
 const searchInputRef = ref<HTMLInputElement>()
 const outputStatus = ref<'success' | 'clipboard' | null>(null)

@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 /**
  * 快捷键设置行：展示当前快捷键，点击进入捕获态（由父组件处理按键监听）
  */
+const { t } = useI18n()
+
 defineProps<{
   label: string
   hotkey: string
@@ -30,7 +33,7 @@ const emit = defineEmits<{ start: []; cancel: [] }>()
       class="px-3 py-1.5 rounded border border-primary text-sm bg-primary/10 text-primary w-24 animate-pulse"
       @click="emit('cancel')"
     >
-      取消
+      {{ t('common.cancel') }}
     </button>
   </div>
 </template>

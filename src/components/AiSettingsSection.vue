@@ -4,6 +4,7 @@
  * 数据直接读写 settingsStore；状态提示通过 status 事件交由父级展示
  */
 import { ref, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { testAiConnection } from '@/services/ai'
 import { DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
@@ -20,6 +21,7 @@ const emit = defineEmits<{
   status: [message: string]
 }>()
 
+const { t } = useI18n()
 const settingsStore = useSettingsStore()
 
 const optimizeHotkey = computed(() => settingsStore.optimizeHotkey)
@@ -36,7 +38,7 @@ const isTestingAi = ref(false)
 // 保存单个 AI 设置项（失焦触发）
 const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemplate', value: string) => {
   settingsStore.updateSettings({ [field]: value }).catch((error) => {
-    emit('status', 'AI 设置保存失败：' + (error instanceof Error ? error.message : String(error)))
+    emit('status', t('aiSettings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   })
 }
 
@@ -44,7 +46,7 @@ const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemp
 const resetTemplate = () => {
   optimizeTemplate.value = ''
   saveAiField('optimizeTemplate', '')
-  emit('status', '已恢复内置默认优化模板')
+  emit('status', t('aiSettings.templateReset'))
 }
 
 // 把内置默认模板填入编辑框，便于在其基础上自定义（失焦后才保存）
@@ -55,19 +57,19 @@ const fillDefaultTemplate = () => {
 // 切换推理模式（即时保存）
 const toggleThinking = () => {
   settingsStore.updateSettings({ optimizeThinking: optimizeThinking.value }).catch((error) => {
-    emit('status', '保存失败：' + (error instanceof Error ? error.message : String(error)))
+    emit('status', t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   })
 }
 
 // 测试 AI 连接（使用当前表单值，无需先保存）
 const handleTestAi = async () => {
   isTestingAi.value = true
-  emit('status', '正在测试 AI 连接...')
+  emit('status', t('aiSettings.testingConn'))
   try {
     const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
-    emit('status', '连接成功，模型回复：' + reply.slice(0, 30))
+    emit('status', t('aiSettings.testSuccess', { reply: reply.slice(0, 30) }))
   } catch (error) {
-    emit('status', '连接失败：' + (error instanceof Error ? error.message : String(error)))
+    emit('status', t('aiSettings.testFailed', { error: error instanceof Error ? error.message : String(error) }))
   } finally {
     isTestingAi.value = false
   }
@@ -78,14 +80,14 @@ const handleTestAi = async () => {
   <div class="border-t border-surface dark:border-surface-dark pt-3 mt-3">
     <div class="flex items-center justify-between mb-2">
       <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark">
-        AI 快捷优化
+        {{ t('aiSettings.sectionTitle') }}
       </h4>
       <button
         class="px-3 py-1 rounded text-xs border border-surface dark:border-surface-dark hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark disabled:opacity-50"
         :disabled="isTestingAi"
         @click="handleTestAi"
       >
-        {{ isTestingAi ? '测试中...' : '测试连接' }}
+        {{ isTestingAi ? t('aiSettings.testing') : t('aiSettings.testConnection') }}
       </button>
     </div>
 
@@ -101,7 +103,7 @@ const handleTestAi = async () => {
     </div>
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">服务地址</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.baseUrl') }}</span>
       <input
         v-model="aiBaseUrl"
         type="text"
@@ -112,7 +114,7 @@ const handleTestAi = async () => {
     </div>
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">模型</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.model') }}</span>
       <input
         v-model="aiModel"
         type="text"
@@ -123,7 +125,7 @@ const handleTestAi = async () => {
     </div>
 
     <HotkeyRow
-      label="优化快捷键"
+      :label="t('aiSettings.optimizeHotkey')"
       :hotkey="optimizeHotkey"
       :capturing="props.capturingField === 'optimizeHotkey'"
       @start="emit('capture', 'optimizeHotkey')"
@@ -131,16 +133,16 @@ const handleTestAi = async () => {
     />
 
     <HotkeyRow
-      label="剪贴板优化快捷键"
+      :label="t('aiSettings.clipboardHotkey')"
       :hotkey="clipboardOptimizeHotkey"
       :capturing="props.capturingField === 'clipboardOptimizeHotkey'"
-      hint="优化剪贴板内容并写回剪贴板，适用于终端等选区不可靠场景"
+      :hint="t('aiSettings.clipboardHotkeyHint')"
       @start="emit('capture', 'clipboardOptimizeHotkey')"
       @cancel="emit('cancel')"
     />
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">推理模式</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.thinkingMode') }}</span>
       <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
         <input
           v-model="optimizeThinking"
@@ -148,32 +150,32 @@ const handleTestAi = async () => {
           class="w-4 h-4"
           @change="toggleThinking"
         >
-        深度思考（更慢）
+        {{ t('aiSettings.thinkingLabel') }}
       </label>
     </div>
 
     <div class="py-1.5">
       <div class="flex items-center justify-between">
-        <span class="setting-label text-xs text-muted">优化指令模板（失焦自动保存）</span>
+        <span class="setting-label text-xs text-muted">{{ t('aiSettings.templateLabel') }}</span>
         <div class="flex gap-3">
           <button
             class="text-xs text-primary hover:underline"
             @click="fillDefaultTemplate"
           >
-            填入默认
+            {{ t('aiSettings.fillDefault') }}
           </button>
           <button
             class="text-xs text-primary hover:underline"
             @click="resetTemplate"
           >
-            恢复默认
+            {{ t('aiSettings.resetDefault') }}
           </button>
         </div>
       </div>
       <textarea
         v-model="optimizeTemplate"
         rows="3"
-        placeholder="留空使用内置默认优化模板"
+        :placeholder="t('aiSettings.templatePlaceholder')"
         class="w-full mt-1 px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark resize-none"
         @blur="saveAiField('optimizeTemplate', optimizeTemplate)"
       />

@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Prompt } from '@/types'
 
 defineOptions({ name: 'VariableForm' })
+
+const { t } = useI18n()
 
 const props = defineProps<{
   prompt: Prompt | null
@@ -55,7 +58,7 @@ const handleCancel = () => {
     class="variable-form p-4 bg-background-light dark:bg-background-dark"
   >
     <h3 class="text-base font-medium mb-4">
-      填写变量值
+      {{ t('variableForm.title') }}
     </h3>
 
     <!-- 变量输入 -->
@@ -77,7 +80,7 @@ const handleCancel = () => {
 
     <!-- 系统变量提示 -->
     <div class="text-xs text-muted mb-4">
-      系统变量将自动填充:
+      {{ t('variableForm.hint') }}
       <span class="text-primary">
         {{ prompt.variables.filter(v => v.type === 'system').map(v => v.name).join(', ') }}
       </span>
@@ -89,14 +92,14 @@ const handleCancel = () => {
         class="btn btn-secondary"
         @click="handleCancel"
       >
-        取消
+        {{ t('common.cancel') }}
       </button>
       <button
         class="btn btn-primary"
         :disabled="hasEmptyVariable"
         @click="handleConfirm"
       >
-        确认输出
+        {{ t('variableForm.confirmOutput') }}
       </button>
     </div>
   </div>

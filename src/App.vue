@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { invoke } from '@tauri-apps/api/core'
 import { usePromptStore } from '@/stores/promptStore'
 import { useSettingsStore } from '@/stores/settingsStore'
@@ -19,6 +20,7 @@ import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
 import { clearDraft } from '@shared/draft'
 import { check as checkForAppUpdate } from '@tauri-apps/plugin-updater'
 
+const { t } = useI18n()
 const promptStore = usePromptStore()
 const settingsStore = useSettingsStore()
 const uiStore = useUiStore()
@@ -38,7 +40,7 @@ const handleSavePrompt = async (prompt: Prompt) => {
   } catch (error) {
     console.error('Failed to save prompt:', error)
     // 保持编辑器打开并提示，避免失败看起来像“保存按钮没反应”
-    uiStore.showSystemNotice('保存失败：' + (error instanceof Error ? error.message : String(error)))
+    uiStore.showSystemNotice(t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   }
 }
 
@@ -126,11 +128,11 @@ const handleKeyDown = async (e: KeyboardEvent) => {
     const selected = promptStore.selectedPrompt
     if (selected) {
       uiStore.openConfirmDialog(
-        '确定删除此提示词吗？',
+        t('confirmDialog.confirmDeletePrompt'),
         () => {
           promptStore.deletePrompt(selected.id)
         },
-        '删除提示词'
+        t('confirmDialog.deletePromptTitle')
       )
     }
     return
@@ -157,7 +159,7 @@ const checkHotkeyStatus = async () => {
     const failed = status.filter((s) => !s.ok)
     if (failed.length > 0) {
       uiStore.showSystemNotice(
-        failed.map((s) => `「${s.name}」快捷键 ${s.hotkey} 注册失败（可能被其他程序占用），请在设置中更换`).join('；')
+        failed.map((s) => t('settings.hotkey.registerFailedStartup', { name: s.name, hotkey: s.hotkey })).join('；')
       )
     } else {
       uiStore.clearSystemNotice()
@@ -173,7 +175,7 @@ const checkAppUpdate = async () => {
     const update = await checkForAppUpdate()
     // 快捷键冲突提示优先级更高，有通知时不覆盖
     if (update && !uiStore.systemNotice) {
-      uiStore.showSystemNotice(`发现新版本 v${update.version}：按 Ctrl+, 打开设置 → 「软件更新」下载安装`)
+      uiStore.showSystemNotice(t('settings.updater.startupNotice', { version: update.version }))
     }
   } catch {
     // 离线等场景检查失败不打扰用户
@@ -256,12 +258,12 @@ onUnmounted(() => {
       v-if="uiStore.aiOptimizing"
       class="animate-fade-in fixed bottom-2 left-2 right-2 z-50 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs shadow-lg"
     >
-      <span class="leading-snug">✨ AI 优化进行中，完成后自动贴回原位置…</span>
+      <span class="leading-snug">{{ t('app.aiOptimizing') }}</span>
       <button
         class="shrink-0 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
         @click="aiOptimizer.cancelOptimize()"
       >
-        取消
+        {{ t('app.cancelOptimize') }}
       </button>
     </div>
 

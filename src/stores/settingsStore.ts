@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { invoke } from '@tauri-apps/api/core'
 import type { Settings } from '@/types'
 import { DEFAULT_SETTINGS } from '@/types'
+import { setLocale } from '@/i18n'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
@@ -29,10 +30,12 @@ export const useSettingsStore = defineStore('settings', {
         const settings = await invoke<Settings>('get_settings')
         this.$patch(settings)
         this.applyTheme()
+        setLocale(this.language)
       } catch (error) {
         console.error('Failed to load settings:', error)
         this.$patch(DEFAULT_SETTINGS)
         this.applyTheme()
+        setLocale(this.language)
       }
     },
 
@@ -45,6 +48,9 @@ export const useSettingsStore = defineStore('settings', {
 
         if (updates.theme) {
           this.applyTheme()
+        }
+        if (updates.language) {
+          setLocale(this.language)
         }
       } catch (error) {
         console.error('Failed to update settings:', error)

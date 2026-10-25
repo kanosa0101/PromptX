@@ -43,7 +43,12 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
-      '@shared': resolve(__dirname, '../shared')
+      '@shared': resolve(__dirname, '../shared'),
+      // 强制 vue/vue-i18n 解析到根 node_modules 的同一副本：
+      // shared/ 代码从根解析、扩展自身代码原本解析到 extension/node_modules（peer 自动安装），
+      // 不钉死会出现双 Vue 运行时（响应式系统/context 各自独立，i18n 插件会失效）
+      'vue': resolve(__dirname, '../node_modules/vue'),
+      'vue-i18n': resolve(__dirname, '../node_modules/vue-i18n')
     }
   },
   build: {
