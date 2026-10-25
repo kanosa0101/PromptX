@@ -28,6 +28,8 @@ export interface Settings extends AiSettings {
   launchAtLogin: boolean
   // AI 优化全局快捷键（松开触发）
   optimizeHotkey: string
+  // 优化结果预览确认：开启后优化完成先展示结果，确认后再替换
+  optimizePreview: boolean
   // 剪贴板优化快捷键（优化剪贴板内容并写回）
   clipboardOptimizeHotkey: string
 }
@@ -72,6 +74,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ...DEFAULT_AI_SETTINGS,
   optimizeHotkey: 'Ctrl+Alt+O',
   clipboardOptimizeHotkey: 'Ctrl+Shift+B',
+  optimizePreview: false,
 }
 
 // 默认空间

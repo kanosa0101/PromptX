@@ -144,6 +144,30 @@
       </template>
     </div>
 
+    <!-- AI 优化进行中（Side Panel 打开时由 background 推送） -->
+    <div
+      v-if="aiOptimizing"
+      class="mx-2 my-1 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs"
+    >
+      <div>{{ t('app.aiOptimizing') }}</div>
+      <div
+        v-if="aiStreamText"
+        class="truncate opacity-70 mt-0.5"
+      >
+        {{ aiStreamText }}
+      </div>
+    </div>
+
+    <!-- AI 优化结果预览 -->
+    <OptimizePreviewPanel
+      v-if="optimizePreviewData"
+      :text="optimizePreviewData.text"
+      :streaming="optimizePreviewData.streaming"
+      :mode="optimizePreviewData.mode"
+      @apply="onPreviewApply"
+      @cancel="onPreviewCancel"
+    />
+
     <!-- 状态栏 -->
     <div class="status-bar">
       <span>{{ t('statusBar.extLegend') }}</span>
@@ -223,6 +247,7 @@ import SpaceEditor from './components/SpaceEditor.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import HelpPanel from './components/HelpPanel.vue'
 import ConfirmDialog from './components/ConfirmDialog.vue'
+import OptimizePreviewPanel from '@shared/ui/components/OptimizePreviewPanel.vue'
 
 const promptStore = usePromptStore()
 const uiStore = useUiStore()
@@ -317,6 +342,9 @@ const showSpaceEditor = computed(() => uiStore.showSpaceEditor)
 const showSettings = computed(() => uiStore.showSettings)
 const showHelp = computed(() => uiStore.showHelp)
 const showConfirmDialog = computed(() => uiStore.showConfirmDialog)
+const aiOptimizing = computed(() => uiStore.aiOptimizing)
+const aiStreamText = computed(() => uiStore.aiStreamText)
+const optimizePreviewData = computed(() => uiStore.optimizePreviewData)
 
 // 键盘导航
 useKeyboardNavigation()
@@ -413,6 +441,36 @@ const onVariableCancel = () => {
   uiStore.closeVariableForm()
 }
 
+// AI 优化预览：确认应用 / 取消（实际执行在 background，其持有目标标签页上下文）
+const onPreviewApply = () => {
+  chrome.runtime.sendMessage({ action: 'px-optimize-preview-apply' }).catch(() => {})
+  uiStore.closeOptimizePreview()
+}
+
+const onPreviewCancel = () => {
+  chrome.runtime.sendMessage({ action: 'px-optimize-preview-cancel' }).catch(() => {})
+  uiStore.closeOptimizePreview()
+}
+
+// background 的 AI 优化进度 / 预览推送（Side Panel 打开时才有接收方）
+const onRuntimeMessage = (message: { action?: string; text?: string; mode?: 'selection' | 'clipboard' }) => {
+  switch (message.action) {
+    case 'px-optimize-start':
+      uiStore.startAiOptimizing()
+      break
+    case 'px-optimize-stream':
+      uiStore.updateAiStream(message.text || '')
+      break
+    case 'px-optimize-done':
+      uiStore.stopAiOptimizing()
+      break
+    case 'px-optimize-preview':
+      uiStore.stopAiOptimizing()
+      uiStore.openOptimizePreview(message.mode || 'selection', message.text || '')
+      break
+  }
+}
+
 // 初始化
 const onStorageChanged = (changes: Record<string, unknown>, area: string) => {
   if (area === 'local' && changes[STORAGE_KEY]) {
@@ -431,10 +489,14 @@ onMounted(async () => {
   searchInputRef.value?.focus()
   // 其他上下文（如 background 写入 AI 优化历史）改动存储时刷新列表
   chrome.storage.onChanged.addListener(onStorageChanged)
+  // 长连接端口：background 据此判断 Side Panel 是否打开（预览确认仅此时可用）
+  chrome.runtime.connect({ name: 'promptx-sidepanel' })
+  chrome.runtime.onMessage.addListener(onRuntimeMessage)
 })
 
 onUnmounted(() => {
   window.clearTimeout(searchDebounceTimer)
+  chrome.runtime.onMessage.removeListener(onRuntimeMessage)
   window
     .matchMedia('(prefers-color-scheme: dark)')
     .removeEventListener('change', applyStoredTheme)

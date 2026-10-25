@@ -175,6 +175,8 @@ export const zhCN = {
     testSuccess: '连接成功，模型回复：{reply}',
     testFailed: '连接失败：{error}',
     saveFailed: 'AI 设置保存失败：{error}',
+    previewLabel: '优化结果预览确认',
+    previewHint: '开启后优化完成先展示结果，确认后再替换',
     extHint: '在网页输入框中选中文本，按 Alt+Shift+O 自动 AI 优化并原位替换（快捷键可在 chrome://extensions/shortcuts 修改）',
   },
   help: {
@@ -233,6 +235,13 @@ export const zhCN = {
     newSpaceButton: '+ 空间',
     helpButton: '❓ 帮助',
     settingsButton: '⚙ 设置',
+  },
+  optimizePreview: {
+    title: 'AI 优化结果',
+    streaming: '生成中…',
+    apply: '替换原位',
+    applyClipboard: '写回剪贴板',
+    cancel: '取消',
   },
   optimizer: {
     donePasted: '✨ AI 优化完成，已贴回原位置',

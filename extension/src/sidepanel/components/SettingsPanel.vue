@@ -113,6 +113,19 @@
         >
       </div>
 
+      <div
+        class="setting-item flex items-center justify-between py-1.5"
+        :title="t('aiSettings.previewHint')"
+      >
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.previewLabel') }}</span>
+        <input
+          v-model="optimizePreview"
+          type="checkbox"
+          class="w-4 h-4"
+          @change="saveSettings"
+        >
+      </div>
+
       <div class="setting-item flex items-center justify-between py-1.5">
         <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.thinkingMode') }}</span>
         <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
@@ -310,6 +323,7 @@ const aiApiKey = ref('')
 const aiModel = ref(DEFAULT_SETTINGS.aiModel)
 const optimizeTemplate = ref(DEFAULT_SETTINGS.optimizeTemplate)
 const optimizeThinking = ref(false)
+const optimizePreview = ref(false)
 const isTestingAi = ref(false)
 
 onMounted(async () => {
@@ -322,6 +336,7 @@ onMounted(async () => {
   aiModel.value = data.settings?.aiModel || DEFAULT_SETTINGS.aiModel
   optimizeTemplate.value = data.settings?.optimizeTemplate ?? ''
   optimizeThinking.value = data.settings?.optimizeThinking ?? false
+  optimizePreview.value = data.settings?.optimizePreview ?? false
 })
 
 const saveTheme = () => {
@@ -347,7 +362,8 @@ const saveSettings = async () => {
       aiApiKey: aiApiKey.value,
       aiModel: aiModel.value,
       optimizeTemplate: optimizeTemplate.value,
-      optimizeThinking: optimizeThinking.value
+      optimizeThinking: optimizeThinking.value,
+      optimizePreview: optimizePreview.value
     }
   })
 }

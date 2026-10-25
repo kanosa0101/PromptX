@@ -18,7 +18,12 @@ export const useUiStore = defineStore('ui', {
     showConfirmDialog: false,
     confirmDialogTitle: '' as string,
     confirmDialogMessage: '' as string,
-    confirmDialogCallback: null as (() => void) | null
+    confirmDialogCallback: null as (() => void) | null,
+    // AI 优化进行中（background 经消息推送，Side Panel 打开时展示进度）
+    aiOptimizing: false,
+    aiStreamText: '',
+    // AI 优化结果预览（optimizePreview 开启且 Side Panel 打开时）
+    optimizePreviewData: null as null | { mode: 'selection' | 'clipboard'; text: string; streaming: boolean }
   }),
 
   actions: {
@@ -126,6 +131,29 @@ export const useUiStore = defineStore('ui', {
         this.confirmDialogCallback()
       }
       this.closeConfirmDialog()
+    },
+
+    // ===== AI 优化进度 / 预览（background 消息驱动） =====
+    startAiOptimizing() {
+      this.aiOptimizing = true
+      this.aiStreamText = ''
+    },
+
+    stopAiOptimizing() {
+      this.aiOptimizing = false
+      this.aiStreamText = ''
+    },
+
+    updateAiStream(text: string) {
+      this.aiStreamText = text
+    },
+
+    openOptimizePreview(mode: 'selection' | 'clipboard', text: string) {
+      this.optimizePreviewData = { mode, text, streaming: false }
+    },
+
+    closeOptimizePreview() {
+      this.optimizePreviewData = null
     }
   }
 })

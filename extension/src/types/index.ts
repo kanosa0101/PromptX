@@ -13,6 +13,7 @@ export interface Settings extends AiSettings {
   theme: 'light' | 'dark' | 'system'
   language: string
   maxResults: number
+  optimizePreview: boolean
 }
 
 // 应用数据结构（settings 为扩展端 Settings）
@@ -23,7 +24,8 @@ export const DEFAULT_SETTINGS: Settings = {
   ...DEFAULT_AI_SETTINGS,
   theme: 'system',
   language: 'system',
-  maxResults: 6
+  maxResults: 6,
+  optimizePreview: false
 }
 
 // 默认空间

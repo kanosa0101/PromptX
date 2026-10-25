@@ -67,10 +67,26 @@ export function useAiOptimizer() {
     }
     optimizeRunning = true
     optimizeController = new AbortController()
+    const previewMode = settingsStore.optimizePreview
     uiStore.startAiOptimizing()
+    if (previewMode) {
+      // 预览模式：唤起主窗口流式展示结果，用户确认后再贴回
+      invoke('show_window').catch(() => {})
+      uiStore.openOptimizePreview('selection')
+    }
     try {
       log(`收到优化事件(${text.length} 字符)，开始调用 AI`)
-      const optimized = await optimizeText(aiSettings(), text, optimizeController.signal)
+      const optimized = await optimizeText(aiSettings(), text, optimizeController.signal, (_delta, full) => {
+        uiStore.aiStreamText = full
+        if (previewMode) {
+          uiStore.updateOptimizePreview(full)
+        }
+      })
+      if (previewMode) {
+        // 应用动作由 App.vue 预览面板的确认回调触发
+        uiStore.finishOptimizePreview()
+        return
+      }
       log(`AI 返回 ${optimized.length} 字符，回调 Rust 贴回`)
       await invoke('optimize_apply_result', { text: optimized })
       showNotice(t('optimizer.donePasted'))
@@ -81,7 +97,7 @@ export function useAiOptimizer() {
       invoke('optimize_cancel').catch(() => {})
       if (message === '已取消') {
         // 用户主动取消：不弹错误、不动窗口
-        showNotice('已取消本次 AI 优化')
+        showNotice(t('optimizer.canceled'))
         return
       }
       // 唤起主窗口展示错误
@@ -102,20 +118,34 @@ export function useAiOptimizer() {
     }
     clipboardOptimizeRunning = true
     clipboardOptimizeController = new AbortController()
+    const previewMode = settingsStore.optimizePreview
     uiStore.startAiOptimizing()
+    if (previewMode) {
+      invoke('show_window').catch(() => {})
+      uiStore.openOptimizePreview('clipboard')
+    }
     try {
       log(`收到剪贴板优化事件(${text.length} 字符)，开始调用 AI`)
-      const optimized = await optimizeText(aiSettings(), text, clipboardOptimizeController.signal)
+      const optimized = await optimizeText(aiSettings(), text, clipboardOptimizeController.signal, (_delta, full) => {
+        uiStore.aiStreamText = full
+        if (previewMode) {
+          uiStore.updateOptimizePreview(full)
+        }
+      })
+      if (previewMode) {
+        uiStore.finishOptimizePreview()
+        return
+      }
       log(`AI 返回 ${optimized.length} 字符，写回剪贴板`)
       await invoke('clipboard_optimize_apply_result', { text: optimized })
-      showNotice('✨ 优化完成，结果已在剪贴板，可直接 Ctrl+V')
+      showNotice(t('optimizer.doneClipboard'))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       log(`剪贴板优化失败: ${message}`)
       // 结束会话（原剪贴板未被修改，无需恢复）
       invoke('clipboard_optimize_cancel').catch(() => {})
       if (message === '已取消') {
-        showNotice('已取消本次 AI 优化')
+        showNotice(t('optimizer.canceled'))
         return
       }
       // 唤起主窗口展示错误

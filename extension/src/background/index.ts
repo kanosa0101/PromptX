@@ -26,6 +26,38 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 })
 
+// Side Panel 连接状态（长连接端口，页面关闭即断开）
+// 优化结果「预览确认」仅在 Side Panel 打开时可用（MV3 无法凭代码打开面板）
+let sidepanelConnected = false
+
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'promptx-sidepanel') {
+    sidepanelConnected = true
+    port.onDisconnect.addListener(() => {
+      sidepanelConnected = false
+      // 面板关闭时未确认的预览视为取消
+      if (pendingPreview) {
+        pendingPreview = null
+        chrome.action.setBadgeText({ text: '' }).catch(() => {})
+      }
+    })
+  }
+})
+
+/** 向 Side Panel 推送消息（未连接时静默） */
+function notifySidepanel(message: Record<string, unknown>): void {
+  if (!sidepanelConnected) return
+  chrome.runtime.sendMessage(message).catch(() => {})
+}
+
+// 预览待应用状态（Side Panel 用户确认后应用）
+let pendingPreview: {
+  tabId: number
+  hasEditableTarget: boolean
+  text: string
+  original: string
+} | null = null
+
 // 监听来自 sidepanel 的消息
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // 仅接受来自本扩展的消息
@@ -43,6 +75,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // 向当前标签页插入文本
       insertToActiveTab(request.text).then(sendResponse)
       return true
+
+    case 'px-optimize-preview-apply':
+      // 预览确认：替换原位 / 写回剪贴板 + 存历史
+      applyPendingPreview().then(() => sendResponse({ ok: true }))
+      return true
+
+    case 'px-optimize-preview-cancel':
+      pendingPreview = null
+      chrome.action.setBadgeText({ text: '' }).catch(() => {})
+      sendResponse({ ok: true })
+      return false
 
     default:
       return false
@@ -130,37 +173,30 @@ async function runOptimizeFlow(): Promise<void> {
       return
     }
 
-    // 2. 调 AI 优化（background 发起请求，绕开页面 CSP/CORS）
+    // 2. 调 AI 优化（background 发起请求，绕开页面 CSP/CORS；流式增量转发给 Side Panel）
     await setBadge('…')
     const settings = await loadAiSettings()
-    const optimized = await optimizeText(settings, text)
+    notifySidepanel({ action: 'px-optimize-start' })
+    const optimized = await optimizeText(settings, text, undefined, (_delta, full) => {
+      notifySidepanel({ action: 'px-optimize-stream', text: full })
+    })
 
-    // 3. 应用结果
-    let applied = false
-    if (capture?.hasEditableTarget) {
-      try {
-        const result = await chrome.tabs.sendMessage(tab.id, { action: 'replaceSelection', text: optimized })
-        applied = result?.success || false
-      } catch {
-        applied = false
-      }
+    // 3. 应用结果（预览确认模式下先发给 Side Panel，用户确认后再应用）
+    const hasEditableTarget = capture?.hasEditableTarget ?? false
+    if (settings.optimizePreview && sidepanelConnected) {
+      pendingPreview = { tabId: tab.id, hasEditableTarget, text: optimized, original: text }
+      notifySidepanel({
+        action: 'px-optimize-preview',
+        text: optimized,
+        mode: hasEditableTarget ? 'selection' : 'clipboard',
+      })
+      return
     }
 
-    if (applied) {
-      await setBadge('✓', '#16A34A')
-      clearBadgeLater()
-    } else {
-      // 非可编辑区或等待期间文本已变化：回退为复制优化结果到剪贴板
-      try {
-        await chrome.tabs.sendMessage(tab.id, { action: 'copyToClipboard', text: optimized })
-        await setBadge('C', '#F59E0B')
-      } catch {
-        await setBadge('!', '#DC2626')
-      }
-      clearBadgeLater(3000)
-    }
+    await applyOptimizedResult(tab.id, hasEditableTarget, optimized)
+    notifySidepanel({ action: 'px-optimize-done' })
 
-    // 4. 存入「AI 优化」历史空间（失败不影响主流程）
+    // 4. 存入「AI 优化」历史空间（失败不影响主流程；预览模式在确认时存）
     await saveOptimizeHistory(text, optimized)
   } catch (error) {
     console.error('[PromptX] AI optimize failed:', error)
@@ -173,10 +209,55 @@ async function runOptimizeFlow(): Promise<void> {
   }
 }
 
+/** 应用优化结果：可编辑区原位替换，失败回退复制到剪贴板 */
+async function applyOptimizedResult(
+  tabId: number,
+  hasEditableTarget: boolean,
+  optimized: string,
+): Promise<void> {
+  let applied = false
+  if (hasEditableTarget) {
+    try {
+      const result = await chrome.tabs.sendMessage(tabId, { action: 'replaceSelection', text: optimized })
+      applied = result?.success || false
+    } catch {
+      applied = false
+    }
+  }
+
+  if (applied) {
+    await setBadge('✓', '#16A34A')
+    clearBadgeLater()
+  } else {
+    // 非可编辑区或等待期间文本已变化：回退为复制优化结果到剪贴板
+    try {
+      await chrome.tabs.sendMessage(tabId, { action: 'copyToClipboard', text: optimized })
+      await setBadge('C', '#F59E0B')
+    } catch {
+      await setBadge('!', '#DC2626')
+    }
+    clearBadgeLater(3000)
+  }
+}
+
+/** 预览确认后的应用（Side Panel 用户点击「替换原位」） */
+async function applyPendingPreview(): Promise<void> {
+  const pending = pendingPreview
+  pendingPreview = null
+  if (!pending) return
+  try {
+    await applyOptimizedResult(pending.tabId, pending.hasEditableTarget, pending.text)
+    await saveOptimizeHistory(pending.original, pending.text)
+  } catch (error) {
+    console.error('[PromptX] Apply preview failed:', error)
+    await notifyFailure(error instanceof Error ? error.message : String(error))
+  }
+}
+
 /**
  * 读取 AI 设置（合并默认值，兼容旧数据）
  */
-async function loadAiSettings(): Promise<AiSettings> {
+async function loadAiSettings(): Promise<AiSettings & { optimizePreview: boolean }> {
   try {
     const result = await chrome.storage.local.get(STORAGE_KEY)
     const data = result[STORAGE_KEY]
@@ -186,6 +267,7 @@ async function loadAiSettings(): Promise<AiSettings> {
       aiModel: data?.settings?.aiModel || DEFAULT_SETTINGS.aiModel,
       optimizeTemplate: data?.settings?.optimizeTemplate || DEFAULT_SETTINGS.optimizeTemplate,
       optimizeThinking: data?.settings?.optimizeThinking ?? false,
+      optimizePreview: data?.settings?.optimizePreview ?? false,
     }
   } catch {
     return {
@@ -194,6 +276,7 @@ async function loadAiSettings(): Promise<AiSettings> {
       aiModel: DEFAULT_SETTINGS.aiModel,
       optimizeTemplate: DEFAULT_SETTINGS.optimizeTemplate,
       optimizeThinking: false,
+      optimizePreview: false,
     }
   }
 }

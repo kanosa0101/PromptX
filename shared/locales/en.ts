@@ -175,6 +175,8 @@ export const en = {
     testSuccess: 'Connected. Model replied: {reply}',
     testFailed: 'Connection failed: {error}',
     saveFailed: 'Failed to save AI settings: {error}',
+    previewLabel: 'Preview before applying',
+    previewHint: 'Show the optimized result for confirmation before replacing',
     extHint: 'Select text in a page input and press Alt+Shift+O to optimize and replace it in place (hotkey can be changed at chrome://extensions/shortcuts)',
   },
   help: {
@@ -233,6 +235,13 @@ export const en = {
     newSpaceButton: '+ Space',
     helpButton: '❓ Help',
     settingsButton: '⚙ Settings',
+  },
+  optimizePreview: {
+    title: 'AI Optimize Result',
+    streaming: 'Generating…',
+    apply: 'Replace in place',
+    applyClipboard: 'Write to clipboard',
+    cancel: 'Cancel',
   },
   optimizer: {
     donePasted: '✨ AI optimization complete, pasted back in place',

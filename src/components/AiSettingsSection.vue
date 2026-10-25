@@ -33,6 +33,7 @@ const aiApiKey = ref(settingsStore.aiApiKey)
 const aiModel = ref(settingsStore.aiModel)
 const optimizeTemplate = ref(settingsStore.optimizeTemplate)
 const optimizeThinking = ref(settingsStore.optimizeThinking)
+const optimizePreview = ref(settingsStore.optimizePreview)
 const isTestingAi = ref(false)
 
 // 保存单个 AI 设置项（失焦触发）
@@ -58,6 +59,13 @@ const fillDefaultTemplate = () => {
 const toggleThinking = () => {
   settingsStore.updateSettings({ optimizeThinking: optimizeThinking.value }).catch((error) => {
     emit('status', t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
+  })
+}
+
+// 切换优化结果预览确认（即时保存）
+const togglePreview = () => {
+  settingsStore.updateSettings({ optimizePreview: optimizePreview.value }).catch((error) => {
+    emit('status', t('aiSettings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   })
 }
 
@@ -152,6 +160,16 @@ const handleTestAi = async () => {
         >
         {{ t('aiSettings.thinkingLabel') }}
       </label>
+    </div>
+
+    <div class="setting-item flex items-center justify-between py-1.5" :title="t('aiSettings.previewHint')">
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.previewLabel') }}</span>
+      <input
+        v-model="optimizePreview"
+        type="checkbox"
+        class="w-4 h-4"
+        @change="togglePreview"
+      >
     </div>
 
     <div class="py-1.5">

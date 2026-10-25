@@ -86,6 +86,9 @@ pub struct Settings {
         default = "default_clipboard_optimize_hotkey"
     )]
     pub clipboard_optimize_hotkey: String,
+    /// 优化结果预览确认：开启后优化完成先展示结果，用户确认后再替换
+    #[serde(rename = "optimizePreview", default)]
+    pub optimize_preview: bool,
 }
 
 impl Default for Settings {
@@ -107,6 +110,7 @@ impl Default for Settings {
             optimize_hotkey: "Ctrl+Alt+O".to_string(),
             optimize_thinking: false,
             clipboard_optimize_hotkey: "Ctrl+Shift+B".to_string(),
+            optimize_preview: false,
         }
     }
 }

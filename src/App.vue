@@ -17,6 +17,7 @@ import PromptEditor from '@/components/PromptEditor.vue'
 import HelpPanel from '@/components/HelpPanel.vue'
 import SpaceEditor from '@/components/SpaceEditor.vue'
 import ConfirmDialog from '@shared/components/ConfirmDialog.vue'
+import OptimizePreviewPanel from '@shared/ui/components/OptimizePreviewPanel.vue'
 import { clearDraft } from '@shared/draft'
 import { check as checkForAppUpdate } from '@tauri-apps/plugin-updater'
 
@@ -42,6 +43,32 @@ const handleSavePrompt = async (prompt: Prompt) => {
     // 保持编辑器打开并提示，避免失败看起来像“保存按钮没反应”
     uiStore.showSystemNotice(t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   }
+}
+
+// AI 优化预览：确认应用（选区模式贴回原位 / 剪贴板模式写回剪贴板）
+const handlePreviewApply = async () => {
+  const preview = uiStore.optimizePreviewData
+  if (!preview || preview.streaming) return
+  try {
+    if (preview.mode === 'clipboard') {
+      await invoke('clipboard_optimize_apply_result', { text: preview.text })
+    } else {
+      await invoke('optimize_apply_result', { text: preview.text })
+    }
+    uiStore.showAiNotice(t('optimizer.donePasted'))
+    window.setTimeout(() => uiStore.clearAiNotice(), 3000)
+  } catch (error) {
+    uiStore.showAiError(t('settings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
+  } finally {
+    uiStore.closeOptimizePreview()
+  }
+}
+
+// AI 优化预览：取消（结束会话并恢复原剪贴板）
+const handlePreviewCancel = () => {
+  const preview = uiStore.optimizePreviewData
+  uiStore.closeOptimizePreview()
+  invoke(preview?.mode === 'clipboard' ? 'clipboard_optimize_cancel' : 'optimize_cancel').catch(() => {})
 }
 
 // 处理键盘事件
@@ -258,7 +285,13 @@ onUnmounted(() => {
       v-if="uiStore.aiOptimizing"
       class="animate-fade-in fixed bottom-2 left-2 right-2 z-50 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-300 dark:border-blue-800 text-blue-700 dark:text-blue-300 text-xs shadow-lg"
     >
-      <span class="leading-snug">{{ t('app.aiOptimizing') }}</span>
+      <div class="leading-snug min-w-0 flex-1">
+        <div>{{ t('app.aiOptimizing') }}</div>
+        <div
+          v-if="uiStore.aiStreamText"
+          class="text-xs opacity-70 truncate"
+        >{{ uiStore.aiStreamText }}</div>
+      </div>
       <button
         class="shrink-0 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"
         @click="aiOptimizer.cancelOptimize()"
@@ -308,6 +341,16 @@ onUnmounted(() => {
       :prompt="uiStore.editingPrompt"
       @save="handleSavePrompt"
       @close="uiStore.closePromptEditor"
+    />
+
+    <!-- AI 优化结果预览（optimizePreview 开启时） -->
+    <OptimizePreviewPanel
+      v-if="uiStore.optimizePreviewData"
+      :text="uiStore.optimizePreviewData.text"
+      :streaming="uiStore.optimizePreviewData.streaming"
+      :mode="uiStore.optimizePreviewData.mode"
+      @apply="handlePreviewApply"
+      @cancel="handlePreviewCancel"
     />
 
     <!-- 确认对话框 -->

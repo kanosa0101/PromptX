@@ -22,7 +22,8 @@ const PASTE_DELAY_MS: u64 = 50;
 /// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
 const RELEASE_SETTLE_MS: u64 = 120;
 /// 会话有效期：超时的残留会话视为已失败，允许新触发覆盖
-const SESSION_STALE_MS: u64 = 90_000;
+// 预览确认模式下用户查看结果后才应用，会话存活窗口需覆盖这段等待
+const SESSION_STALE_MS: u64 = 300_000;
 /// 截取哨兵：模拟 Ctrl+C 前写入剪贴板，用于确定性判定是否复制到了新内容
 const SENTINEL: &str = " ";
 /// 「AI 优化」历史空间条数上限（防止数据文件无限膨胀）
