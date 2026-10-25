@@ -1,7 +1,7 @@
 /**
  * PromptX 桌面端类型定义（共享类型见 shared/types.ts）
  */
-import type { AiSettings, Prompt, Space, Variable } from '@shared/types'
+import type { AiSettings } from '@shared/types'
 import { DEFAULT_AI_SETTINGS } from '@shared/types'
 
 // 共享类型：Variable / Prompt / Space / MatchResult / SearchResult /
@@ -51,6 +51,7 @@ export type { ImportResult } from '@shared/types'
 export type { PromptInput } from '@shared/types'
 
 // 默认设置
+// （桌面端默认空间/提示词由 Rust 侧 AppData::default() 生成，前端不再维护种子数据）
 export const DEFAULT_SETTINGS: Settings = {
   globalHotkey: 'Alt+Space',
   theme: 'system',
@@ -66,62 +67,3 @@ export const DEFAULT_SETTINGS: Settings = {
   clipboardOptimizeHotkey: 'Ctrl+Shift+B',
   optimizePreview: false,
 }
-
-// 默认空间
-export const DEFAULT_SPACES: Space[] = [
-  {
-    id: 'space_default',
-    name: '默认',
-    icon: '📁',
-    color: '#3B82F6',
-    order: 0,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'space_work',
-    name: '工作',
-    icon: '💼',
-    color: '#10B981',
-    order: 1,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'space_personal',
-    name: '个人',
-    icon: '🏠',
-    color: '#F59E0B',
-    order: 2,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-]
-
-// 默认提示词示例
-export const DEFAULT_PROMPTS: Prompt[] = [
-  {
-    id: 'prompt_001',
-    title: '代码解释',
-    content: '请解释以下代码的功能：\n\n{{clipboard}}',
-    tags: ['开发', '代码'],
-    spaceId: 'space_work',
-    variables: [{ name: 'clipboard', type: 'system' }] as Variable[],
-    usageCount: 0,
-    lastUsedAt: null,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-  {
-    id: 'prompt_002',
-    title: '文档润色',
-    content: '请润色以下文档，使其更加专业和清晰：\n\n{{clipboard}}',
-    tags: ['写作', '文档'],
-    spaceId: 'space_work',
-    variables: [{ name: 'clipboard', type: 'system' }] as Variable[],
-    usageCount: 0,
-    lastUsedAt: null,
-    createdAt: '2024-01-01T00:00:00.000Z',
-    updatedAt: '2024-01-01T00:00:00.000Z',
-  },
-]

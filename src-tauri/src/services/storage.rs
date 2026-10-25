@@ -49,9 +49,10 @@ impl StorageService {
 
     /// 按数据目录构造（Native Messaging host 进程无 tauri App，走这条路径）
     pub fn new_at_dir(data_dir: PathBuf) -> Self {
-        // 确保目录存在
+        // 尽力确保目录存在；创建失败不 panic（NM host 进程 panic 会无声挂断），
+        // 后续读写会以 io::Error 形式正常报错
         if !data_dir.exists() {
-            fs::create_dir_all(&data_dir).expect("Failed to create data directory");
+            let _ = fs::create_dir_all(&data_dir);
         }
 
         Self {

@@ -8,7 +8,7 @@ import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import { invoke } from '@tauri-apps/api/core'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
-import { optimizeText } from '@/services/ai'
+import { optimizeText, describeAiError } from '@/services/ai'
 import { t } from '@/i18n'
 
 /** 错误横幅自动消失时长 */
@@ -102,7 +102,7 @@ export function useAiOptimizer() {
       }
       // 唤起主窗口展示错误
       invoke('show_window').catch(() => {})
-      showError(message)
+      showError(describeAiError(error, t))
     } finally {
       optimizeRunning = false
       optimizeController = null
@@ -150,7 +150,7 @@ export function useAiOptimizer() {
       }
       // 唤起主窗口展示错误
       invoke('show_window').catch(() => {})
-      showError(message)
+      showError(describeAiError(error, t))
     } finally {
       clipboardOptimizeRunning = false
       clipboardOptimizeController = null

@@ -252,7 +252,21 @@ export const zhCN = {
   },
   background: {
     aiOptimize: 'AI 优化',
+    aiHistoryTag: 'AI优化',
     optimizeFailedTitle: 'PromptX AI 优化失败',
+  },
+  aiErrors: {
+    noApiKey: '未配置 API Key，请先在设置中填写',
+    noBaseUrl: '未配置 AI 服务地址（Base URL），请先在设置中填写',
+    failed: 'AI 请求失败',
+    timeout: 'AI 请求超时（{seconds}秒）',
+    connectFailed: '无法连接到 AI 服务: {message}',
+    httpAuth: 'AI 接口返回 {status}（请检查 API Key 是否正确）{detail}',
+    httpNotFound: 'AI 接口返回 {status}（请检查 Base URL 与模型名，多数服务需要以 /v1 结尾）{detail}',
+    httpRateLimit: 'AI 接口返回 {status}（请求过于频繁或额度不足）{detail}',
+    httpGeneric: 'AI 接口返回 {status} {detail}',
+    emptyContent: 'AI 返回了空内容',
+    parseFailed: 'AI 响应解析失败',
   },
   presets: {
     label: '优化风格预设',

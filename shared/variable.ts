@@ -81,13 +81,6 @@ function formatTime(date: Date): string {
 }
 
 /**
- * 判断是否有自定义变量
- */
-export function hasCustomVariables(variables: Variable[]): boolean {
-  return variables.some(v => v.type === 'custom')
-}
-
-/**
  * 获取自定义变量列表
  */
 export function getCustomVariables(variables: Variable[]): Variable[] {

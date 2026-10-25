@@ -2,8 +2,17 @@
  * shared/ai.ts 单元测试：端点拼接、代码围栏剥离、重试与错误分类
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { chatEndpoint, stripCodeFence, optimizeText, testAiConnection, consumeSseLines } from '../ai'
+import {
+  chatEndpoint,
+  stripCodeFence,
+  optimizeText,
+  testAiConnection,
+  consumeSseLines,
+  describeAiError,
+  AiError,
+} from '../ai'
 import { DEFAULT_OPTIMIZE_TEMPLATE } from '../types'
+import { flatTranslate } from '../locales'
 
 const CONFIG = {
   aiBaseUrl: 'https://api.test.com',
@@ -119,21 +128,24 @@ describe('optimizeText', () => {
   })
 
   it('未配置 API Key 时直接抛错且不发请求', async () => {
-    await expect(optimizeText({ ...CONFIG, aiApiKey: ' ' }, '原文')).rejects.toThrow(
-      /API Key/
-    )
+    await expect(optimizeText({ ...CONFIG, aiApiKey: ' ' }, '原文')).rejects.toMatchObject({
+      key: 'aiErrors.noApiKey',
+    })
     expect(fetch).not.toHaveBeenCalled()
   })
 
   it('未配置 Base URL 时直接抛错', async () => {
-    await expect(optimizeText({ ...CONFIG, aiBaseUrl: '' }, '原文')).rejects.toThrow(
-      /Base URL/
-    )
+    await expect(optimizeText({ ...CONFIG, aiBaseUrl: '' }, '原文')).rejects.toMatchObject({
+      key: 'aiErrors.noBaseUrl',
+    })
   })
 
-  it('401 客户端错误不重试，并附带 API Key 提示', async () => {
+  it('401 客户端错误不重试，并附带状态码参数', async () => {
     vi.mocked(fetch).mockResolvedValue(errorResponse(401, 'unauthorized'))
-    await expect(optimizeText(CONFIG, '原文')).rejects.toThrow(/401.*API Key/)
+    await expect(optimizeText(CONFIG, '原文')).rejects.toMatchObject({
+      key: 'aiErrors.httpAuth',
+      params: { status: 401 },
+    })
     expect(fetch).toHaveBeenCalledTimes(1)
   })
 
@@ -157,7 +169,9 @@ describe('optimizeText', () => {
 
   it('AI 返回空内容时抛错', async () => {
     vi.mocked(fetch).mockResolvedValue(okResponse(''))
-    await expect(optimizeText(CONFIG, '原文')).rejects.toThrow('AI 返回了空内容')
+    await expect(optimizeText(CONFIG, '原文')).rejects.toMatchObject({
+      key: 'aiErrors.emptyContent',
+    })
   })
 
   it('剥离响应中的代码围栏', async () => {
@@ -201,6 +215,21 @@ describe('optimizeText 取消（外部 AbortSignal）', () => {
     controller.abort()
     await expect(pending).rejects.toThrow('已取消')
     expect(fetch).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('describeAiError', () => {
+  it('AiError 按指定语言转译并去除首尾空白', () => {
+    const error = new AiError('aiErrors.timeout', { seconds: 60 })
+    const zh = describeAiError(error, (key, params) => flatTranslate('zh-CN', key, params))
+    const en = describeAiError(error, (key, params) => flatTranslate('en', key, params))
+    expect(zh).toBe('AI 请求超时（60秒）')
+    expect(en).toBe('AI request timed out (60s)')
+  })
+
+  it('普通错误原样透传 message', () => {
+    expect(describeAiError(new Error('boom'), () => 'translated')).toBe('boom')
+    expect(describeAiError('raw', () => 'translated')).toBe('raw')
   })
 })
 

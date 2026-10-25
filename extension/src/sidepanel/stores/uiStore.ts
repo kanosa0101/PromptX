@@ -23,6 +23,8 @@ export const useUiStore = defineStore('ui', {
     // AI 优化进行中（background 经消息推送，Side Panel 打开时展示进度）
     aiOptimizing: false,
     aiStreamText: '',
+    // AI 优化失败信息（background 推送 px-optimize-error 时展示）
+    aiError: '',
     // AI 优化结果预览（optimizePreview 开启且 Side Panel 打开时）
     optimizePreviewData: null as null | { mode: 'selection' | 'clipboard'; text: string; streaming: boolean }
   }),
@@ -152,6 +154,7 @@ export const useUiStore = defineStore('ui', {
     startAiOptimizing() {
       this.aiOptimizing = true
       this.aiStreamText = ''
+      this.aiError = ''
     },
 
     stopAiOptimizing() {
@@ -161,6 +164,14 @@ export const useUiStore = defineStore('ui', {
 
     updateAiStream(text: string) {
       this.aiStreamText = text
+    },
+
+    showAiError(message: string) {
+      this.aiError = message
+    },
+
+    clearAiError() {
+      this.aiError = ''
     },
 
     openOptimizePreview(mode: 'selection' | 'clipboard', text: string) {

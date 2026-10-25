@@ -340,7 +340,7 @@ import { applyTheme, type ThemeSetting } from '@/lib/theme'
 import { setLocale } from '../i18n'
 import { isNmConnected, nmConnect, nmDisconnect, onNmStatusChanged } from '@/lib/nm'
 import { mergeLocalOnlyIntoDesktop } from '@/lib/storage'
-import { testAiConnection } from '@/lib/ai'
+import { testAiConnection, describeAiError } from '@/lib/ai'
 import { DEFAULT_SETTINGS, DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
 import { OPTIMIZE_PRESETS } from '@shared/optimizePresets'
 
@@ -504,7 +504,7 @@ const handleTestAi = async () => {
     const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
     statusMessage.value = t('aiSettings.testSuccess', { reply: reply.slice(0, 30) })
   } catch (err) {
-    statusMessage.value = t('aiSettings.testFailed', { error: (err as Error).message })
+    statusMessage.value = t('aiSettings.testFailed', { error: describeAiError(err, t) })
   } finally {
     isTestingAi.value = false
   }
@@ -517,7 +517,7 @@ const handleExport = async () => {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `promptx-extension-export-${new Date().toISOString().split('T')[0]}.json`
+  a.download = `promptx-export-${new Date().toISOString().split('T')[0]}.json`
   a.click()
   URL.revokeObjectURL(url)
   statusMessage.value = t('settings.importExport.exported')

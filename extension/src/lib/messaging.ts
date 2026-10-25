@@ -25,21 +25,3 @@ export async function insertTextToActiveTab(text: string): Promise<boolean> {
     return false
   }
 }
-
-/**
- * 向指定标签页发送消息
- */
-export async function sendMessageToTab<T = unknown>(
-  tabId: number,
-  message: unknown
-): Promise<T> {
-  return chrome.tabs.sendMessage(tabId, message) as Promise<T>
-}
-
-/**
- * 获取当前活动标签页
- */
-export async function getActiveTab(): Promise<chrome.tabs.Tab | null> {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true })
-  return tab || null
-}

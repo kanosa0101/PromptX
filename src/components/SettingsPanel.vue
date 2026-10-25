@@ -540,7 +540,7 @@ const downloadAndInstall = async () => {
         <span
           v-if="appVersion"
           class="text-xs text-muted"
-        >当前版本 v{{ appVersion }}</span>
+        >{{ t('settings.updater.currentVersion', { version: appVersion }) }}</span>
       </div>
       <div class="flex items-center justify-between gap-2 mt-2">
         <span
@@ -550,7 +550,7 @@ const downloadAndInstall = async () => {
         <span
           v-else
           class="text-xs text-muted"
-        >检查并安装新版本（安装后自动重启）</span>
+        >{{ t('settings.updater.checkHint') }}</span>
         <button
           v-if="updaterState === 'available'"
           class="shrink-0 px-3 py-1.5 rounded text-xs bg-primary text-white hover:bg-primary-hover"

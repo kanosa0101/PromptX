@@ -1,12 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   DEFAULT_SETTINGS,
-  DEFAULT_SPACES,
-  DEFAULT_PROMPTS,
   type ImportResult,
   type Settings,
-  type Space,
-  type Prompt,
 } from '../index'
 
 describe('DEFAULT_SETTINGS', () => {
@@ -38,70 +34,6 @@ describe('DEFAULT_SETTINGS', () => {
   it('conforms to the Settings interface', () => {
     const settings: Settings = DEFAULT_SETTINGS
     expect(settings).toBeDefined()
-  })
-})
-
-describe('DEFAULT_SPACES', () => {
-  it('has correct structure with 3 spaces', () => {
-    expect(DEFAULT_SPACES).toHaveLength(3)
-  })
-
-  it('each space has required fields', () => {
-    DEFAULT_SPACES.forEach((space: Space) => {
-      expect(space).toHaveProperty('id')
-      expect(space).toHaveProperty('name')
-      expect(space).toHaveProperty('icon')
-      expect(space).toHaveProperty('color')
-      expect(space).toHaveProperty('order')
-      expect(space).toHaveProperty('createdAt')
-      expect(space).toHaveProperty('updatedAt')
-    })
-  })
-
-  it('has expected space IDs', () => {
-    const ids = DEFAULT_SPACES.map((s) => s.id)
-    expect(ids).toContain('space_default')
-    expect(ids).toContain('space_work')
-    expect(ids).toContain('space_personal')
-  })
-
-  it('spaces are ordered 0, 1, 2', () => {
-    const orders = DEFAULT_SPACES.map((s) => s.order)
-    expect(orders).toEqual([0, 1, 2])
-  })
-})
-
-describe('DEFAULT_PROMPTS', () => {
-  it('has correct structure with sample prompts', () => {
-    expect(DEFAULT_PROMPTS.length).toBeGreaterThanOrEqual(2)
-  })
-
-  it('each prompt has required fields', () => {
-    DEFAULT_PROMPTS.forEach((prompt: Prompt) => {
-      expect(prompt).toHaveProperty('id')
-      expect(prompt).toHaveProperty('title')
-      expect(prompt).toHaveProperty('content')
-      expect(prompt).toHaveProperty('tags')
-      expect(prompt).toHaveProperty('spaceId')
-      expect(prompt).toHaveProperty('variables')
-      expect(prompt).toHaveProperty('usageCount')
-      expect(prompt).toHaveProperty('lastUsedAt')
-      expect(prompt).toHaveProperty('createdAt')
-      expect(prompt).toHaveProperty('updatedAt')
-    })
-  })
-
-  it('has expected prompt IDs', () => {
-    const ids = DEFAULT_PROMPTS.map((p) => p.id)
-    expect(ids).toContain('prompt_001')
-    expect(ids).toContain('prompt_002')
-  })
-
-  it('prompts reference valid space IDs', () => {
-    const spaceIds = DEFAULT_SPACES.map((s) => s.id)
-    DEFAULT_PROMPTS.forEach((prompt: Prompt) => {
-      expect(spaceIds).toContain(prompt.spaceId)
-    })
   })
 })
 

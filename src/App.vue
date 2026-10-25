@@ -311,7 +311,9 @@ onUnmounted(() => {
         <div
           v-if="uiStore.aiStreamText"
           class="text-xs opacity-70 truncate"
-        >{{ uiStore.aiStreamText }}</div>
+        >
+          {{ uiStore.aiStreamText }}
+        </div>
       </div>
       <button
         class="shrink-0 px-2 py-0.5 rounded border border-blue-300 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900"

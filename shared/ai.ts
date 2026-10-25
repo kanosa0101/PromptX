@@ -54,8 +54,35 @@ export function stripCodeFence(text: string): string {
   return trimmed
 }
 
+/**
+ * 携带 i18n key 的 AI 错误：message 即 key（未转译时的兜底展示），
+ * 展示方用 describeAiError 按当前语言转译（Vue 组件内用 t()，SW 用 flatTranslate）
+ */
+export class AiError extends Error {
+  readonly key: string
+  readonly params?: Record<string, string | number>
+
+  constructor(key: string, params?: Record<string, string | number>) {
+    super(key)
+    this.name = 'AiError'
+    this.key = key
+    this.params = params
+  }
+}
+
+/** 展示方提供的翻译函数（vue-i18n 的 t / flatTranslate 的柯里化封装均可） */
+export type AiErrorTranslate = (key: string, params?: Record<string, string | number>) => string
+
+/** 把 chat() 抛出的错误转成当前语言的用户可读文案；非 AiError 原样透传 */
+export function describeAiError(error: unknown, translate: AiErrorTranslate): string {
+  if (error instanceof AiError) {
+    return translate(error.key, error.params).trim()
+  }
+  return error instanceof Error ? error.message : String(error)
+}
+
 /** 可重试错误：超时、网络故障、服务端临时错误（5xx/429） */
-class RetryableError extends Error {}
+class RetryableError extends AiError {}
 
 /** 重试参数 */
 const MAX_ATTEMPTS = 2
@@ -105,13 +132,13 @@ async function chat(
   onDelta?: StreamDeltaHandler,
 ): Promise<string> {
   if (!config.aiApiKey.trim()) {
-    throw new Error('未配置 API Key，请先在设置中填写')
+    throw new AiError('aiErrors.noApiKey')
   }
   if (!config.aiBaseUrl.trim()) {
-    throw new Error('未配置 AI 服务地址（Base URL），请先在设置中填写')
+    throw new AiError('aiErrors.noBaseUrl')
   }
 
-  let lastError: Error = new Error('AI 请求失败')
+  let lastError: Error = new AiError('aiErrors.failed')
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     if (signal?.aborted) {
@@ -153,30 +180,30 @@ async function chat(
           throw new Error('已取消')
         }
         if (error instanceof DOMException && error.name === 'AbortError') {
-          throw new RetryableError(`AI 请求超时（${REQUEST_TIMEOUT_MS / 1000}秒）`)
+          throw new RetryableError('aiErrors.timeout', { seconds: REQUEST_TIMEOUT_MS / 1000 })
         }
-        throw new RetryableError(
-          `无法连接到 AI 服务: ${error instanceof Error ? error.message : String(error)}`
-        )
+        throw new RetryableError('aiErrors.connectFailed', {
+          message: error instanceof Error ? error.message : String(error),
+        })
       }
 
       if (!response.ok) {
         const errBody = await response.text().catch(() => '')
-        const hint =
-          response.status === 401 || response.status === 403
-            ? '（请检查 API Key 是否正确）'
-            : response.status === 404
-              ? '（请检查 Base URL 与模型名，多数服务需要以 /v1 结尾）'
-              : response.status === 429
-                ? '（请求过于频繁或额度不足）'
-                : ''
         const detail = errBody.trim().slice(0, 200)
-        const message = `AI 接口返回 ${response.status}: ${hint} ${detail}`.trim()
+        const key =
+          response.status === 401 || response.status === 403
+            ? 'aiErrors.httpAuth'
+            : response.status === 404
+              ? 'aiErrors.httpNotFound'
+              : response.status === 429
+                ? 'aiErrors.httpRateLimit'
+                : 'aiErrors.httpGeneric'
+        const params = { status: response.status, detail: detail ? ` ${detail}` : '' }
         // 服务端临时性错误可重试；客户端错误（Key 错、参数错）重试无意义
         if (response.status >= 500 || response.status === 429) {
-          throw new RetryableError(message)
+          throw new RetryableError(key, params)
         }
-        throw new Error(message)
+        throw new AiError(key, params)
       }
 
       const contentType = response.headers.get('content-type') || ''
@@ -200,19 +227,19 @@ async function chat(
         }
         const optimized = stripCodeFence(full)
         if (!optimized) {
-          throw new Error('AI 返回了空内容')
+          throw new AiError('aiErrors.emptyContent')
         }
         return optimized
       }
 
       // 非流式路径（未请求流式，或服务端忽略 stream 参数返回整体 JSON）
       const data = await response.json().catch(() => {
-        throw new Error('AI 响应解析失败')
+        throw new AiError('aiErrors.parseFailed')
       })
       const content: string = data?.choices?.[0]?.message?.content ?? ''
       const optimized = stripCodeFence(content)
       if (!optimized) {
-        throw new Error('AI 返回了空内容')
+        throw new AiError('aiErrors.emptyContent')
       }
       if (onDelta) {
         onDelta(optimized, optimized)

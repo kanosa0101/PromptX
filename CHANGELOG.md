@@ -1,5 +1,28 @@
 # Changelog
 
+## 未发布
+
+收尾优化（发布后全项目巡检）。
+
+### 修复
+
+- **扩展端 AI 优化失败时 Side Panel「优化中」横幅卡死**：background 失败分支现在会向面板推送
+  `px-optimize-error`，面板立即结束进度横幅并以红色横幅展示原因（8 秒自动消失，点击可关闭）
+- AI 错误消息未按语言展示：`shared/ai.ts` 全部错误改为携带 i18n key 的 `AiError`，
+  由展示端（主窗口 / Side Panel / background 系统通知）按当前语言转译——
+  英文用户不再看到中文报错
+
+### 优化
+
+- AI 优化历史空间名与标签按当前语言写入（仅影响新创建的历史空间）
+- 桌面端设置面板更新器两处裸中文接入 i18n（`settings.updater.currentVersion` / `checkHint`）
+- 扩展端导出文件名与桌面端统一为 `promptx-export-YYYY-MM-DD.json`
+- 清理死代码：桌面端 `DEFAULT_SPACES`/`DEFAULT_PROMPTS`（默认数据实际由 Rust 侧生成）、
+  扩展端 `sendMessageToTab`/`getActiveTab`/`clearData`、`shared/variable.ts` 的
+  `hasCustomVariables`
+- Rust：NM host 构造路径不再在目录创建失败时 panic（以 io::Error 正常报错）；
+  消除快捷键解析中的守卫式 `unwrap`
+
 ## 2.0.0（2026-10-25）
 
 v2.0 核心目标落地：双端数据打通 + UI 层合并起步 + 模板市场。

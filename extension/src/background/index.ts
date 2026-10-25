@@ -3,10 +3,10 @@
  * 处理快捷键 + 打开 Side Panel + 消息转发 + AI 快捷优化编排
  */
 
-import { optimizeText } from '@/lib/ai'
+import { optimizeText, describeAiError } from '@/lib/ai'
 import { loadAppData, mutateAppData, STORAGE_KEY } from '@/lib/storage'
 import { buildHistoryTitle, MAX_AI_HISTORY } from '@shared/aiHistory'
-import { flatTranslate, resolveLocale } from '@shared/locales'
+import { flatTranslate, resolveLocale, type Locale } from '@shared/locales'
 import { AI_HISTORY_SPACE_ID, DEFAULT_SETTINGS } from '@/types'
 import type { AiSettings } from '@/types'
 
@@ -118,9 +118,8 @@ async function currentLocale() {
 }
 
 /** 失败时弹系统通知（红叹号徽标不足以传达失败原因，如「未配置 API Key」） */
-async function notifyFailure(message: string): Promise<void> {
+async function showFailureNotice(locale: Locale, message: string): Promise<void> {
   try {
-    const locale = await currentLocale()
     await chrome.notifications.create({
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon128.png'),
@@ -130,6 +129,12 @@ async function notifyFailure(message: string): Promise<void> {
   } catch {
     // 通知不可用时静默（保留徽标与控制台日志）
   }
+}
+
+/** 把 chat() 抛出的错误按当前语言转译成用户可读文案 */
+async function describeErrorLocalized(error: unknown): Promise<string> {
+  const locale = await currentLocale()
+  return describeAiError(error, (key, params) => flatTranslate(locale, key, params))
 }
 
 /**
@@ -143,7 +148,7 @@ let optimizeRunning = false
 
 async function runOptimizeFlow(): Promise<void> {
   if (optimizeRunning) {
-    console.warn('[PromptX] AI 优化进行中，忽略本次触发')
+    console.warn('[PromptX] Optimize already running, ignored')
     return
   }
   optimizeRunning = true
@@ -200,10 +205,13 @@ async function runOptimizeFlow(): Promise<void> {
     await saveOptimizeHistory(text, optimized)
   } catch (error) {
     console.error('[PromptX] AI optimize failed:', error)
+    const message = await describeErrorLocalized(error)
+    // Side Panel 打开时同步失败状态（否则面板的「优化中」横幅会一直卡住）
+    notifySidepanel({ action: 'px-optimize-error', message })
     await setBadge('!', '#DC2626')
     clearBadgeLater(3000)
     // 系统通知展示失败原因（Key 未配置 / 接口报错 / 网络故障等）
-    await notifyFailure(error instanceof Error ? error.message : String(error))
+    await showFailureNotice(await currentLocale(), message)
   } finally {
     optimizeRunning = false
   }
@@ -250,7 +258,7 @@ async function applyPendingPreview(): Promise<void> {
     await saveOptimizeHistory(pending.original, pending.text)
   } catch (error) {
     console.error('[PromptX] Apply preview failed:', error)
-    await notifyFailure(error instanceof Error ? error.message : String(error))
+    await showFailureNotice(await currentLocale(), await describeErrorLocalized(error))
   }
 }
 
@@ -287,6 +295,10 @@ async function loadAiSettings(): Promise<AiSettings & { optimizePreview: boolean
  */
 async function saveOptimizeHistory(original: string, optimized: string): Promise<void> {
   try {
+    // 历史空间名与标签按当前语言写入（仅影响首次创建的持久化数据）
+    const locale = await currentLocale()
+    const spaceName = flatTranslate(locale, 'background.aiOptimize')
+    const historyTag = flatTranslate(locale, 'background.aiHistoryTag')
     await mutateAppData((data) => {
       data.spaces = data.spaces || []
       data.prompts = data.prompts || []
@@ -297,7 +309,7 @@ async function saveOptimizeHistory(original: string, optimized: string): Promise
         const maxOrder = data.spaces.reduce((max, s) => Math.max(max, s.order || 0), 0)
         data.spaces.push({
           id: AI_HISTORY_SPACE_ID,
-          name: 'AI 优化',
+          name: spaceName,
           icon: '✨',
           color: '#8B5CF6',
           order: maxOrder + 1,
@@ -313,7 +325,7 @@ async function saveOptimizeHistory(original: string, optimized: string): Promise
         id: crypto.randomUUID(),
         title,
         content: optimized,
-        tags: ['AI优化'],
+        tags: [historyTag],
         spaceId: AI_HISTORY_SPACE_ID,
         variables: [],
         usageCount: 0,

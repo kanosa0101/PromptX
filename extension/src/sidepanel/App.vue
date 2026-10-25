@@ -165,6 +165,16 @@
       </div>
     </div>
 
+    <!-- AI 优化失败（background 推送，点击关闭） -->
+    <div
+      v-if="aiError"
+      class="mx-2 my-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs cursor-pointer"
+      :title="t('common.close')"
+      @click="uiStore.clearAiError()"
+    >
+      {{ aiError }}
+    </div>
+
     <!-- AI 优化结果预览 -->
     <OptimizePreviewPanel
       v-if="optimizePreviewData"
@@ -362,6 +372,7 @@ const showTemplateMarket = computed(() => uiStore.showTemplateMarket)
 const showConfirmDialog = computed(() => uiStore.showConfirmDialog)
 const aiOptimizing = computed(() => uiStore.aiOptimizing)
 const aiStreamText = computed(() => uiStore.aiStreamText)
+const aiError = computed(() => uiStore.aiError)
 const optimizePreviewData = computed(() => uiStore.optimizePreviewData)
 
 // 键盘导航
@@ -494,7 +505,7 @@ const onPreviewCancel = () => {
 let nmUnlisten: (() => void) | undefined
 
 // background 的 AI 优化进度 / 预览推送（Side Panel 打开时才有接收方）
-const onRuntimeMessage = (message: { action?: string; text?: string; mode?: 'selection' | 'clipboard' }) => {
+const onRuntimeMessage = (message: { action?: string; text?: string; mode?: 'selection' | 'clipboard'; message?: string }) => {
   switch (message.action) {
     case 'px-optimize-start':
       uiStore.startAiOptimizing()
@@ -508,6 +519,12 @@ const onRuntimeMessage = (message: { action?: string; text?: string; mode?: 'sel
     case 'px-optimize-preview':
       uiStore.stopAiOptimizing()
       uiStore.openOptimizePreview(message.mode || 'selection', message.text || '')
+      break
+    case 'px-optimize-error':
+      uiStore.stopAiOptimizing()
+      uiStore.showAiError(message.message || '')
+      // 与桌面端一致：错误横幅 8 秒后自动消失
+      window.setTimeout(() => uiStore.clearAiError(), 8000)
       break
   }
 }

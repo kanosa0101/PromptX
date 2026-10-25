@@ -29,9 +29,7 @@ pub fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
         }
     }
 
-    if code.is_none() {
-        return Err(format!("快捷键缺少按键: {}", hotkey));
-    }
+    let code = code.ok_or_else(|| format!("快捷键缺少按键: {}", hotkey))?;
 
     if modifiers.is_empty() {
         return Err(format!(
@@ -40,7 +38,7 @@ pub fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
         ));
     }
 
-    Ok(Shortcut::new(Some(modifiers), code.unwrap()))
+    Ok(Shortcut::new(Some(modifiers), code))
 }
 
 /// 解析按键名称为 Code

@@ -252,7 +252,22 @@ export const en = {
   },
   background: {
     aiOptimize: 'AI Optimize',
+    aiHistoryTag: 'AI',
     optimizeFailedTitle: 'PromptX AI optimization failed',
+  },
+  aiErrors: {
+    noApiKey: 'No API Key configured — set it in settings first',
+    noBaseUrl: 'No AI service URL (Base URL) configured — set it in settings first',
+    failed: 'AI request failed',
+    timeout: 'AI request timed out ({seconds}s)',
+    connectFailed: 'Cannot connect to the AI service: {message}',
+    httpAuth: 'AI API returned {status} (check that your API Key is correct) {detail}',
+    httpNotFound:
+      'AI API returned {status} (check Base URL and model name — most services need a /v1 suffix) {detail}',
+    httpRateLimit: 'AI API returned {status} (too many requests or quota exceeded) {detail}',
+    httpGeneric: 'AI API returned {status} {detail}',
+    emptyContent: 'AI returned empty content',
+    parseFailed: 'Failed to parse the AI response',
   },
   presets: {
     label: 'Style presets',

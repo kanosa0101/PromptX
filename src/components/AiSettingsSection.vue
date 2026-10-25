@@ -6,7 +6,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settingsStore'
-import { testAiConnection } from '@/services/ai'
+import { testAiConnection, describeAiError } from '@/services/ai'
 import { DEFAULT_OPTIMIZE_TEMPLATE } from '@/types'
 import { OPTIMIZE_PRESETS } from '@shared/optimizePresets'
 import HotkeyRow from './HotkeyRow.vue'
@@ -89,7 +89,7 @@ const handleTestAi = async () => {
     const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
     emit('status', t('aiSettings.testSuccess', { reply: reply.slice(0, 30) }))
   } catch (error) {
-    emit('status', t('aiSettings.testFailed', { error: error instanceof Error ? error.message : String(error) }))
+    emit('status', t('aiSettings.testFailed', { error: describeAiError(error, t) }))
   } finally {
     isTestingAi.value = false
   }
@@ -174,7 +174,10 @@ const handleTestAi = async () => {
       </label>
     </div>
 
-    <div class="setting-item flex items-center justify-between py-1.5" :title="t('aiSettings.previewHint')">
+    <div
+      class="setting-item flex items-center justify-between py-1.5"
+      :title="t('aiSettings.previewHint')"
+    >
       <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('aiSettings.previewLabel') }}</span>
       <input
         v-model="optimizePreview"
@@ -184,7 +187,10 @@ const handleTestAi = async () => {
       >
     </div>
 
-    <div class="setting-item flex items-center justify-between py-1.5" :title="t('presets.hint')">
+    <div
+      class="setting-item flex items-center justify-between py-1.5"
+      :title="t('presets.hint')"
+    >
       <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ t('presets.label') }}</span>
       <select
         v-model="selectedPreset"

@@ -199,10 +199,3 @@ export async function importData(jsonStr: string, merge = false): Promise<{ impo
     return { imported: imported.prompts.length + imported.spaces.length, skipped: 0 }
   }
 }
-
-/**
- * 清空数据
- */
-export async function clearData(): Promise<void> {
-  await chrome.storage.local.remove(STORAGE_KEY)
-}
