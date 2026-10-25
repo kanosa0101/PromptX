@@ -179,7 +179,7 @@ const handleClose = () => {
         v-model="title"
         type="text"
         placeholder="提示词标题"
-        class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary"
+        class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary"
       >
     </div>
 
@@ -190,7 +190,7 @@ const handleClose = () => {
         v-model="content"
         placeholder="提示词内容，支持 {{变量名}} 语法"
         rows="4"
-        class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary resize-none"
+        class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary resize-none"
       />
       <!-- 变量提示 -->
       <div
@@ -211,7 +211,7 @@ const handleClose = () => {
         <span
           v-for="(tag, index) in tags"
           :key="tag"
-          class="tag text-xs px-2 py-1 rounded bg-border cursor-pointer"
+          class="tag text-xs px-2 py-1 rounded bg-surface cursor-pointer"
           @click="removeTag(index)"
         >
           {{ tag }} ✕
@@ -221,7 +221,7 @@ const handleClose = () => {
         v-model="tagsInput"
         type="text"
         placeholder="输入标签后按 Enter 添加"
-        class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary"
+        class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary"
         @keyup.enter="addTag"
       >
     </div>
@@ -231,7 +231,7 @@ const handleClose = () => {
       <label class="block text-sm font-medium mb-2">所属空间</label>
       <select
         v-model="spaceId"
-        class="w-full px-3 py-2 rounded border border-border bg-transparent focus:outline-none focus:border-primary"
+        class="w-full px-3 py-2 rounded border border-surface bg-transparent focus:outline-none focus:border-primary"
       >
         <option
           v-for="space in spaces"

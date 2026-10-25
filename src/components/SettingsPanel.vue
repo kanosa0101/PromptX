@@ -283,13 +283,13 @@ const downloadAndInstall = async () => {
 </script>
 
 <template>
-  <div class="settings-panel p-4 bg-white dark:bg-[#1A1A2E]">
+  <div class="settings-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+      <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
         设置
       </h3>
       <button
-        class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
         @click="handleClose"
       >
         ✕
@@ -298,10 +298,10 @@ const downloadAndInstall = async () => {
 
     <!-- 主题设置 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">主题</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">主题</span>
       <select
         v-model="theme"
-        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
       >
         <option
           v-for="opt in themeOptions"
@@ -315,28 +315,28 @@ const downloadAndInstall = async () => {
 
     <!-- 搜索防抖 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">搜索防抖 (ms)</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">搜索防抖 (ms)</span>
       <input
         :value="searchDebounce"
         type="number"
         min="100"
         max="1000"
         step="50"
-        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent w-20 text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent w-20 text-foreground dark:text-foreground-dark"
         @change="onDebounceChange"
       >
     </div>
 
     <!-- 最大结果数 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">最大结果数</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">最大结果数</span>
       <input
         :value="maxResults"
         type="number"
         min="3"
         max="20"
         step="1"
-        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent w-20 text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent w-20 text-foreground dark:text-foreground-dark"
         @change="onMaxResultsChange"
       >
     </div>
@@ -352,7 +352,7 @@ const downloadAndInstall = async () => {
 
     <!-- 窗口透明度 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">窗口透明度</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">窗口透明度</span>
       <input
         v-model.number="windowOpacity"
         type="range"
@@ -362,12 +362,12 @@ const downloadAndInstall = async () => {
         class="w-24"
         @input="updateOpacity"
       >
-      <span class="text-xs text-[#71717A] w-12">{{ Math.round(windowOpacity * 100) }}%</span>
+      <span class="text-xs text-muted w-12">{{ Math.round(windowOpacity * 100) }}%</span>
     </div>
 
     <!-- 失去焦点自动隐藏 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">失去焦点自动隐藏</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">失去焦点自动隐藏</span>
       <input
         v-model="autoHide"
         type="checkbox"
@@ -377,7 +377,7 @@ const downloadAndInstall = async () => {
 
     <!-- 开机自启动 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">开机自启动</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">开机自启动</span>
       <input
         v-model="launchAtLogin"
         type="checkbox"
@@ -394,40 +394,40 @@ const downloadAndInstall = async () => {
     />
 
     <!-- 使用统计 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
         📊 使用统计
       </h4>
       <div class="grid grid-cols-4 gap-2 text-center">
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.count }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             提示词
           </div>
         </div>
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.spaces }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             空间
           </div>
         </div>
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.totalUses }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             累计输出
           </div>
         </div>
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.favorites }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             收藏
           </div>
         </div>
@@ -436,7 +436,7 @@ const downloadAndInstall = async () => {
         v-if="stats.top.length"
         class="mt-3"
       >
-        <div class="text-xs text-[#71717A] mb-1">
+        <div class="text-xs text-muted mb-1">
           最常用
         </div>
         <div
@@ -444,55 +444,55 @@ const downloadAndInstall = async () => {
           :key="p.id"
           class="flex justify-between gap-2 text-xs py-0.5"
         >
-          <span class="truncate text-[#1A1A2E] dark:text-[#E4E4E7]">{{ i + 1 }}. {{ p.title }}</span>
-          <span class="shrink-0 text-[#71717A]">{{ p.usageCount }} 次</span>
+          <span class="truncate text-foreground dark:text-foreground-dark">{{ i + 1 }}. {{ p.title }}</span>
+          <span class="shrink-0 text-muted">{{ p.usageCount }} 次</span>
         </div>
       </div>
       <div
         v-if="stats.lastUsed"
-        class="text-xs text-[#71717A] mt-2"
+        class="text-xs text-muted mt-2"
       >
         最近使用：{{ stats.lastUsed.slice(0, 16).replace('T', ' ') }}
       </div>
     </div>
 
     <!-- 软件更新 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <div class="flex items-center justify-between">
-        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+        <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark">
           🔄 软件更新
         </h4>
         <span
           v-if="appVersion"
-          class="text-xs text-[#71717A]"
+          class="text-xs text-muted"
         >当前版本 v{{ appVersion }}</span>
       </div>
       <div class="flex items-center justify-between gap-2 mt-2">
         <span
           v-if="updaterMessage"
-          class="text-xs text-[#71717A] truncate"
+          class="text-xs text-muted truncate"
         >{{ updaterMessage }}</span>
         <span
           v-else
-          class="text-xs text-[#71717A]"
+          class="text-xs text-muted"
         >检查并安装新版本（安装后自动重启）</span>
         <button
           v-if="updaterState === 'available'"
-          class="shrink-0 px-3 py-1.5 rounded text-xs bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-primary text-white hover:bg-primary-hover"
           @click="downloadAndInstall"
         >
           下载并安装
         </button>
         <button
           v-else-if="updaterState === 'downloading'"
-          class="shrink-0 px-3 py-1.5 rounded text-xs bg-[#3B82F6] text-white opacity-60 cursor-not-allowed"
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-primary text-white opacity-60 cursor-not-allowed"
           disabled
         >
           安装中…
         </button>
         <button
           v-else
-          class="shrink-0 px-3 py-1.5 rounded text-xs bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
+          class="shrink-0 px-3 py-1.5 rounded text-xs bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark disabled:opacity-50"
           :disabled="updaterState === 'checking'"
           @click="checkForUpdate"
         >
@@ -502,16 +502,16 @@ const downloadAndInstall = async () => {
     </div>
 
     <!-- 导入导出 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <div class="flex gap-2 mb-3">
         <button
-          class="flex-1 px-3 py-2 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E] text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleExport"
         >
           导出数据
         </button>
         <button
-          class="flex-1 px-3 py-2 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E] text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleImport"
         >
           导入数据
@@ -520,12 +520,12 @@ const downloadAndInstall = async () => {
       <!-- 状态提示 -->
       <div
         v-if="importStatus"
-        class="text-xs text-[#71717A] mb-2 text-center"
+        class="text-xs text-muted mb-2 text-center"
       >
         {{ importStatus }}
       </div>
       <button
-        class="w-full px-3 py-2 rounded text-sm bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+        class="w-full px-3 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
         @click="showHelp"
       >
         使用说明

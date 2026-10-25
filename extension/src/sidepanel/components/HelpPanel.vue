@@ -1,11 +1,11 @@
 <template>
-  <div class="help-panel p-4 bg-white dark:bg-[#1A1A2E]">
+  <div class="help-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+      <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
         使用说明
       </h3>
       <button
-        class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
         aria-label="关闭使用说明"
         @click="$emit('close')"
       >
@@ -15,7 +15,7 @@
 
     <!-- 快捷键 -->
     <section class="mb-4">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
         快捷键
       </h4>
       <div class="space-y-1.5">
@@ -26,7 +26,7 @@
         >
           <span class="text-gray-500 dark:text-gray-400">{{ item.desc }}</span>
           <kbd
-            class="shrink-0 px-1.5 py-0.5 rounded border border-[#E4E4E7] dark:border-[#27272A] bg-gray-50 dark:bg-[#27272A] text-xs text-[#1A1A2E] dark:text-[#E4E4E7]"
+            class="shrink-0 px-1.5 py-0.5 rounded border border-surface dark:border-surface-dark bg-gray-50 dark:bg-surface-dark text-xs text-foreground dark:text-foreground-dark"
           >{{ item.keys }}</kbd>
         </div>
       </div>
@@ -36,8 +36,8 @@
     </section>
 
     <!-- 输出方式 -->
-    <section class="mb-4 border-t border-[#E4E4E7] dark:border-[#27272A] pt-3">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+    <section class="mb-4 border-t border-surface dark:border-surface-dark pt-3">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
         输出方式
       </h4>
       <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
@@ -47,20 +47,20 @@
     </section>
 
     <!-- AI 优化 -->
-    <section class="mb-4 border-t border-[#E4E4E7] dark:border-[#27272A] pt-3">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+    <section class="mb-4 border-t border-surface dark:border-surface-dark pt-3">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
         AI 优化
       </h4>
       <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-        在页面选中一段文字后按 <kbd class="px-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs">Alt+Shift+O</kbd>：
+        在页面选中一段文字后按 <kbd class="px-1 rounded border border-surface dark:border-surface-dark text-xs">Alt+Shift+O</kbd>：
         调用 AI 润色并原位替换，结果自动存入「AI 优化」空间（上限 200 条）。
         需先在设置中配置 API Key；不可编辑区域会回退为复制优化结果。
       </p>
     </section>
 
     <!-- 数据说明 -->
-    <section class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-3">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+    <section class="border-t border-surface dark:border-surface-dark pt-3">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
         数据说明
       </h4>
       <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
@@ -69,7 +69,7 @@
       </p>
     </section>
 
-    <footer class="mt-4 pt-3 border-t border-[#E4E4E7] dark:border-[#27272A] text-xs text-gray-400 dark:text-gray-500">
+    <footer class="mt-4 pt-3 border-t border-surface dark:border-surface-dark text-xs text-gray-400 dark:text-gray-500">
       PromptX 扩展 v{{ appVersion }}
     </footer>
   </div>

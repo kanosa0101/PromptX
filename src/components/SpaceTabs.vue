@@ -80,7 +80,7 @@ const onDrop = (index: number) => {
 
 <template>
   <div
-    class="space-tabs flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#1A1A2E]"
+    class="space-tabs flex items-center gap-2 px-4 py-2 bg-white dark:bg-background-dark"
     role="tablist"
   >
     <!-- 空间标签（可拖拽排序） -->
@@ -94,11 +94,11 @@ const onDrop = (index: number) => {
       class="px-3.5 py-1.5 rounded-full text-sm transition-all duration-150 group relative cursor-grab active:cursor-grabbing"
       :class="[
         space.id === currentSpaceId
-          ? 'bg-[#3B82F6] text-white shadow-sm'
-          : 'hover:bg-[#E4E4E7]/80 dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]',
+          ? 'bg-primary text-white shadow-sm'
+          : 'hover:bg-surface/80 dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark',
         dragIndex === index ? 'opacity-40' : '',
         dragOverIndex === index && dragIndex !== index
-          ? 'ring-2 ring-[#3B82F6] ring-offset-1'
+          ? 'ring-2 ring-primary ring-offset-1'
           : ''
       ]"
       @click="selectSpace(space.id)"
@@ -113,14 +113,14 @@ const onDrop = (index: number) => {
       {{ space.name }}
       <!-- 编辑按钮（悬停时显示） -->
       <span
-        class="ml-1 opacity-0 group-hover:opacity-100 hover:text-[#3B82F6] transition-opacity"
+        class="ml-1 opacity-0 group-hover:opacity-100 hover:text-primary transition-opacity"
         title="编辑空间"
         @click.stop="editSpace(space.id)"
       >✎</span>
       <!-- 删除按钮（悬停时显示，默认空间不可删除） -->
       <span
         v-if="space.id !== 'space_default'"
-        class="ml-1 opacity-0 group-hover:opacity-100 hover:text-[#EF4444] transition-opacity"
+        class="ml-1 opacity-0 group-hover:opacity-100 hover:text-error transition-opacity"
         title="删除空间"
         @click.stop="deleteSpace(space.id)"
       >✕</span>
@@ -128,7 +128,7 @@ const onDrop = (index: number) => {
 
     <!-- 新建空间按钮 -->
     <button
-      class="px-3 py-1.5 rounded text-sm text-[#71717A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A]"
+      class="px-3 py-1.5 rounded text-sm text-muted hover:bg-surface dark:hover:bg-surface-dark"
       aria-label="新建空间"
       @click="showCreateSpace"
     >

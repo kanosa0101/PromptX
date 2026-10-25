@@ -1,43 +1,12 @@
 /** @type {import('tailwindcss').Config} */
+import { colors } from './shared/ui/tokens.js'
+
 export default {
   darkMode: 'class',
   content: ['./src/**/*.{vue,ts,tsx}', './shared/**/*.{vue,ts}'],
   theme: {
     extend: {
-      colors: {
-        primary: {
-          light: '#3B82F6',
-          dark: '#60A5FA',
-          DEFAULT: '#3B82F6',
-        },
-        background: {
-          light: '#FFFFFF',
-          dark: '#1A1A2E',
-          DEFAULT: '#FFFFFF',
-        },
-        foreground: {
-          light: '#1A1A2E',
-          dark: '#E4E4E7',
-          DEFAULT: '#1A1A2E',
-        },
-        muted: {
-          DEFAULT: '#71717A',
-        },
-        success: {
-          DEFAULT: '#10B981',
-        },
-        warning: {
-          DEFAULT: '#F59E0B',
-        },
-        error: {
-          DEFAULT: '#EF4444',
-        },
-        border: {
-          light: '#E4E4E7',
-          dark: '#27272A',
-          DEFAULT: '#E4E4E7',
-        },
-      },
+      colors,
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
       },

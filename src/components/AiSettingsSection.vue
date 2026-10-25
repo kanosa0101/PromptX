@@ -75,13 +75,13 @@ const handleTestAi = async () => {
 </script>
 
 <template>
-  <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-3 mt-3">
+  <div class="border-t border-surface dark:border-surface-dark pt-3 mt-3">
     <div class="flex items-center justify-between mb-2">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark">
         AI 快捷优化
       </h4>
       <button
-        class="px-3 py-1 rounded text-xs border border-[#E4E4E7] dark:border-[#27272A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
+        class="px-3 py-1 rounded text-xs border border-surface dark:border-surface-dark hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark disabled:opacity-50"
         :disabled="isTestingAi"
         @click="handleTestAi"
       >
@@ -90,34 +90,34 @@ const handleTestAi = async () => {
     </div>
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">API Key</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">API Key</span>
       <input
         v-model="aiApiKey"
         type="password"
         placeholder="sk-..."
-        class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
         @blur="saveAiField('aiApiKey', aiApiKey)"
       >
     </div>
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">服务地址</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">服务地址</span>
       <input
         v-model="aiBaseUrl"
         type="text"
         placeholder="https://api.deepseek.com"
-        class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
         @blur="saveAiField('aiBaseUrl', aiBaseUrl)"
       >
     </div>
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">模型</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">模型</span>
       <input
         v-model="aiModel"
         type="text"
         placeholder="deepseek-flash"
-        class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
         @blur="saveAiField('aiModel', aiModel)"
       >
     </div>
@@ -140,8 +140,8 @@ const handleTestAi = async () => {
     />
 
     <div class="setting-item flex items-center justify-between py-1.5">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">推理模式</span>
-      <label class="flex items-center gap-1.5 text-xs text-[#71717A] cursor-pointer">
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">推理模式</span>
+      <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
         <input
           v-model="optimizeThinking"
           type="checkbox"
@@ -154,16 +154,16 @@ const handleTestAi = async () => {
 
     <div class="py-1.5">
       <div class="flex items-center justify-between">
-        <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
+        <span class="setting-label text-xs text-muted">优化指令模板（失焦自动保存）</span>
         <div class="flex gap-3">
           <button
-            class="text-xs text-[#3B82F6] hover:underline"
+            class="text-xs text-primary hover:underline"
             @click="fillDefaultTemplate"
           >
             填入默认
           </button>
           <button
-            class="text-xs text-[#3B82F6] hover:underline"
+            class="text-xs text-primary hover:underline"
             @click="resetTemplate"
           >
             恢复默认
@@ -174,7 +174,7 @@ const handleTestAi = async () => {
         v-model="optimizeTemplate"
         rows="3"
         placeholder="留空使用内置默认优化模板"
-        class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
+        class="w-full mt-1 px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark resize-none"
         @blur="saveAiField('optimizeTemplate', optimizeTemplate)"
       />
     </div>

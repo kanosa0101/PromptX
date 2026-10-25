@@ -17,17 +17,17 @@ const emit = defineEmits<{ start: []; cancel: [] }>()
     class="setting-item flex items-center justify-between py-1.5"
     :title="hint"
   >
-    <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">{{ label }}</span>
+    <span class="setting-label text-sm text-foreground dark:text-foreground-dark">{{ label }}</span>
     <button
       v-if="!capturing"
-      class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] w-24"
+      class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark w-24"
       @click="emit('start')"
     >
       {{ hotkey }}
     </button>
     <button
       v-else
-      class="px-3 py-1.5 rounded border border-[#3B82F6] text-sm bg-[#3B82F6]/10 text-[#3B82F6] w-24 animate-pulse"
+      class="px-3 py-1.5 rounded border border-primary text-sm bg-primary/10 text-primary w-24 animate-pulse"
       @click="emit('cancel')"
     >
       取消

@@ -49,30 +49,30 @@ onUnmounted(() => {
     />
 
     <!-- 对话框 -->
-    <div class="dialog-content animate-fade-in relative bg-white dark:bg-[#1A1A2E] rounded-xl shadow-xl p-4 min-w-[280px]">
+    <div class="dialog-content animate-fade-in relative bg-white dark:bg-background-dark rounded-xl shadow-xl p-4 min-w-[280px]">
       <!-- 标题 -->
       <h3
         v-if="title"
-        class="text-base font-medium mb-2 text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="text-base font-medium mb-2 text-foreground dark:text-foreground-dark"
       >
         {{ title }}
       </h3>
 
       <!-- 消息 -->
-      <p class="text-sm text-[#71717A] mb-4">
+      <p class="text-sm text-muted mb-4">
         {{ message }}
       </p>
 
       <!-- 按钮 -->
       <div class="flex justify-end gap-2">
         <button
-          class="px-3 py-1.5 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] hover:bg-[#D4D4D8] dark:hover:bg-[#3F3F46]"
+          class="px-3 py-1.5 rounded text-sm bg-surface dark:bg-surface-dark text-foreground dark:text-foreground-dark hover:bg-surface-hover-light dark:hover:bg-surface-soft-dark"
           @click="emit('cancel')"
         >
           取消
         </button>
         <button
-          class="px-3 py-1.5 rounded text-sm bg-[#EF4444] text-white hover:bg-[#DC2626]"
+          class="px-3 py-1.5 rounded text-sm bg-error text-white hover:bg-error-hover"
           @click="emit('confirm')"
         >
           {{ confirmText || '删除' }}

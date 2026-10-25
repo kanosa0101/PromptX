@@ -67,13 +67,13 @@ const handleClose = () => {
 </script>
 
 <template>
-  <div class="p-4 bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]">
+  <div class="p-4 bg-white dark:bg-background-dark text-foreground dark:text-foreground-dark">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-base font-medium">
         {{ isEditing ? '编辑空间' : '新建空间' }}
       </h3>
       <button
-        class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A]"
+        class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark"
         @click="handleClose"
       >
         ✕
@@ -87,7 +87,7 @@ const handleClose = () => {
         v-model="name"
         type="text"
         placeholder="空间名称"
-        class="w-full px-3 py-2 rounded border border-[#E4E4E7] dark:border-[#27272A] bg-transparent focus:outline-none focus:border-[#3B82F6] text-sm"
+        class="w-full px-3 py-2 rounded border border-surface dark:border-surface-dark bg-transparent focus:outline-none focus:border-primary text-sm"
       >
     </div>
 
@@ -101,8 +101,8 @@ const handleClose = () => {
           class="w-8 h-8 rounded flex items-center justify-center text-lg"
           :class="[
             icon === ic
-              ? 'bg-[#3B82F6] text-white'
-              : 'bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#3B82F6]/20'
+              ? 'bg-primary text-white'
+              : 'bg-surface dark:bg-surface-dark hover:bg-primary/20'
           ]"
           @click="icon = ic"
         >
@@ -119,7 +119,7 @@ const handleClose = () => {
           v-for="c in colorOptions"
           :key="c"
           class="w-8 h-8 rounded flex items-center justify-center"
-          :class="[color === c ? 'ring-2 ring-offset-2 ring-[#1A1A2E] dark:ring-[#E4E4E7]' : '']"
+          :class="[color === c ? 'ring-2 ring-offset-2 ring-background-dark dark:ring-surface' : '']"
           :style="{ backgroundColor: c }"
           @click="color = c"
         >
@@ -134,13 +134,13 @@ const handleClose = () => {
     <!-- 操作按钮 -->
     <div class="flex justify-end gap-2">
       <button
-        class="px-4 py-2 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E]"
+        class="px-4 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark"
         @click="handleClose"
       >
         取消
       </button>
       <button
-        class="px-4 py-2 rounded text-sm bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+        class="px-4 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
         :disabled="!name.trim()"
         @click="handleSave"
       >

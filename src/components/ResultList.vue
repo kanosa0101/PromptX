@@ -16,7 +16,7 @@ const onItemClick = (index: number) => {
 
 <template>
   <div
-    class="result-list overflow-y-auto bg-white dark:bg-[#1A1A2E]"
+    class="result-list overflow-y-auto bg-white dark:bg-background-dark"
     role="listbox"
     aria-label="提示词列表"
   >
@@ -40,10 +40,10 @@ const onItemClick = (index: number) => {
       >
         🔍
       </div>
-      <p class="text-[#71717A] text-sm">
+      <p class="text-muted text-sm">
         暂无匹配结果
       </p>
-      <p class="text-xs text-[#71717A]/70 mt-1.5">
+      <p class="text-xs text-muted/70 mt-1.5">
         按 Ctrl+N 创建新提示词
       </p>
     </div>

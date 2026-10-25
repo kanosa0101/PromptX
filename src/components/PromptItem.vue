@@ -66,8 +66,8 @@ const handleDelete = () => {
     :aria-selected="selected"
     :class="[
       selected
-        ? 'bg-[#3B82F6]/10 dark:bg-[#60A5FA]/20 border-[#3B82F6]/40 shadow-sm'
-        : 'border-transparent hover:bg-[#E4E4E7]/60 dark:hover:bg-[#27272A]/60'
+        ? 'bg-primary/10 dark:bg-primary-dark/20 border-primary/40 shadow-sm'
+        : 'border-transparent hover:bg-surface/60 dark:hover:bg-surface-dark/60'
     ]"
     @click="$emit('click')"
   >
@@ -77,7 +77,7 @@ const handleDelete = () => {
       class="absolute right-2 top-2 flex gap-1"
     >
       <button
-        class="p-1 rounded transition-colors hover:bg-[#3B82F6]/20 text-[#71717A] hover:text-[#3B82F6]"
+        class="p-1 rounded transition-colors hover:bg-primary/20 text-muted hover:text-primary"
         aria-label="编辑"
         title="编辑 (Ctrl+E)"
         @click.stop="handleEdit"
@@ -85,7 +85,7 @@ const handleDelete = () => {
         ✏️
       </button>
       <button
-        class="p-1 rounded transition-colors hover:bg-[#EF4444]/20 text-[#71717A] hover:text-[#EF4444]"
+        class="p-1 rounded transition-colors hover:bg-error/20 text-muted hover:text-error"
         aria-label="删除"
         title="删除 (Ctrl+D)"
         @click.stop="handleDelete"
@@ -97,11 +97,11 @@ const handleDelete = () => {
     <!-- 标题与内容摘要：内容经 highlightMatches 转义（shared/search.ts，有 XSS 测试覆盖） -->
     <!-- eslint-disable vue/no-v-html -->
     <div
-      class="font-medium text-sm text-[#1A1A2E] dark:text-[#E4E4E7]"
+      class="font-medium text-sm text-foreground dark:text-foreground-dark"
       v-html="formatTitle(prompt)"
     />
     <div
-      class="text-xs text-[#71717A] mt-1 line-clamp-1"
+      class="text-xs text-muted mt-1 line-clamp-1"
       v-html="formatContent(prompt)"
     />
     <!-- eslint-enable vue/no-v-html -->
@@ -112,14 +112,14 @@ const handleDelete = () => {
         <span
           v-for="tag in prompt.tags"
           :key="tag"
-          class="text-xs px-2 py-0.5 rounded-md bg-[#E4E4E7]/60 dark:bg-[#27272A]/60 border border-black/5 dark:border-white/10 text-[#71717A]"
+          class="text-xs px-2 py-0.5 rounded-md bg-surface/60 dark:bg-surface-dark/60 border border-black/5 dark:border-white/10 text-muted"
         >
           {{ tag }}
         </span>
       </div>
       <button
         class="shrink-0 text-sm leading-none transition-colors"
-        :class="prompt.favorite ? 'text-amber-400' : 'text-[#71717A]/50 hover:text-amber-400'"
+        :class="prompt.favorite ? 'text-amber-400' : 'text-muted/50 hover:text-amber-400'"
         :aria-label="prompt.favorite ? '取消收藏' : '收藏'"
         :title="prompt.favorite ? '取消收藏' : '收藏（列表优先展示）'"
         @click.stop="handleToggleFavorite"
@@ -127,7 +127,7 @@ const handleDelete = () => {
         {{ prompt.favorite ? '★' : '☆' }}
       </button>
       <span
-        class="shrink-0 text-xs text-[#71717A]/60"
+        class="shrink-0 text-xs text-muted/60"
         :title="'创建于 ' + prompt.createdAt"
       >{{ formatDate(prompt.createdAt) }}</span>
     </div>
@@ -135,7 +135,7 @@ const handleDelete = () => {
     <!-- 变量提示 -->
     <div
       v-if="prompt.variables.length > 0"
-      class="text-xs text-[#3B82F6] mt-1"
+      class="text-xs text-primary mt-1"
     >
       {{ formatVariables(prompt.variables) }}
     </div>

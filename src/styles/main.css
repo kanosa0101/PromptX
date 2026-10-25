@@ -48,7 +48,7 @@ body {
 }
 
 .tag {
-  @apply text-xs px-2 py-0.5 rounded bg-border/50;
+  @apply text-xs px-2 py-0.5 rounded bg-surface/50;
 }
 
 /* 空间标签样式 */
@@ -65,7 +65,7 @@ body {
 }
 
 .space-tab:not(.active) {
-  @apply hover:bg-border/50;
+  @apply hover:bg-surface/50;
 }
 
 /* 变量表单样式 */
@@ -82,7 +82,7 @@ body {
 }
 
 .variable-input input {
-  @apply w-full px-3 py-2 rounded border border-border bg-background focus:outline-none focus:border-primary;
+  @apply w-full px-3 py-2 rounded border border-surface bg-background focus:outline-none focus:border-primary;
 }
 
 /* 设置面板样式 */
@@ -100,7 +100,7 @@ body {
 
 /* 底部提示栏 */
 .status-bar {
-  @apply flex items-center justify-center gap-4 px-4 py-2 text-xs text-muted border-t border-border;
+  @apply flex items-center justify-center gap-4 px-4 py-2 text-xs text-muted border-t border-surface;
 }
 
 /* 空状态提示 */
@@ -131,12 +131,12 @@ body {
 }
 
 .btn-secondary {
-  @apply bg-border text-foreground hover:bg-border/80;
+  @apply bg-surface text-foreground hover:bg-surface/80;
 }
 
 /* 图标按钮 */
 .icon-btn {
-  @apply p-1.5 rounded hover:bg-border/50 transition-colors;
+  @apply p-1.5 rounded hover:bg-surface/50 transition-colors;
 }
 
 /* 文本选区颜色 */
@@ -171,7 +171,7 @@ body {
 }
 
 .dark .tag {
-  @apply bg-border-dark/50;
+  @apply bg-surface-dark/50;
 }
 
 /* 滚动条样式 */

@@ -71,7 +71,7 @@ const handleCancel = () => {
         v-model="values[variable.name]"
         :placeholder="variable.defaultValue"
         type="text"
-        class="w-full px-3 py-2 rounded border border-border-light dark:border-border-dark bg-transparent focus:outline-none focus:border-primary"
+        class="w-full px-3 py-2 rounded border border-surface-light dark:border-surface-dark bg-transparent focus:outline-none focus:border-primary"
       >
     </div>
 

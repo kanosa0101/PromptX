@@ -1,11 +1,11 @@
 <template>
-  <div class="space-editor-panel p-4 bg-white dark:bg-[#1A1A2E]">
+  <div class="space-editor-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+      <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
         空间管理
       </h3>
       <button
-        class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
         @click="emit('close')"
       >
         ✕
@@ -17,15 +17,15 @@
       <div
         v-for="space in spaces"
         :key="space.id"
-        class="space-item flex items-center justify-between p-2 rounded border border-[#E4E4E7] dark:border-[#27272A] mb-2"
+        class="space-item flex items-center justify-between p-2 rounded border border-surface dark:border-surface-dark mb-2"
       >
         <div class="flex items-center gap-2">
           <span class="text-lg">{{ space.icon }}</span>
-          <span class="text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">{{ space.name }}</span>
+          <span class="text-sm text-foreground dark:text-foreground-dark">{{ space.name }}</span>
         </div>
         <div class="flex gap-1">
           <button
-            class="px-2 py-1 text-xs rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#71717A]"
+            class="px-2 py-1 text-xs rounded hover:bg-surface dark:hover:bg-surface-dark text-muted"
             @click="editSpace(space)"
           >
             编辑
@@ -43,7 +43,7 @@
 
     <!-- 新建空间 -->
     <button
-      class="w-full px-3 py-2 rounded text-sm bg-[#3B82F6] text-white hover:bg-[#2563EB]"
+      class="w-full px-3 py-2 rounded text-sm bg-primary text-white hover:bg-primary-hover"
       @click="showCreateForm = true"
     >
       + 新建空间
@@ -52,14 +52,14 @@
     <!-- 创建/编辑表单 -->
     <div
       v-if="showCreateForm || editingSpace"
-      class="mt-4 p-3 bg-[#F4F4F5] dark:bg-[#27272A] rounded"
+      class="mt-4 p-3 bg-surface-soft-light dark:bg-surface-dark rounded"
     >
       <div class="space-y-3">
         <div>
-          <label class="block text-sm text-[#1A1A2E] dark:text-[#E4E4E7] mb-1">图标</label>
+          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">图标</label>
           <select
             v-model="form.icon"
-            class="w-full px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent"
+            class="w-full px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent"
           >
             <option
               v-for="icon in iconOptions"
@@ -71,16 +71,16 @@
           </select>
         </div>
         <div>
-          <label class="block text-sm text-[#1A1A2E] dark:text-[#E4E4E7] mb-1">名称</label>
+          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">名称</label>
           <input
             v-model="form.name"
             type="text"
-            class="w-full px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent"
+            class="w-full px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent"
             placeholder="空间名称"
           >
         </div>
         <div>
-          <label class="block text-sm text-[#1A1A2E] dark:text-[#E4E4E7] mb-1">颜色</label>
+          <label class="block text-sm text-foreground dark:text-foreground-dark mb-1">颜色</label>
           <div class="flex gap-2">
             <button
               v-for="color in colorOptions"
@@ -94,13 +94,13 @@
       </div>
       <div class="flex gap-2 mt-3">
         <button
-          class="flex-1 px-2 py-1 text-sm rounded bg-[#E4E4E7] dark:bg-[#3A3A3E]"
+          class="flex-1 px-2 py-1 text-sm rounded bg-surface dark:bg-surface-hover-dark"
           @click="cancelEdit"
         >
           取消
         </button>
         <button
-          class="flex-1 px-2 py-1 text-sm rounded bg-[#3B82F6] text-white"
+          class="flex-1 px-2 py-1 text-sm rounded bg-primary text-white"
           :disabled="!form.name"
           @click="saveSpace"
         >

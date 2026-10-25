@@ -1,11 +1,11 @@
 <template>
-  <div class="settings-panel p-4 bg-white dark:bg-[#1A1A2E]">
+  <div class="settings-panel p-4 bg-white dark:bg-background-dark">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+      <h3 class="text-base font-medium text-foreground dark:text-foreground-dark">
         设置
       </h3>
       <button
-        class="p-1 rounded hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="p-1 rounded hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark"
         @click="$emit('close')"
       >
         ✕
@@ -14,10 +14,10 @@
 
     <!-- 主题设置 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">主题</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">主题</span>
       <select
         v-model="theme"
-        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
         @change="saveTheme"
       >
         <option value="light">
@@ -34,25 +34,25 @@
 
     <!-- 最大结果数 -->
     <div class="setting-item flex items-center justify-between py-2">
-      <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">最大结果数</span>
+      <span class="setting-label text-sm text-foreground dark:text-foreground-dark">最大结果数</span>
       <input
         v-model.number="maxResults"
         type="number"
         min="5"
         max="50"
-        class="px-3 py-1.5 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent w-16 text-[#1A1A2E] dark:text-[#E4E4E7]"
+        class="px-3 py-1.5 rounded border border-surface dark:border-surface-dark text-sm bg-transparent w-16 text-foreground dark:text-foreground-dark"
         @change="saveSettings"
       >
     </div>
 
     <!-- AI 优化设置 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <div class="flex items-center justify-between mb-2">
-        <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+        <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark">
           AI 快捷优化
         </h4>
         <button
-          class="px-3 py-1 rounded text-xs border border-[#E4E4E7] dark:border-[#27272A] hover:bg-[#E4E4E7] dark:hover:bg-[#27272A] text-[#1A1A2E] dark:text-[#E4E4E7] disabled:opacity-50"
+          class="px-3 py-1 rounded text-xs border border-surface dark:border-surface-dark hover:bg-surface dark:hover:bg-surface-dark text-foreground dark:text-foreground-dark disabled:opacity-50"
           :disabled="isTestingAi"
           @click="handleTestAi"
         >
@@ -61,41 +61,41 @@
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">API Key</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">API Key</span>
         <input
           v-model="aiApiKey"
           type="password"
           placeholder="sk-..."
-          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
           @blur="saveSettings"
         >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">服务地址</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">服务地址</span>
         <input
           v-model="aiBaseUrl"
           type="text"
           placeholder="https://api.deepseek.com"
-          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
           @blur="saveSettings"
         >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">模型</span>
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">模型</span>
         <input
           v-model="aiModel"
           type="text"
           placeholder="deepseek-flash"
-          class="w-40 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-sm bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
           @blur="saveSettings"
         >
       </div>
 
       <div class="setting-item flex items-center justify-between py-1.5">
-        <span class="setting-label text-sm text-[#1A1A2E] dark:text-[#E4E4E7]">推理模式</span>
-        <label class="flex items-center gap-1.5 text-xs text-[#71717A] cursor-pointer">
+        <span class="setting-label text-sm text-foreground dark:text-foreground-dark">推理模式</span>
+        <label class="flex items-center gap-1.5 text-xs text-muted cursor-pointer">
           <input
             v-model="optimizeThinking"
             type="checkbox"
@@ -108,16 +108,16 @@
 
       <div class="py-1.5">
         <div class="flex items-center justify-between">
-          <span class="setting-label text-xs text-[#71717A]">优化指令模板（失焦自动保存）</span>
+          <span class="setting-label text-xs text-muted">优化指令模板（失焦自动保存）</span>
           <div class="flex gap-3">
             <button
-              class="text-xs text-[#3B82F6] hover:underline"
+              class="text-xs text-primary hover:underline"
               @click="fillDefaultTemplate"
             >
               填入默认
             </button>
             <button
-              class="text-xs text-[#3B82F6] hover:underline"
+              class="text-xs text-primary hover:underline"
               @click="resetTemplate"
             >
               恢复默认
@@ -128,51 +128,51 @@
           v-model="optimizeTemplate"
           rows="3"
           placeholder="留空使用内置默认优化模板"
-          class="w-full mt-1 px-2 py-1 rounded border border-[#E4E4E7] dark:border-[#27272A] text-xs bg-transparent text-[#1A1A2E] dark:text-[#E4E4E7] resize-none"
+          class="w-full mt-1 px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark resize-none"
           @blur="saveSettings"
         />
       </div>
 
-      <p class="text-xs text-[#71717A] leading-relaxed">
+      <p class="text-xs text-muted leading-relaxed">
         在网页输入框中选中文本，按 Alt+Shift+O 自动 AI 优化并原位替换（快捷键可在 chrome://extensions/shortcuts 修改）
       </p>
     </div>
 
     <!-- 使用统计 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
-      <h4 class="text-sm font-medium text-[#1A1A2E] dark:text-[#E4E4E7] mb-2">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
+      <h4 class="text-sm font-medium text-foreground dark:text-foreground-dark mb-2">
         📊 使用统计
       </h4>
       <div class="grid grid-cols-4 gap-2 text-center">
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.count }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             提示词
           </div>
         </div>
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.spaces }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             空间
           </div>
         </div>
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.totalUses }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             累计输出
           </div>
         </div>
         <div>
-          <div class="text-base font-medium text-[#1A1A2E] dark:text-[#E4E4E7]">
+          <div class="text-base font-medium text-foreground dark:text-foreground-dark">
             {{ stats.favorites }}
           </div>
-          <div class="text-xs text-[#71717A]">
+          <div class="text-xs text-muted">
             收藏
           </div>
         </div>
@@ -181,7 +181,7 @@
         v-if="stats.top.length"
         class="mt-3"
       >
-        <div class="text-xs text-[#71717A] mb-1">
+        <div class="text-xs text-muted mb-1">
           最常用
         </div>
         <div
@@ -189,29 +189,29 @@
           :key="p.id"
           class="flex justify-between gap-2 text-xs py-0.5"
         >
-          <span class="truncate text-[#1A1A2E] dark:text-[#E4E4E7]">{{ i + 1 }}. {{ p.title }}</span>
-          <span class="shrink-0 text-[#71717A]">{{ p.usageCount }} 次</span>
+          <span class="truncate text-foreground dark:text-foreground-dark">{{ i + 1 }}. {{ p.title }}</span>
+          <span class="shrink-0 text-muted">{{ p.usageCount }} 次</span>
         </div>
       </div>
       <div
         v-if="stats.lastUsed"
-        class="text-xs text-[#71717A] mt-2"
+        class="text-xs text-muted mt-2"
       >
         最近使用：{{ stats.lastUsed.slice(0, 16).replace('T', ' ') }}
       </div>
     </div>
 
     <!-- 导入导出 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4">
       <div class="flex gap-2 mb-3">
         <button
-          class="flex-1 px-3 py-2 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E] text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleExport"
         >
           导出数据
         </button>
         <button
-          class="flex-1 px-3 py-2 rounded text-sm bg-[#E4E4E7] dark:bg-[#27272A] hover:bg-[#D4D4D8] dark:hover:bg-[#3A3A3E] text-[#1A1A2E] dark:text-[#E4E4E7]"
+          class="flex-1 px-3 py-2 rounded text-sm bg-surface dark:bg-surface-dark hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground dark:text-foreground-dark"
           @click="handleImport"
         >
           导入数据
@@ -220,18 +220,18 @@
       <!-- 状态提示 -->
       <div
         v-if="statusMessage"
-        class="text-xs text-[#71717A] mb-2 text-center"
+        class="text-xs text-muted mb-2 text-center"
       >
         {{ statusMessage }}
       </div>
     </div>
 
     <!-- 关于 -->
-    <div class="border-t border-[#E4E4E7] dark:border-[#27272A] pt-4 mt-4 text-center">
-      <p class="text-xs text-[#71717A]">
+    <div class="border-t border-surface dark:border-surface-dark pt-4 mt-4 text-center">
+      <p class="text-xs text-muted">
         PromptX 浏览器插件 v{{ appVersion }}
       </p>
-      <p class="text-xs text-[#71717A] mt-1">
+      <p class="text-xs text-muted mt-1">
         AI 提示词剪贴板管理工具
       </p>
     </div>

@@ -207,7 +207,7 @@ onUnmounted(() => {
   />
 
   <div
-    class="app-container min-h-screen bg-white dark:bg-[#1A1A2E] text-[#1A1A2E] dark:text-[#E4E4E7]"
+    class="app-container min-h-screen bg-white dark:bg-background-dark text-foreground dark:text-foreground-dark"
   >
     <!-- 系统通知横幅（快捷键冲突等，需手动关闭） -->
     <div
