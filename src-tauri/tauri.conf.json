@@ -1,6 +1,6 @@
 {
   "productName": "PromptX",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "identifier": "com.promptx.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -24,7 +24,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; connect-src 'self' ipc: ipc.localhost http://ipc.localhost https: http://localhost:* http://127.0.0.1:*; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+      "csp": "default-src 'self'; connect-src 'self' ipc: ipc.localhost http://ipc.localhost https: http://localhost:* http://127.0.0.1:*; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'"
     }
   },
   "plugins": {

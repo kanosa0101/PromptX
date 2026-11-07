@@ -1,6 +1,6 @@
 [package]
 name = "promptx"
-version = "2.0.1"
+version = "2.0.2"
 description = "A lightweight AI prompt clipboard tool"
 authors = ["PromptX Team"]
 edition = "2021"
@@ -9,7 +9,7 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["devtools"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-clipboard-manager = "2"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import SharedVariableForm from '@shared/ui/components/VariableForm.vue'
 import type { Prompt } from '@/types'
 
@@ -18,6 +18,12 @@ const emit = defineEmits<{
 const customVariables = computed(() =>
   props.prompt?.variables.filter((v) => v.type === 'custom') || []
 )
+
+onMounted(() => {
+  if (!props.prompt) {
+    emit('cancel')
+  }
+})
 </script>
 
 <template>

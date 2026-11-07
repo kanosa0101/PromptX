@@ -100,6 +100,15 @@ pub fn hide_window(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// 打开开发者工具（调试用，支持前端 F12 呼出）
+#[tauri::command]
+pub fn open_devtools(app: AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        window.open_devtools();
+    }
+    Ok(())
+}
+
 /// 保存当前窗口位置（不依赖前端触发；失焦自动隐藏等内部路径共用）
 pub fn save_position(app: &AppHandle) {
     use tauri::Manager;

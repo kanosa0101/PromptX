@@ -74,6 +74,9 @@ fn main() {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
+                if std::env::var("PROMPTX_DEVTOOLS").is_ok() || std::env::var("PROMPTX_DEBUG").is_ok() {
+                    window.open_devtools();
+                }
             }
 
             // 旧版本兼容：把 data.json 中的明文 API Key 迁移到系统钥匙串
@@ -172,6 +175,7 @@ fn main() {
             // 窗口
             commands::window::hide_window,
             commands::window::show_window,
+            commands::window::open_devtools,
             // 浏览器扩展同步（Native Messaging）
             commands::nm::get_nm_status,
             commands::nm::set_nm_sync,
