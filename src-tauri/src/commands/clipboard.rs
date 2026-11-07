@@ -64,12 +64,36 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
 }
 
 /// 模拟复制按键 (Ctrl+C / Cmd+C)
+#[cfg(target_os = "windows")]
+pub fn simulate_copy() -> Result<(), String> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, VK_CONTROL, VK_MENU, VK_SHIFT,
+    };
+    unsafe {
+        // 先确保 Alt / Shift 处于抬起状态（防止全局快捷键如 Ctrl+Alt+O 触发时物理键残留导致系统识别为 Ctrl+Alt+C）
+        keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+        keybd_event(VK_SHIFT.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+
+        // 按下 Ctrl
+        keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+        std::thread::sleep(std::time::Duration::from_millis(15));
+        // 按下并释放 'C' (VK_C = 0x43)
+        keybd_event(b'C', 0, KEYBD_EVENT_FLAGS(0), 0);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        keybd_event(b'C', 0, KEYEVENTF_KEYUP, 0);
+        std::thread::sleep(std::time::Duration::from_millis(15));
+        // 释放 Ctrl
+        keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
 pub fn simulate_copy() -> Result<(), String> {
     simulate_copy_or_cut('c')
 }
 
-/// 模拟复制或剪切按键 (Ctrl+C/X 或 Cmd+C/X)
-/// 初始化失败不再静默吞掉，由调用方记录诊断日志
+#[cfg(not(target_os = "windows"))]
 fn simulate_copy_or_cut(key: char) -> Result<(), String> {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
@@ -84,9 +108,9 @@ fn simulate_copy_or_cut(key: char) -> Result<(), String> {
         let _ = enigo.key(Key::Meta, Direction::Release);
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     {
-        // Windows/Linux: Ctrl+C/X
+        // Linux: Ctrl+C/X
         let _ = enigo.key(Key::Control, Direction::Press);
         let _ = enigo.key(Key::Unicode(key), Direction::Click);
         let _ = enigo.key(Key::Control, Direction::Release);
@@ -96,6 +120,31 @@ fn simulate_copy_or_cut(key: char) -> Result<(), String> {
 }
 
 /// 模拟粘贴按键 (Ctrl+V / Cmd+V)
+#[cfg(target_os = "windows")]
+pub fn simulate_paste() -> Result<(), String> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, VK_CONTROL, VK_MENU, VK_SHIFT,
+    };
+    unsafe {
+        // 先确保 Alt / Shift 处于抬起状态
+        keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+        keybd_event(VK_SHIFT.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+
+        // 按下 Ctrl
+        keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
+        std::thread::sleep(std::time::Duration::from_millis(15));
+        // 按下并释放 'V' (VK_V = 0x56)
+        keybd_event(b'V', 0, KEYBD_EVENT_FLAGS(0), 0);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        keybd_event(b'V', 0, KEYEVENTF_KEYUP, 0);
+        std::thread::sleep(std::time::Duration::from_millis(15));
+        // 释放 Ctrl
+        keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
 pub fn simulate_paste() -> Result<(), String> {
     use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 
@@ -110,9 +159,9 @@ pub fn simulate_paste() -> Result<(), String> {
         let _ = enigo.key(Key::Meta, Direction::Release);
     }
 
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(target_os = "linux")]
     {
-        // Windows/Linux: Ctrl+V
+        // Linux: Ctrl+V
         let _ = enigo.key(Key::Control, Direction::Press);
         let _ = enigo.key(Key::Unicode('v'), Direction::Click);
         let _ = enigo.key(Key::Control, Direction::Release);

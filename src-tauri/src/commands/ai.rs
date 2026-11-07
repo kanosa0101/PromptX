@@ -17,7 +17,7 @@ use tauri_plugin_clipboard_manager::ClipboardExt;
 use uuid::Uuid;
 
 /// 模拟按键后等待系统/应用响应的间隔
-const COPY_DELAY_MS: u64 = 250;
+const _COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
 /// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
 const RELEASE_SETTLE_MS: u64 = 120;
@@ -160,6 +160,21 @@ async fn capture_inner(
     app: &tauri::AppHandle,
 ) -> Result<(String, Option<String>, Option<isize>), String> {
     // 0. 松开快捷键后稍作缓冲，确保用户物理按键已全部抬起
+    #[cfg(target_os = "windows")]
+    {
+        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_MENU};
+        let start = std::time::Instant::now();
+        while start.elapsed() < Duration::from_millis(400) {
+            unsafe {
+                let alt_down = (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000) != 0;
+                if !alt_down {
+                    break;
+                }
+            }
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }
+    }
+
     tokio::time::sleep(Duration::from_millis(RELEASE_SETTLE_MS)).await;
 
     // 1. 记录当前前台窗口（贴回前恢复焦点用）
@@ -193,11 +208,24 @@ async fn capture_inner(
         debug_log(&format!("模拟 Ctrl+C 失败: {}", e));
         format!("模拟按键失败: {}", e)
     })?;
-    tokio::time::sleep(Duration::from_millis(COPY_DELAY_MS)).await;
+    // 4. 轮询读取截取结果（最多 600ms，每 30ms 轮询一次），适应不同宿主应用的响应时间
+    let mut selected = String::new();
+    let poll_start = std::time::Instant::now();
+    while poll_start.elapsed() < Duration::from_millis(600) {
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        if let Ok(text) = app.clipboard().read_text() {
+            if text != SENTINEL && !text.trim().is_empty() {
+                selected = text;
+                break;
+            }
+        }
+    }
 
     // 4. 读取截取结果：仍为哨兵说明 Ctrl+C 没有产生新内容
     //    （终端里 Ctrl+C 是中断信号、TUI 无法选中等场景），恢复原剪贴板并失败
-    let selected = app.clipboard().read_text().unwrap_or_default();
+    if selected.is_empty() {
+        selected = app.clipboard().read_text().unwrap_or_default();
+    }
     debug_log(&format!(
         "Ctrl+C 后剪贴板: {} 字符 [{}]",
         selected.chars().count(),
