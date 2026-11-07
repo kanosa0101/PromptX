@@ -5,6 +5,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { getVersion } from '@tauri-apps/api/app'
 import { check, type Update } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
+import { isTauri } from '@/utils/isTauri'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { usePromptStore } from '@/stores/promptStore'
@@ -102,7 +103,9 @@ const handleHotkeyCapture = async (e: KeyboardEvent) => {
     try {
       if (field === 'globalHotkey') {
         // 立即注册新快捷键
-        await invoke('register_hotkey', { hotkey: fullHotkey })
+        if (isTauri()) {
+          await invoke('register_hotkey', { hotkey: fullHotkey })
+        }
         await settingsStore.changeHotkey(fullHotkey)
       } else if (field === 'optimizeHotkey') {
         // 保存后 update_settings 会统一重注册全部快捷键

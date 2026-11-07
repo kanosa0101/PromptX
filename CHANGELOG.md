@@ -1,11 +1,17 @@
 # Changelog
 
-## 未发布
+## 2.0.1（2026-11-07）
 
-收尾优化（发布后全项目巡检）。
+- 修复应用启动白屏与运行时环境兼容问题；
+- 扩展与桌面端发布后巡检修复。
 
 ### 修复
 
+- **桌面端应用启动白屏与环境兼容**：
+  - 修复在非 Tauri / 纯 Web 调试环境下，顶层 `invoke` 抛出未捕获异常导致 Vue 3 根组件挂载崩溃白屏的问题，加入 `isTauri` 环境探测守卫并为 `promptStore`/`settingsStore` 引入 localStorage 降级存储
+  - 修复 `vite.config.ts` 资源基准路径（`base: './'`），解决本地/Webview 协议下静态资源绝对路径 404
+  - 修复 `tauri.conf.json` 中 CSP `connect-src` 缺失 `ipc:` 协议导致 Webview2 内部 IPC 请求被拦截的问题
+  - 修复单实例重复唤醒时未重新居中定位导致窗口在多屏或特殊分辨率下屏幕外不可见的问题
 - **扩展端 AI 优化失败时 Side Panel「优化中」横幅卡死**：background 失败分支现在会向面板推送
   `px-optimize-error`，面板立即结束进度横幅并以红色横幅展示原因（8 秒自动消失，点击可关闭）
 - AI 错误消息未按语言展示：`shared/ai.ts` 全部错误改为携带 i18n key 的 `AiError`，

@@ -1,6 +1,6 @@
 [package]
 name = "promptx"
-version = "2.0.0"
+version = "2.0.1"
 description = "A lightweight AI prompt clipboard tool"
 authors = ["PromptX Team"]
 edition = "2021"

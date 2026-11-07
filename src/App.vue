@@ -22,6 +22,7 @@ import TemplateMarketPanel from '@shared/ui/components/TemplateMarketPanel.vue'
 import type { MarketTemplate } from '@shared/templateMarket'
 import { clearDraft } from '@shared/draft'
 import { check as checkForAppUpdate } from '@tauri-apps/plugin-updater'
+import { isTauri } from '@/utils/isTauri'
 
 const { t } = useI18n()
 const promptStore = usePromptStore()
@@ -69,10 +70,14 @@ const handlePreviewApply = async () => {
   const preview = uiStore.optimizePreviewData
   if (!preview || preview.streaming) return
   try {
-    if (preview.mode === 'clipboard') {
-      await invoke('clipboard_optimize_apply_result', { text: preview.text })
+    if (isTauri()) {
+      if (preview.mode === 'clipboard') {
+        await invoke('clipboard_optimize_apply_result', { text: preview.text })
+      } else {
+        await invoke('optimize_apply_result', { text: preview.text })
+      }
     } else {
-      await invoke('optimize_apply_result', { text: preview.text })
+      await navigator.clipboard.writeText(preview.text)
     }
     uiStore.showAiNotice(t('optimizer.donePasted'))
     window.setTimeout(() => uiStore.clearAiNotice(), 3000)
@@ -87,7 +92,9 @@ const handlePreviewApply = async () => {
 const handlePreviewCancel = () => {
   const preview = uiStore.optimizePreviewData
   uiStore.closeOptimizePreview()
-  invoke(preview?.mode === 'clipboard' ? 'clipboard_optimize_cancel' : 'optimize_cancel').catch(() => {})
+  if (isTauri()) {
+    invoke(preview?.mode === 'clipboard' ? 'clipboard_optimize_cancel' : 'optimize_cancel').catch(() => {})
+  }
 }
 
 // 处理键盘事件
@@ -151,7 +158,9 @@ const handleKeyDown = async (e: KeyboardEvent) => {
   // Escape 隐藏窗口
   if (e.key === 'Escape') {
     e.preventDefault()
-    await invoke('hide_window')
+    if (isTauri()) {
+      await invoke('hide_window')
+    }
     return
   }
 
@@ -202,6 +211,7 @@ const handleSystemThemeChange = () => {
 
 // 检查全局快捷键注册状态（启动时提示冲突，例如被其他程序占用）
 const checkHotkeyStatus = async () => {
+  if (!isTauri()) return
   try {
     const status = await invoke<{ name: string; hotkey: string; ok: boolean }[]>('get_hotkey_status')
     const failed = status.filter((s) => !s.ok)
@@ -219,6 +229,7 @@ const checkHotkeyStatus = async () => {
 
 // 启动时后台检查应用更新（失败静默；有新版本时提示，安装由用户在设置中确认）
 const checkAppUpdate = async () => {
+  if (!isTauri()) return
   try {
     const update = await checkForAppUpdate()
     // 快捷键冲突提示优先级更高，有通知时不覆盖

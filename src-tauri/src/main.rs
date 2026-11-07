@@ -39,6 +39,8 @@ fn main() {
         // 避免多个实例抢占全局快捷键（否则快捷键会静默失效）
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Some(window) = app.get_webview_window("main") {
+                let state = app.state::<AppState>();
+                window::restore_window_position(&window, &state);
                 let _ = window.show();
                 let _ = window.set_focus();
             }
@@ -67,6 +69,8 @@ fn main() {
             // 开机自启带 --hidden 参数 → 仅驻留后台（快捷键唤出），避免登录时弹窗
             if let Some(window) = app.get_webview_window("main") {
                 if !std::env::args().any(|a| a == "--hidden") {
+                    let state = app.state::<AppState>();
+                    window::restore_window_position(&window, &state);
                     let _ = window.show();
                     let _ = window.set_focus();
                 }

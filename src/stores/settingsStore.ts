@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import type { Settings } from '@/types'
 import { DEFAULT_SETTINGS } from '@/types'
 import { setLocale } from '@/i18n'
+import { isTauri } from '@/utils/isTauri'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
@@ -28,8 +29,21 @@ export const useSettingsStore = defineStore('settings', {
   actions: {
     async loadSettings() {
       try {
-        const settings = await invoke<Settings>('get_settings')
-        this.$patch(settings)
+        if (isTauri()) {
+          const settings = await invoke<Settings>('get_settings')
+          this.$patch(settings)
+        } else {
+          const cached = localStorage.getItem('promptx_settings')
+          if (cached) {
+            try {
+              this.$patch(JSON.parse(cached))
+            } catch {
+              this.$patch(DEFAULT_SETTINGS)
+            }
+          } else {
+            this.$patch(DEFAULT_SETTINGS)
+          }
+        }
         this.applyTheme()
         setLocale(this.language)
       } catch (error) {
@@ -42,9 +56,14 @@ export const useSettingsStore = defineStore('settings', {
 
     async updateSettings(updates: Partial<Settings>) {
       try {
-        // 后端 update_settings 要求完整 Settings 对象（整体替换），必须先合并出全量
-        const full: Settings = { ...this.$state, ...updates }
-        await invoke('update_settings', { settings: full })
+        if (isTauri()) {
+          // 后端 update_settings 要求完整 Settings 对象（整体替换），必须先合并出全量
+          const full: Settings = { ...this.$state, ...updates }
+          await invoke('update_settings', { settings: full })
+        } else {
+          const full = { ...this.$state, ...updates }
+          localStorage.setItem('promptx_settings', JSON.stringify(full))
+        }
         this.$patch(updates)
 
         if (updates.theme) {

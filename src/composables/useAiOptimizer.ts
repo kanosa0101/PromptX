@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/stores/settingsStore'
 import { useUiStore } from '@/stores/uiStore'
 import { optimizeText, describeAiError } from '@/services/ai'
 import { t } from '@/i18n'
+import { isTauri } from '@/utils/isTauri'
 
 /** 错误横幅自动消失时长 */
 const ERROR_DISMISS_MS = 8000
@@ -34,7 +35,11 @@ export function useAiOptimizer() {
 
   /** 前端诊断日志：与 Rust 侧写同一文件，便于对齐时间线 */
   const log = (message: string) => {
-    invoke('ai_debug_log', { message }).catch(() => {})
+    if (isTauri()) {
+      invoke('ai_debug_log', { message }).catch(() => {})
+    } else {
+      console.log(`[PromptX AI] ${message}`)
+    }
   }
 
   log('useAiOptimizer 初始化')
@@ -71,7 +76,9 @@ export function useAiOptimizer() {
     uiStore.startAiOptimizing()
     if (previewMode) {
       // 预览模式：唤起主窗口流式展示结果，用户确认后再贴回
-      invoke('show_window').catch(() => {})
+      if (isTauri()) {
+        invoke('show_window').catch(() => {})
+      }
       uiStore.openOptimizePreview('selection')
     }
     try {
@@ -88,20 +95,28 @@ export function useAiOptimizer() {
         return
       }
       log(`AI 返回 ${optimized.length} 字符，回调 Rust 贴回`)
-      await invoke('optimize_apply_result', { text: optimized })
+      if (isTauri()) {
+        await invoke('optimize_apply_result', { text: optimized })
+      } else {
+        await navigator.clipboard.writeText(optimized)
+      }
       showNotice(t('optimizer.donePasted'))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       log(`AI 流程失败: ${message}`)
       // 结束会话并恢复剪贴板
-      invoke('optimize_cancel').catch(() => {})
+      if (isTauri()) {
+        invoke('optimize_cancel').catch(() => {})
+      }
       if (message === '已取消') {
         // 用户主动取消：不弹错误、不动窗口
         showNotice(t('optimizer.canceled'))
         return
       }
       // 唤起主窗口展示错误
-      invoke('show_window').catch(() => {})
+      if (isTauri()) {
+        invoke('show_window').catch(() => {})
+      }
       showError(describeAiError(error, t))
     } finally {
       optimizeRunning = false
@@ -121,7 +136,9 @@ export function useAiOptimizer() {
     const previewMode = settingsStore.optimizePreview
     uiStore.startAiOptimizing()
     if (previewMode) {
-      invoke('show_window').catch(() => {})
+      if (isTauri()) {
+        invoke('show_window').catch(() => {})
+      }
       uiStore.openOptimizePreview('clipboard')
     }
     try {
@@ -137,19 +154,27 @@ export function useAiOptimizer() {
         return
       }
       log(`AI 返回 ${optimized.length} 字符，写回剪贴板`)
-      await invoke('clipboard_optimize_apply_result', { text: optimized })
+      if (isTauri()) {
+        await invoke('clipboard_optimize_apply_result', { text: optimized })
+      } else {
+        await navigator.clipboard.writeText(optimized)
+      }
       showNotice(t('optimizer.doneClipboard'))
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       log(`剪贴板优化失败: ${message}`)
       // 结束会话（原剪贴板未被修改，无需恢复）
-      invoke('clipboard_optimize_cancel').catch(() => {})
+      if (isTauri()) {
+        invoke('clipboard_optimize_cancel').catch(() => {})
+      }
       if (message === '已取消') {
         showNotice(t('optimizer.canceled'))
         return
       }
       // 唤起主窗口展示错误
-      invoke('show_window').catch(() => {})
+      if (isTauri()) {
+        invoke('show_window').catch(() => {})
+      }
       showError(describeAiError(error, t))
     } finally {
       clipboardOptimizeRunning = false
@@ -166,6 +191,10 @@ export function useAiOptimizer() {
 
   /** 注册事件监听（在 App 挂载时调用一次） */
   const start = async () => {
+    if (!isTauri()) {
+      log('运行于非 Tauri 浏览器环境，跳过全局快捷键事件监听')
+      return
+    }
     try {
       unlistenFns = await Promise.all([
         listen<{ text: string }>('promptx-ai-captured', (event) => {

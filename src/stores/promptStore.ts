@@ -9,6 +9,43 @@ import { useSearch } from '@/composables/useSearch'
 import { t } from '@/i18n'
 import { useSettingsStore } from './settingsStore'
 import { useUiStore } from './uiStore'
+import { isTauri } from '@/utils/isTauri'
+
+const DEFAULT_WEB_SPACES: Space[] = [
+  { id: 'space_default', name: '默认', icon: '📁', color: '#3B82F6', order: 0, createdAt: '2026-05-16T01:45:39.072Z', updatedAt: '2026-05-16T01:45:39.072Z' },
+  { id: 'space_work', name: '工作', icon: '💼', color: '#10B981', order: 1, createdAt: '2026-05-16T01:45:39.072Z', updatedAt: '2026-05-16T01:45:39.072Z' },
+  { id: 'space_personal', name: '个人', icon: '🏠', color: '#F59E0B', order: 2, createdAt: '2026-05-16T01:45:39.072Z', updatedAt: '2026-05-16T01:45:39.072Z' },
+  { id: 'space_ai_history', name: 'AI 优化', icon: '✨', color: '#8B5CF6', order: 3, createdAt: '2026-09-19T09:03:42.585Z', updatedAt: '2026-09-19T09:03:42.585Z' },
+]
+
+const DEFAULT_WEB_PROMPTS: Prompt[] = [
+  {
+    id: 'prompt_001',
+    title: '代码解释',
+    content: '请解释以下代码的功能：\n\n{{clipboard}}',
+    tags: ['开发', '代码'],
+    spaceId: 'space_work',
+    variables: [{ name: 'clipboard', type: 'system', defaultValue: undefined }],
+    usageCount: 1,
+    lastUsedAt: null,
+    createdAt: '2026-05-16T01:45:39.072Z',
+    updatedAt: '2026-05-16T01:45:39.072Z',
+    favorite: false,
+  },
+  {
+    id: 'prompt_002',
+    title: '文档润色',
+    content: '请润色以下文档：\n\n{{clipboard}}',
+    tags: ['写作'],
+    spaceId: 'space_work',
+    variables: [{ name: 'clipboard', type: 'system', defaultValue: undefined }],
+    usageCount: 1,
+    lastUsedAt: null,
+    createdAt: '2026-05-16T01:45:39.072Z',
+    updatedAt: '2026-05-16T01:45:39.072Z',
+    favorite: false,
+  },
+]
 
 export const usePromptStore = defineStore('prompt', {
   state: () => ({
@@ -44,13 +81,47 @@ export const usePromptStore = defineStore('prompt', {
   },
 
   actions: {
+    saveWebData() {
+      if (!isTauri()) {
+        try {
+          localStorage.setItem(
+            'promptx_web_data',
+            JSON.stringify({
+              spaces: this.spaces,
+              prompts: this.prompts,
+            })
+          )
+        } catch {
+          // ignore localStorage error
+        }
+      }
+    },
+
     async loadPrompts() {
       this.isLoading = true
       try {
-        const data = await invoke('get_app_data') as AppData
-        // 空间按 order 字段排序（与拖拽排序持久化的顺序一致）
-        this.spaces = [...(data.spaces || [])].sort((a, b) => a.order - b.order)
-        this.prompts = data.prompts || []
+        if (isTauri()) {
+          const data = await invoke('get_app_data') as AppData
+          // 空间按 order 字段排序（与拖拽排序持久化的顺序一致）
+          this.spaces = [...(data.spaces || [])].sort((a, b) => a.order - b.order)
+          this.prompts = data.prompts || []
+        } else {
+          const cached = localStorage.getItem('promptx_web_data')
+          if (cached) {
+            try {
+              const data = JSON.parse(cached)
+              this.spaces = (data.spaces || []).sort((a: Space, b: Space) => a.order - b.order)
+              this.prompts = data.prompts || []
+            } catch {
+              this.spaces = DEFAULT_WEB_SPACES
+              this.prompts = DEFAULT_WEB_PROMPTS
+            }
+          } else {
+            this.spaces = DEFAULT_WEB_SPACES
+            this.prompts = DEFAULT_WEB_PROMPTS
+            this.saveWebData()
+          }
+        }
       } catch (error) {
         console.error('Failed to load prompts:', error)
         // 加载失败保持空列表并提示用户；绝不注入演示数据冒充用户数据
@@ -68,9 +139,28 @@ export const usePromptStore = defineStore('prompt', {
 
     async createPrompt(prompt: PromptInput) {
       try {
-        const newPrompt = await invoke('create_prompt', { prompt }) as Prompt
-        this.prompts.push(newPrompt)
-        return newPrompt
+        if (isTauri()) {
+          const newPrompt = await invoke('create_prompt', { prompt }) as Prompt
+          this.prompts.push(newPrompt)
+          return newPrompt
+        } else {
+          const newPrompt: Prompt = {
+            id: `p_${Date.now()}`,
+            title: prompt.title,
+            content: prompt.content,
+            tags: prompt.tags || [],
+            spaceId: prompt.spaceId || this.currentSpaceId,
+            variables: this.parseVariables(prompt.content),
+            usageCount: 0,
+            lastUsedAt: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            favorite: false,
+          }
+          this.prompts.push(newPrompt)
+          this.saveWebData()
+          return newPrompt
+        }
       } catch (error) {
         console.error('Failed to create prompt:', error)
         throw error
@@ -79,12 +169,30 @@ export const usePromptStore = defineStore('prompt', {
 
     async updatePrompt(id: string, updates: Partial<Prompt>) {
       try {
-        const updatedPrompt = await invoke<Prompt>('update_prompt', { id, updates })
-        const index = this.prompts.findIndex((p) => p.id === id)
-        if (index !== -1) {
-          this.prompts[index] = updatedPrompt
+        if (isTauri()) {
+          const updatedPrompt = await invoke<Prompt>('update_prompt', { id, updates })
+          const index = this.prompts.findIndex((p) => p.id === id)
+          if (index !== -1) {
+            this.prompts[index] = updatedPrompt
+          }
+          return updatedPrompt
+        } else {
+          const index = this.prompts.findIndex((p) => p.id === id)
+          if (index !== -1) {
+            const updated = {
+              ...this.prompts[index],
+              ...updates,
+              updatedAt: new Date().toISOString(),
+            }
+            if (updates.content) {
+              updated.variables = this.parseVariables(updates.content)
+            }
+            this.prompts[index] = updated
+            this.saveWebData()
+            return updated
+          }
+          throw new Error('Prompt not found')
         }
-        return updatedPrompt
       } catch (error) {
         console.error('Failed to update prompt:', error)
         throw error
@@ -93,8 +201,11 @@ export const usePromptStore = defineStore('prompt', {
 
     async deletePrompt(id: string) {
       try {
-        await invoke('delete_prompt', { id })
+        if (isTauri()) {
+          await invoke('delete_prompt', { id })
+        }
         this.prompts = this.prompts.filter((p) => p.id !== id)
+        this.saveWebData()
       } catch (error) {
         console.error('Failed to delete prompt:', error)
         throw error
@@ -119,10 +230,18 @@ export const usePromptStore = defineStore('prompt', {
         // 获取唤醒时保存的剪贴板内容（而非当前剪贴板）
         // 这是在窗口显示前执行 Ctrl+C 时捕获的内容
         let clipboardText = ''
-        try {
-          clipboardText = await invoke<string>('get_wakeup_clipboard')
-        } catch {
-          clipboardText = ''
+        if (isTauri()) {
+          try {
+            clipboardText = await invoke<string>('get_wakeup_clipboard')
+          } catch {
+            clipboardText = ''
+          }
+        } else {
+          try {
+            clipboardText = (await navigator.clipboard.readText()) || ''
+          } catch {
+            clipboardText = ''
+          }
         }
 
         // 准备变量值
@@ -137,11 +256,23 @@ export const usePromptStore = defineStore('prompt', {
         // 替换变量
         const outputText = this.replaceVariables(prompt.content, values)
 
-        // 输出到剪贴板并模拟粘贴，自动恢复原剪贴板
-        await invoke('paste_and_restore', { text: outputText })
-
-        // 更新使用计数
-        await invoke('update_prompt_usage', { id: prompt.id })
+        if (isTauri()) {
+          // 输出到剪贴板并模拟粘贴，自动恢复原剪贴板
+          await invoke('paste_and_restore', { text: outputText })
+          // 更新使用计数
+          await invoke('update_prompt_usage', { id: prompt.id })
+        } else {
+          await navigator.clipboard.writeText(outputText)
+          const p = this.prompts.find((item) => item.id === prompt.id)
+          if (p) {
+            p.usageCount = (p.usageCount || 0) + 1
+            p.lastUsedAt = new Date().toISOString()
+            this.saveWebData()
+          }
+          const uiStore = useUiStore()
+          uiStore.showAiNotice(t('optimizer.doneClipboard'))
+          window.setTimeout(() => uiStore.clearAiNotice(), 2500)
+        }
       } catch (error) {
         console.error('Failed to output prompt:', error)
         throw error
@@ -228,9 +359,24 @@ export const usePromptStore = defineStore('prompt', {
 
     async createSpace(name: string, icon: string, color: string) {
       try {
-        const newSpace = await invoke<Space>('create_space', { name, icon, color })
-        this.spaces.push(newSpace)
-        return newSpace
+        if (isTauri()) {
+          const newSpace = await invoke<Space>('create_space', { name, icon, color })
+          this.spaces.push(newSpace)
+          return newSpace
+        } else {
+          const newSpace: Space = {
+            id: `space_${Date.now()}`,
+            name,
+            icon,
+            color,
+            order: this.spaces.length,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+          this.spaces.push(newSpace)
+          this.saveWebData()
+          return newSpace
+        }
       } catch (error) {
         console.error('Failed to create space:', error)
         throw error
@@ -239,12 +385,23 @@ export const usePromptStore = defineStore('prompt', {
 
     async updateSpace(id: string, updates: { name?: string; icon?: string; color?: string }) {
       try {
-        const updatedSpace = await invoke<Space>('update_space', { id, ...updates })
-        const index = this.spaces.findIndex((s) => s.id === id)
-        if (index !== -1) {
-          this.spaces[index] = updatedSpace
+        if (isTauri()) {
+          const updatedSpace = await invoke<Space>('update_space', { id, ...updates })
+          const index = this.spaces.findIndex((s) => s.id === id)
+          if (index !== -1) {
+            this.spaces[index] = updatedSpace
+          }
+          return updatedSpace
+        } else {
+          const index = this.spaces.findIndex((s) => s.id === id)
+          if (index !== -1) {
+            const updated = { ...this.spaces[index], ...updates, updatedAt: new Date().toISOString() }
+            this.spaces[index] = updated
+            this.saveWebData()
+            return updated
+          }
+          throw new Error('Space not found')
         }
-        return updatedSpace
       } catch (error) {
         console.error('Failed to update space:', error)
         throw error
@@ -253,7 +410,9 @@ export const usePromptStore = defineStore('prompt', {
 
     async deleteSpace(id: string) {
       try {
-        await invoke('delete_space', { id })
+        if (isTauri()) {
+          await invoke('delete_space', { id })
+        }
         this.spaces = this.spaces.filter((s) => s.id !== id)
         // 将该空间下的提示词移至默认空间（与后端行为一致）
         this.prompts.forEach((p) => {
@@ -265,6 +424,7 @@ export const usePromptStore = defineStore('prompt', {
         if (this.currentSpaceId === id) {
           this.setCurrentSpace('space_default')
         }
+        this.saveWebData()
       } catch (error) {
         console.error('Failed to delete space:', error)
         throw error
@@ -274,8 +434,21 @@ export const usePromptStore = defineStore('prompt', {
     // 空间拖拽排序：传入完整 ID 顺序，后端校验并持久化
     async reorderSpaces(orderedIds: string[]) {
       try {
-        const spaces = await invoke<Space[]>('reorder_spaces', { spaceIds: orderedIds })
-        this.spaces = spaces
+        if (isTauri()) {
+          const spaces = await invoke<Space[]>('reorder_spaces', { spaceIds: orderedIds })
+          this.spaces = spaces
+        } else {
+          const spaceMap = new Map(this.spaces.map((s) => [s.id, s]))
+          const reordered: Space[] = []
+          orderedIds.forEach((id, index) => {
+            const s = spaceMap.get(id)
+            if (s) {
+              reordered.push({ ...s, order: index })
+            }
+          })
+          this.spaces = reordered
+          this.saveWebData()
+        }
       } catch (error) {
         console.error('Failed to reorder spaces:', error)
         throw error
@@ -284,8 +457,18 @@ export const usePromptStore = defineStore('prompt', {
 
     async exportData() {
       try {
-        const data = await invoke<AppData>('get_app_data')
-        return data
+        if (isTauri()) {
+          const data = await invoke<AppData>('get_app_data')
+          return data
+        } else {
+          const settingsStore = useSettingsStore()
+          return {
+            version: '2.0.0',
+            settings: settingsStore.$state,
+            spaces: this.spaces,
+            prompts: this.prompts,
+          } as unknown as AppData
+        }
       } catch (error) {
         console.error('Failed to export data:', error)
         throw error
@@ -294,10 +477,29 @@ export const usePromptStore = defineStore('prompt', {
 
     async importData(data: AppData, merge: boolean = true) {
       try {
-        const result = await invoke<ImportResult>('import_data', { importData: data, merge })
-        // 重新加载数据
-        await this.loadPrompts()
-        return result
+        if (isTauri()) {
+          const result = await invoke<ImportResult>('import_data', { importData: data, merge })
+          // 重新加载数据
+          await this.loadPrompts()
+          return result
+        } else {
+          if (merge) {
+            const existingIds = new Set(this.prompts.map((p) => p.id))
+            data.prompts.forEach((p) => {
+              if (existingIds.has(p.id)) {
+                const idx = this.prompts.findIndex((item) => item.id === p.id)
+                this.prompts[idx] = p
+              } else {
+                this.prompts.push(p)
+              }
+            })
+          } else {
+            this.spaces = data.spaces || this.spaces
+            this.prompts = data.prompts || []
+          }
+          this.saveWebData()
+          return { importedPrompts: data.prompts?.length || 0, importedSpaces: data.spaces?.length || 0, skipped: 0, conflicts: [] }
+        }
       } catch (error) {
         console.error('Failed to import data:', error)
         throw error
