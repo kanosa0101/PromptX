@@ -74,7 +74,9 @@ fn main() {
                     let _ = window.show();
                     let _ = window.set_focus();
                 }
-                if std::env::var("PROMPTX_DEVTOOLS").is_ok() || std::env::var("PROMPTX_DEBUG").is_ok() {
+                if std::env::var("PROMPTX_DEVTOOLS").is_ok()
+                    || std::env::var("PROMPTX_DEBUG").is_ok()
+                {
                     window.open_devtools();
                 }
             }
