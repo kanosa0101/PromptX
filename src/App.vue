@@ -112,6 +112,12 @@ const handleRetryCapture = async () => {
   await aiOptimizer.retryCapture()
 }
 
+// 提示通知：从错误中打开设置
+const openSettingsFromAiError = () => {
+  uiStore.clearAiError()
+  uiStore.showSettingsPanel()
+}
+
 // 提示通知：重新生成
 const handleRegenerate = async () => {
   uiStore.clearAiNotice()
@@ -372,6 +378,12 @@ onUnmounted(() => {
         <span class="leading-snug break-words">{{ uiStore.aiError }}</span>
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
+        <button
+          class="px-2 py-0.5 rounded border border-red-400 dark:border-red-700 bg-red-100/60 dark:bg-red-900/40 hover:bg-red-200/60 dark:hover:bg-red-800/60 text-red-800 dark:text-red-200 font-medium"
+          @click="openSettingsFromAiError"
+        >
+          {{ t('optimizer.openSettings') }}
+        </button>
         <button
           v-if="uiStore.lastOptimization?.originalText"
           class="px-2 py-0.5 rounded border border-red-400 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900 text-red-800 dark:text-red-200 font-medium"

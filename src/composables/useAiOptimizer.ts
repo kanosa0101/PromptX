@@ -83,6 +83,11 @@ export function useAiOptimizer() {
     }
     try {
       log(`收到优化事件(${text.length} 字符)，开始调用 AI`)
+      uiStore.setLastOptimization({
+        originalText: text,
+        optimizedText: '',
+        mode: 'selection',
+      })
       const optimized = await optimizeText(aiSettings(), text, optimizeController.signal, (_delta, full) => {
         uiStore.aiStreamText = full
         if (previewMode) {
@@ -148,6 +153,11 @@ export function useAiOptimizer() {
     }
     try {
       log(`收到剪贴板优化事件(${text.length} 字符)，开始调用 AI`)
+      uiStore.setLastOptimization({
+        originalText: text,
+        optimizedText: '',
+        mode: 'clipboard',
+      })
       const optimized = await optimizeText(aiSettings(), text, clipboardOptimizeController.signal, (_delta, full) => {
         uiStore.aiStreamText = full
         if (previewMode) {

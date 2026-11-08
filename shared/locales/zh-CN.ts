@@ -257,6 +257,7 @@ export const zhCN = {
     fallbackNotice: '未检测到新选区，检测到剪贴板已有内容（{count} 字符）',
     useClipboardOptimize: '使用剪贴板内容优化',
     retryCapture: '重新获取选区',
+    openSettings: '前往设置填写',
   },
   background: {
     aiOptimize: 'AI 优化',

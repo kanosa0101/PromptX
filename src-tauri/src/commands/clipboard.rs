@@ -66,9 +66,7 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
 /// 恢复指定剪贴板内容（用户点击前端「恢复原剪贴板」时调用）
 #[tauri::command]
 pub fn restore_clipboard(app: tauri::AppHandle, text: String) -> Result<(), String> {
-    app.clipboard()
-        .write_text(&text)
-        .map_err(|e| e.to_string())
+    app.clipboard().write_text(&text).map_err(|e| e.to_string())
 }
 
 #[cfg(target_os = "windows")]

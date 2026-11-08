@@ -3,7 +3,7 @@
  * AI 快捷优化设置区块：服务配置 + 快捷键 + 推理模式 + 优化模板
  * 数据直接读写 settingsStore；状态提示通过 status 事件交由父级展示
  */
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '@/stores/settingsStore'
 import { testAiConnection, describeAiError } from '@/services/ai'
@@ -28,7 +28,7 @@ const settingsStore = useSettingsStore()
 const optimizeHotkey = computed(() => settingsStore.optimizeHotkey)
 const clipboardOptimizeHotkey = computed(() => settingsStore.clipboardOptimizeHotkey)
 
-// AI 优化设置（本地编辑，失焦即保存）
+// AI 优化设置（本地编辑，失焦或变更即保存）
 const aiBaseUrl = ref(settingsStore.aiBaseUrl)
 const aiApiKey = ref(settingsStore.aiApiKey)
 const aiModel = ref(settingsStore.aiModel)
@@ -37,12 +37,70 @@ const optimizeThinking = ref(settingsStore.optimizeThinking)
 const optimizePreview = ref(settingsStore.optimizePreview)
 const isTestingAi = ref(false)
 
-// 保存单个 AI 设置项（失焦触发）
+// 响应 store 加载后的异步更新（如钥匙串加载完附加 key）
+watch(
+  () => settingsStore.aiApiKey,
+  (v) => {
+    if (v !== aiApiKey.value) aiApiKey.value = v
+  }
+)
+watch(
+  () => settingsStore.aiBaseUrl,
+  (v) => {
+    if (v !== aiBaseUrl.value) aiBaseUrl.value = v
+  }
+)
+watch(
+  () => settingsStore.aiModel,
+  (v) => {
+    if (v !== aiModel.value) aiModel.value = v
+  }
+)
+watch(
+  () => settingsStore.optimizeTemplate,
+  (v) => {
+    if (v !== optimizeTemplate.value) optimizeTemplate.value = v
+  }
+)
+watch(
+  () => settingsStore.optimizeThinking,
+  (v) => {
+    optimizeThinking.value = v
+  }
+)
+watch(
+  () => settingsStore.optimizePreview,
+  (v) => {
+    optimizePreview.value = v
+  }
+)
+
+// 保存单个 AI 设置项（失焦或回车触发）
 const saveAiField = (field: 'aiBaseUrl' | 'aiApiKey' | 'aiModel' | 'optimizeTemplate', value: string) => {
-  settingsStore.updateSettings({ [field]: value }).catch((error) => {
+  const trimmed = field === 'aiBaseUrl' || field === 'aiApiKey' || field === 'aiModel' ? value.trim() : value
+  settingsStore.updateSettings({ [field]: trimmed }).catch((error) => {
     emit('status', t('aiSettings.saveFailed', { error: error instanceof Error ? error.message : String(error) }))
   })
 }
+
+// 组件卸载时确保未失焦的修改落盘保存
+onUnmounted(() => {
+  if (
+    aiApiKey.value.trim() !== settingsStore.aiApiKey.trim() ||
+    aiBaseUrl.value.trim() !== settingsStore.aiBaseUrl.trim() ||
+    aiModel.value.trim() !== settingsStore.aiModel.trim() ||
+    optimizeTemplate.value !== settingsStore.optimizeTemplate
+  ) {
+    settingsStore
+      .updateSettings({
+        aiBaseUrl: aiBaseUrl.value.trim(),
+        aiApiKey: aiApiKey.value.trim(),
+        aiModel: aiModel.value.trim(),
+        optimizeTemplate: optimizeTemplate.value,
+      })
+      .catch(() => {})
+  }
+})
 
 // 恢复默认优化模板：清空 = 使用内置默认（模板正文单源维护在 shared/types.ts）
 const resetTemplate = () => {
@@ -81,12 +139,22 @@ const togglePreview = () => {
   })
 }
 
-// 测试 AI 连接（使用当前表单值，无需先保存）
+// 测试 AI 连接（自动同步当前表单最新值并测试）
 const handleTestAi = async () => {
   isTestingAi.value = true
   emit('status', t('aiSettings.testingConn'))
   try {
-    const reply = await testAiConnection(aiBaseUrl.value, aiApiKey.value, aiModel.value, optimizeThinking.value)
+    await settingsStore.updateSettings({
+      aiBaseUrl: aiBaseUrl.value.trim(),
+      aiApiKey: aiApiKey.value.trim(),
+      aiModel: aiModel.value.trim(),
+    })
+    const reply = await testAiConnection(
+      aiBaseUrl.value.trim(),
+      aiApiKey.value.trim(),
+      aiModel.value.trim(),
+      optimizeThinking.value
+    )
     emit('status', t('aiSettings.testSuccess', { reply: reply.slice(0, 30) }))
   } catch (error) {
     emit('status', t('aiSettings.testFailed', { error: describeAiError(error, t) }))
@@ -118,7 +186,9 @@ const handleTestAi = async () => {
         type="password"
         placeholder="sk-..."
         class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
+        @change="saveAiField('aiApiKey', aiApiKey)"
         @blur="saveAiField('aiApiKey', aiApiKey)"
+        @keydown.enter="saveAiField('aiApiKey', aiApiKey); ($event.target as HTMLElement)?.blur()"
       >
     </div>
 
@@ -129,7 +199,9 @@ const handleTestAi = async () => {
         type="text"
         placeholder="https://api.deepseek.com"
         class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
+        @change="saveAiField('aiBaseUrl', aiBaseUrl)"
         @blur="saveAiField('aiBaseUrl', aiBaseUrl)"
+        @keydown.enter="saveAiField('aiBaseUrl', aiBaseUrl); ($event.target as HTMLElement)?.blur()"
       >
     </div>
 
@@ -140,7 +212,9 @@ const handleTestAi = async () => {
         type="text"
         placeholder="deepseek-flash"
         class="w-40 px-2 py-1 rounded border border-surface dark:border-surface-dark text-sm bg-transparent text-foreground dark:text-foreground-dark"
+        @change="saveAiField('aiModel', aiModel)"
         @blur="saveAiField('aiModel', aiModel)"
+        @keydown.enter="saveAiField('aiModel', aiModel); ($event.target as HTMLElement)?.blur()"
       >
     </div>
 
@@ -230,6 +304,7 @@ const handleTestAi = async () => {
         rows="3"
         :placeholder="t('aiSettings.templatePlaceholder')"
         class="w-full mt-1 px-2 py-1 rounded border border-surface dark:border-surface-dark text-xs bg-transparent text-foreground dark:text-foreground-dark resize-none"
+        @change="saveAiField('optimizeTemplate', optimizeTemplate)"
         @blur="saveAiField('optimizeTemplate', optimizeTemplate)"
       />
     </div>

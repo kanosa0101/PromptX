@@ -257,6 +257,7 @@ export const en = {
     fallbackNotice: 'No new selection detected, existing clipboard content found ({count} chars)',
     useClipboardOptimize: 'Optimize Clipboard Content',
     retryCapture: 'Retry Selection',
+    openSettings: 'Go to Settings',
   },
   background: {
     aiOptimize: 'AI Optimize',
