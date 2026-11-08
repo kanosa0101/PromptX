@@ -163,10 +163,13 @@ fn main() {
             // 剪贴板
             commands::clipboard::get_wakeup_clipboard,
             commands::clipboard::paste_and_restore,
+            commands::clipboard::restore_clipboard,
             // AI 优化
             commands::ai::optimize_apply_result,
             commands::ai::optimize_cancel,
             commands::ai::ai_debug_log,
+            commands::ai::prepare_optimize_session,
+            commands::ai::ai_retry_capture,
             commands::ai::clipboard_optimize_apply_result,
             commands::ai::clipboard_optimize_cancel,
             // 设置

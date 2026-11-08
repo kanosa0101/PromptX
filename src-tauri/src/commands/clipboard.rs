@@ -46,8 +46,8 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
         window.hide().unwrap_or_default();
     }
 
-    // 等待窗口隐藏完成
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    // 等待窗口隐藏完成并归还焦点
+    tokio::time::sleep(Duration::from_millis(100)).await;
 
     // 模拟粘贴
     simulate_paste().map_err(|e| format!("模拟按键失败: {}", e))?;
@@ -63,29 +63,90 @@ pub async fn paste_and_restore(app: tauri::AppHandle, text: String) -> Result<()
     Ok(())
 }
 
+/// 恢复指定剪贴板内容（用户点击前端「恢复原剪贴板」时调用）
+#[tauri::command]
+pub fn restore_clipboard(app: tauri::AppHandle, text: String) -> Result<(), String> {
+    app.clipboard()
+        .write_text(&text)
+        .map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn send_input_key(vk: windows::Win32::UI::Input::KeyboardAndMouse::VIRTUAL_KEY, keyup: bool) {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        MapVirtualKeyW, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS,
+        KEYEVENTF_KEYUP, MAPVK_VK_TO_VSC,
+    };
+    let scancode = unsafe { MapVirtualKeyW(vk.0 as u32, MAPVK_VK_TO_VSC) as u16 };
+    let flags = if keyup {
+        KEYEVENTF_KEYUP
+    } else {
+        KEYBD_EVENT_FLAGS(0)
+    };
+    let input = INPUT {
+        r#type: INPUT_KEYBOARD,
+        Anonymous: INPUT_0 {
+            ki: KEYBDINPUT {
+                wVk: vk,
+                wScan: scancode,
+                dwFlags: flags,
+                time: 0,
+                dwExtraInfo: 0,
+            },
+        },
+    };
+    unsafe {
+        SendInput(&[input], std::mem::size_of::<INPUT>() as i32);
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn simulate_ctrl_combo(key_vk: u8) -> Result<(), String> {
+    use windows::Win32::UI::Input::KeyboardAndMouse::{
+        GetAsyncKeyState, VIRTUAL_KEY, VK_CONTROL, VK_MENU, VK_SHIFT,
+    };
+
+    unsafe {
+        // 检查当前物理修饰键状态
+        let alt_down = (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000) != 0;
+        let shift_down = (GetAsyncKeyState(VK_SHIFT.0 as i32) as u16 & 0x8000) != 0;
+
+        // 1. 先按下 Ctrl（在任何 Alt 变动前按下 Ctrl，彻底防止 Windows 激活菜单栏 SC_KEYMENU）
+        send_input_key(VK_CONTROL, false);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        // 如果物理 Alt / Shift 仍被按住，在 Ctrl 保护下抬起它们
+        if alt_down {
+            send_input_key(VK_MENU, true);
+        }
+        if shift_down {
+            send_input_key(VK_SHIFT, true);
+        }
+
+        // 2. 按下并释放目标键（C 或 V）
+        send_input_key(VIRTUAL_KEY(key_vk as u16), false);
+        std::thread::sleep(std::time::Duration::from_millis(30));
+        send_input_key(VIRTUAL_KEY(key_vk as u16), true);
+        std::thread::sleep(std::time::Duration::from_millis(20));
+
+        // 恢复之前被临时抬起的物理修饰键（避免用户物理按键状态错乱）
+        if alt_down {
+            send_input_key(VK_MENU, false);
+        }
+        if shift_down {
+            send_input_key(VK_SHIFT, false);
+        }
+
+        // 3. 释放 Ctrl
+        send_input_key(VK_CONTROL, true);
+    }
+    Ok(())
+}
+
 /// 模拟复制按键 (Ctrl+C / Cmd+C)
 #[cfg(target_os = "windows")]
 pub fn simulate_copy() -> Result<(), String> {
-    use windows::Win32::UI::Input::KeyboardAndMouse::{
-        keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, VK_CONTROL, VK_MENU, VK_SHIFT,
-    };
-    unsafe {
-        // 先确保 Alt / Shift 处于抬起状态（防止全局快捷键如 Ctrl+Alt+O 触发时物理键残留导致系统识别为 Ctrl+Alt+C）
-        keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-        keybd_event(VK_SHIFT.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-
-        // 按下 Ctrl
-        keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-        std::thread::sleep(std::time::Duration::from_millis(15));
-        // 按下并释放 'C' (VK_C = 0x43)
-        keybd_event(b'C', 0, KEYBD_EVENT_FLAGS(0), 0);
-        std::thread::sleep(std::time::Duration::from_millis(20));
-        keybd_event(b'C', 0, KEYEVENTF_KEYUP, 0);
-        std::thread::sleep(std::time::Duration::from_millis(15));
-        // 释放 Ctrl
-        keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-    }
-    Ok(())
+    simulate_ctrl_combo(b'C')
 }
 
 #[cfg(not(target_os = "windows"))]
@@ -122,26 +183,7 @@ fn simulate_copy_or_cut(key: char) -> Result<(), String> {
 /// 模拟粘贴按键 (Ctrl+V / Cmd+V)
 #[cfg(target_os = "windows")]
 pub fn simulate_paste() -> Result<(), String> {
-    use windows::Win32::UI::Input::KeyboardAndMouse::{
-        keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, VK_CONTROL, VK_MENU, VK_SHIFT,
-    };
-    unsafe {
-        // 先确保 Alt / Shift 处于抬起状态
-        keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-        keybd_event(VK_SHIFT.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-
-        // 按下 Ctrl
-        keybd_event(VK_CONTROL.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-        std::thread::sleep(std::time::Duration::from_millis(15));
-        // 按下并释放 'V' (VK_V = 0x56)
-        keybd_event(b'V', 0, KEYBD_EVENT_FLAGS(0), 0);
-        std::thread::sleep(std::time::Duration::from_millis(20));
-        keybd_event(b'V', 0, KEYEVENTF_KEYUP, 0);
-        std::thread::sleep(std::time::Duration::from_millis(15));
-        // 释放 Ctrl
-        keybd_event(VK_CONTROL.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-    }
-    Ok(())
+    simulate_ctrl_combo(b'V')
 }
 
 #[cfg(not(target_os = "windows"))]

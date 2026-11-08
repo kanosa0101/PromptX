@@ -6,7 +6,7 @@
 //! → invoke 写回剪贴板并模拟 Ctrl+V 贴回原位 → 恢复原剪贴板
 //! → 结果存入「AI 优化」历史空间。
 
-use crate::commands::clipboard::{simulate_copy, simulate_paste, RESTORE_DELAY_MS};
+use crate::commands::clipboard::{simulate_copy, simulate_paste};
 use crate::models::{Prompt, Space, AI_HISTORY_SPACE_ID};
 use crate::AppState;
 use chrono::Utc;
@@ -19,8 +19,6 @@ use uuid::Uuid;
 /// 模拟按键后等待系统/应用响应的间隔
 const _COPY_DELAY_MS: u64 = 250;
 const PASTE_DELAY_MS: u64 = 50;
-/// 松开快捷键后、模拟 Ctrl+C 前的缓冲，确保物理按键状态稳定
-const RELEASE_SETTLE_MS: u64 = 120;
 /// 会话有效期：超时的残留会话视为已失败，允许新触发覆盖
 // 预览确认模式下用户查看结果后才应用，会话存活窗口需覆盖这段等待
 const SESSION_STALE_MS: u64 = 300_000;
@@ -86,6 +84,17 @@ pub fn ai_debug_log(message: String) -> Result<(), String> {
     Ok(())
 }
 
+/// 优化截取结果错误类型
+enum CaptureError {
+    /// 未截取到新选区，但剪贴板有现有文本内容
+    FallbackToClipboard {
+        clipboard_text: String,
+        foreground: Option<isize>,
+    },
+    /// 致命错误（如剪贴板亦为空、写剪贴板失败）
+    Fatal(String),
+}
+
 /// 快捷键入口：截取选中文本并通知前端开始 AI 优化
 /// 全程不显示主窗口，焦点始终停留在目标应用
 pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
@@ -131,7 +140,33 @@ pub async fn capture_selection_for_optimize(app: tauri::AppHandle) {
                 debug_log(&format!("前端事件发送失败: {}", e));
             }
         }
-        Err(err) => {
+        Err(CaptureError::FallbackToClipboard {
+            clipboard_text,
+            foreground,
+        }) => {
+            // 未截取到新选区，但剪贴板有现有内容：
+            // 将会话初始化为该剪贴板内容，以备用户在前端点击「使用剪贴板内容优化」
+            if let Some(session) = OPTIMIZE_SESSION.lock().as_mut() {
+                session.original_clipboard = Some(clipboard_text.clone());
+                session.selected_text = clipboard_text.clone();
+                session.foreground = foreground;
+            }
+            debug_log(&format!(
+                "未截取到新选区，检测到剪贴板现有内容({} 字符)，发送 fallback 事件",
+                clipboard_text.chars().count()
+            ));
+            if let Err(e) = emit_to_main(
+                &app,
+                "promptx-ai-fallback",
+                serde_json::json!({
+                    "clipboardText": clipboard_text,
+                    "message": "未截取到选中文本，检测到剪贴板已有内容"
+                }),
+            ) {
+                debug_log(&format!("前端 fallback 事件发送失败: {}", e));
+            }
+        }
+        Err(CaptureError::Fatal(err)) => {
             // 截取失败：清除占位会话，弹出主窗口由前端展示错误
             *OPTIMIZE_SESSION.lock() = None;
             debug_log(&format!("截取失败: {}", err));
@@ -158,16 +193,22 @@ fn preview(s: &str, max: usize) -> String {
 
 async fn capture_inner(
     app: &tauri::AppHandle,
-) -> Result<(String, Option<String>, Option<isize>), String> {
-    // 0. 松开快捷键后稍作缓冲，确保用户物理按键已全部抬起
+) -> Result<(String, Option<String>, Option<isize>), CaptureError> {
+    // 0. 松开快捷键后稍作缓冲，确保用户物理修饰按键已全部抬起
     #[cfg(target_os = "windows")]
     {
-        use windows::Win32::UI::Input::KeyboardAndMouse::{GetAsyncKeyState, VK_MENU};
+        use windows::Win32::UI::Input::KeyboardAndMouse::{
+            GetAsyncKeyState, VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+        };
         let start = std::time::Instant::now();
-        while start.elapsed() < Duration::from_millis(400) {
+        while start.elapsed() < Duration::from_millis(600) {
             unsafe {
                 let alt_down = (GetAsyncKeyState(VK_MENU.0 as i32) as u16 & 0x8000) != 0;
-                if !alt_down {
+                let ctrl_down = (GetAsyncKeyState(VK_CONTROL.0 as i32) as u16 & 0x8000) != 0;
+                let shift_down = (GetAsyncKeyState(VK_SHIFT.0 as i32) as u16 & 0x8000) != 0;
+                let win_down = (GetAsyncKeyState(VK_LWIN.0 as i32) as u16 & 0x8000) != 0
+                    || (GetAsyncKeyState(VK_RWIN.0 as i32) as u16 & 0x8000) != 0;
+                if !alt_down && !ctrl_down && !shift_down && !win_down {
                     break;
                 }
             }
@@ -175,7 +216,7 @@ async fn capture_inner(
         }
     }
 
-    tokio::time::sleep(Duration::from_millis(RELEASE_SETTLE_MS)).await;
+    tokio::time::sleep(Duration::from_millis(50)).await;
 
     // 1. 记录当前前台窗口（贴回前恢复焦点用）
     let foreground = crate::utils::focus::foreground_window();
@@ -186,7 +227,7 @@ async fn capture_inner(
         ));
     }
 
-    // 2. 保存原剪贴板内容，用于结束后恢复
+    // 2. 保存原剪贴板内容，用于结束后恢复或重合判定
     let original = app.clipboard().read_text().ok();
     debug_log(&format!(
         "原剪贴板: {}",
@@ -196,23 +237,25 @@ async fn capture_inner(
         }
     ));
 
-    // 2. 先写入哨兵内容清空剪贴板：之后能读到非哨兵内容，当且仅当
-    //    Ctrl+C 真的复制了新东西。否则无法区分「没复制到」与「复制的
-    //    内容恰好和已有剪贴板相同」（用户常先手动复制草稿再选中优化）
+    // 3. 先写入哨兵内容清空剪贴板：之后能读到非哨兵内容，当且仅当
+    //    Ctrl+C 真的复制了新东西。
     app.clipboard()
         .write_text(SENTINEL)
-        .map_err(|e| format!("无法写入剪贴板: {}", e))?;
+        .map_err(|e| CaptureError::Fatal(format!("无法写入剪贴板: {}", e)))?;
 
-    // 3. 模拟 Ctrl+C 截取选中内容（窗口未显示，焦点仍在原应用）
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
+    // 4. 模拟 Ctrl+C 截取选中内容（窗口未显示，焦点仍在原应用）
     simulate_copy().map_err(|e| {
         debug_log(&format!("模拟 Ctrl+C 失败: {}", e));
-        format!("模拟按键失败: {}", e)
+        CaptureError::Fatal(format!("模拟按键失败: {}", e))
     })?;
-    // 4. 轮询读取截取结果（最多 600ms，每 30ms 轮询一次），适应不同宿主应用的响应时间
+
+    // 5. 轮询读取截取结果（最多 600ms，每 25ms 轮询一次），适应不同宿主应用的响应时间
     let mut selected = String::new();
     let poll_start = std::time::Instant::now();
     while poll_start.elapsed() < Duration::from_millis(600) {
-        tokio::time::sleep(Duration::from_millis(30)).await;
+        tokio::time::sleep(Duration::from_millis(25)).await;
         if let Ok(text) = app.clipboard().read_text() {
             if text != SENTINEL && !text.trim().is_empty() {
                 selected = text;
@@ -221,8 +264,7 @@ async fn capture_inner(
         }
     }
 
-    // 4. 读取截取结果：仍为哨兵说明 Ctrl+C 没有产生新内容
-    //    （终端里 Ctrl+C 是中断信号、TUI 无法选中等场景），恢复原剪贴板并失败
+    // 6. 读取截取结果：仍为哨兵说明 Ctrl+C 没有产生新内容
     if selected.is_empty() {
         selected = app.clipboard().read_text().unwrap_or_default();
     }
@@ -231,11 +273,24 @@ async fn capture_inner(
         selected.chars().count(),
         preview(&selected, 30)
     ));
+
     if selected.trim().is_empty() || selected == SENTINEL {
+        // 先把原剪贴板写回，保证系统剪贴板不残留哨兵字符
         if let Some(orig) = &original {
             let _ = app.clipboard().write_text(orig);
         }
-        return Err("未截取到选中文本，请先在目标应用中选中要优化的内容".to_string());
+        // 显式检查：如果原剪贴板中有有效内容（非空白且非哨兵），触发 fallback 候选
+        if let Some(orig) = original {
+            if !orig.trim().is_empty() && orig != SENTINEL {
+                return Err(CaptureError::FallbackToClipboard {
+                    clipboard_text: orig,
+                    foreground,
+                });
+            }
+        }
+        return Err(CaptureError::Fatal(
+            "未截取到选中文本，且剪贴板为空。请先在目标应用中选中要优化的内容".to_string(),
+        ));
     }
 
     // 返回（选中文本, 原剪贴板, 前台窗口），会话由调用方登记
@@ -247,26 +302,24 @@ async fn capture_inner(
 pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Result<(), String> {
     debug_log(&format!("前端回调贴回: {} 字符", text.chars().count()));
 
-    // 先写剪贴板再消费会话：写失败时会话保留，
-    // 前端错误路径仍可通过 optimize_cancel 恢复原剪贴板并清理
     app.clipboard()
         .write_text(&text)
         .map_err(|e| e.to_string())?;
 
-    let session = OPTIMIZE_SESSION
-        .lock()
-        .take()
-        .ok_or_else(|| "没有进行中的优化会话".to_string())?;
+    let session = OPTIMIZE_SESSION.lock().take();
+    let (selected_text, foreground) = match &session {
+        Some(s) => (s.selected_text.clone(), s.foreground),
+        None => (String::new(), crate::utils::focus::foreground_window()),
+    };
 
     if let Some(window) = app.get_webview_window("main") {
         if window.is_visible().unwrap_or(false) {
             window.hide().unwrap_or_default();
-            // 隐藏窗口后焦点归还目标应用，稍多等一会确保稳定
             tokio::time::sleep(Duration::from_millis(150)).await;
         }
     }
     // 贴回前把焦点恢复到截取时刻的前台窗口（AI 等待期间焦点可能漂移）
-    if let Some(hwnd) = session.foreground {
+    if let Some(hwnd) = foreground {
         let current = crate::utils::focus::foreground_window();
         if current != Some(hwnd) {
             debug_log(&format!(
@@ -287,16 +340,39 @@ pub async fn optimize_apply_result(app: tauri::AppHandle, text: String) -> Resul
         debug_log(&format!("模拟 Ctrl+V 失败: {}", e));
         format!("模拟按键失败: {}", e)
     })?;
-    debug_log("已模拟 Ctrl+V，等待目标应用读取剪贴板");
-    tokio::time::sleep(Duration::from_millis(RESTORE_DELAY_MS)).await;
-
-    if let Some(orig) = session.original_clipboard {
-        let _ = app.clipboard().write_text(&orig);
-        debug_log("已恢复原剪贴板");
-    }
+    debug_log("已模拟 Ctrl+V，优化结果已保留在剪贴板中");
 
     // 保存历史（失败不影响主流程）
-    save_ai_history(&app, &session.selected_text, &text);
+    save_ai_history(&app, &selected_text, &text);
+    Ok(())
+}
+
+/// 前端调用：为优化会话登记上下文（用于重新生成或 fallback 使用剪贴板时）
+#[tauri::command]
+pub fn prepare_optimize_session(
+    text: String,
+    original_clipboard: Option<String>,
+) -> Result<(), String> {
+    let foreground = crate::utils::focus::foreground_window();
+    let mut session = OPTIMIZE_SESSION.lock();
+    *session = Some(OptimizeSession {
+        original_clipboard,
+        selected_text: text,
+        created_at: std::time::Instant::now(),
+        foreground,
+    });
+    Ok(())
+}
+
+/// 前端在 fallback 弹窗中点击「重新获取选区」：隐藏主窗口并重新尝试截取
+#[tauri::command]
+pub async fn ai_retry_capture(app: tauri::AppHandle) -> Result<(), String> {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.hide();
+    }
+    // 等待窗口隐藏并归还焦点
+    tokio::time::sleep(Duration::from_millis(300)).await;
+    capture_selection_for_optimize(app).await;
     Ok(())
 }
 

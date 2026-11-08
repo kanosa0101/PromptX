@@ -26,9 +26,39 @@ export const useUiStore = defineStore('ui', {
     aiStreamText: '',
     // 优化结果预览（optimizePreview 开启时：先展示，用户确认后再替换）
     optimizePreviewData: null as null | { mode: 'selection' | 'clipboard'; text: string; streaming: boolean },
+    // 截取选区未获取到但剪贴板有现有内容时的候选数据
+    aiFallbackData: null as null | { text: string },
+    // 最近一次优化上下文（用于支持用户「重新生成」或「恢复原剪贴板」）
+    lastOptimization: null as null | {
+      originalText: string
+      optimizedText: string
+      mode: 'selection' | 'clipboard'
+      originalClipboard?: string
+    },
   }),
 
   actions: {
+    showAiFallback(text: string) {
+      this.aiFallbackData = { text }
+      this.clearAiError()
+    },
+
+    clearAiFallback() {
+      this.aiFallbackData = null
+    },
+
+    setLastOptimization(data: {
+      originalText: string
+      optimizedText: string
+      mode: 'selection' | 'clipboard'
+      originalClipboard?: string
+    }) {
+      this.lastOptimization = data
+    },
+
+    clearLastOptimization() {
+      this.lastOptimization = null
+    },
     showSystemNotice(message: string) {
       this.systemNotice = message
     },

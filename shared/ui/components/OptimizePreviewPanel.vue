@@ -17,6 +17,7 @@ defineProps<{
 const emit = defineEmits<{
   apply: []
   cancel: []
+  regenerate: []
 }>()
 </script>
 
@@ -45,6 +46,13 @@ const emit = defineEmits<{
         @click="emit('cancel')"
       >
         {{ t('optimizePreview.cancel') }}
+      </button>
+      <button
+        class="btn btn-secondary"
+        :disabled="streaming"
+        @click="emit('regenerate')"
+      >
+        {{ t('optimizer.regenerate') }}
       </button>
       <button
         class="btn btn-primary"

@@ -97,6 +97,33 @@ const handlePreviewCancel = () => {
   }
 }
 
+// AI 优化预览：重新生成
+const handlePreviewRegenerate = async () => {
+  await aiOptimizer.regenerate()
+}
+
+// 智能候选：使用剪贴板内容优化
+const handleUseFallback = async () => {
+  await aiOptimizer.useFallbackOptimize()
+}
+
+// 智能候选：重新获取选区
+const handleRetryCapture = async () => {
+  await aiOptimizer.retryCapture()
+}
+
+// 提示通知：重新生成
+const handleRegenerate = async () => {
+  uiStore.clearAiNotice()
+  uiStore.clearAiError()
+  await aiOptimizer.regenerate()
+}
+
+// 提示通知：恢复原剪贴板
+const handleRestoreOriginalClipboard = async () => {
+  await aiOptimizer.restoreOriginalClipboard()
+}
+
 // 处理键盘事件
 const handleKeyDown = async (e: KeyboardEvent) => {
   // 如果在弹窗状态，不处理导航键；Escape 逐层关闭（否则是键盘陷阱）
@@ -299,32 +326,100 @@ onUnmounted(() => {
       </button>
     </div>
 
+    <!-- 智能剪贴板候选横幅（未截取到选区但剪贴板有现有内容） -->
+    <div
+      v-if="uiStore.aiFallbackData"
+      class="animate-fade-in fixed top-8 left-2 right-2 z-50 p-3 rounded-lg bg-amber-50 dark:bg-amber-950 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs shadow-xl flex flex-col gap-2"
+    >
+      <div class="flex items-center justify-between font-medium">
+        <span class="flex items-center gap-1.5">
+          <span>💡</span>
+          <span>{{ t('optimizer.fallbackNotice', { count: uiStore.aiFallbackData.text.length }) }}</span>
+        </span>
+        <button
+          class="opacity-70 hover:opacity-100 p-0.5"
+          @click="uiStore.clearAiFallback"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="max-h-16 overflow-y-auto px-2 py-1 rounded bg-amber-100/60 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-mono text-[11px] truncate">
+        {{ uiStore.aiFallbackData.text }}
+      </div>
+      <div class="flex justify-end gap-2 pt-1">
+        <button
+          class="px-2.5 py-1 rounded border border-amber-400 dark:border-amber-700 hover:bg-amber-200/50 dark:hover:bg-amber-900/50"
+          @click="handleRetryCapture"
+        >
+          {{ t('optimizer.retryCapture') }}
+        </button>
+        <button
+          class="px-3 py-1 rounded bg-primary text-white hover:bg-primary-hover font-medium shadow-sm"
+          @click="handleUseFallback"
+        >
+          {{ t('optimizer.useClipboardOptimize') }}
+        </button>
+      </div>
+    </div>
+
     <!-- AI 优化错误横幅 -->
     <div
       v-if="uiStore.aiError"
-      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg"
+      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg"
     >
-      <span class="leading-snug">{{ uiStore.aiError }}</span>
-      <button
-        class="shrink-0 opacity-70 hover:opacity-100"
-        @click="uiStore.clearAiError"
-      >
-        ✕
-      </button>
+      <div class="flex items-center gap-1.5 min-w-0 flex-1">
+        <span class="shrink-0">⚠️</span>
+        <span class="leading-snug break-words">{{ uiStore.aiError }}</span>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button
+          v-if="uiStore.lastOptimization?.originalText"
+          class="px-2 py-0.5 rounded border border-red-400 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900 text-red-800 dark:text-red-200 font-medium"
+          @click="handleRegenerate"
+        >
+          {{ t('optimizer.retry') }}
+        </button>
+        <button
+          class="shrink-0 opacity-70 hover:opacity-100 px-1"
+          @click="uiStore.clearAiError"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
-    <!-- AI 优化成功提示（自动消失） -->
+    <!-- AI 优化成功提示 -->
     <div
       v-if="uiStore.aiNotice"
-      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-start justify-between gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-800 text-green-700 dark:text-green-300 text-xs shadow-lg"
+      class="animate-fade-in fixed top-8 left-2 right-2 z-50 flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950 border border-green-300 dark:border-green-800 text-green-700 dark:text-green-300 text-xs shadow-lg"
     >
-      <span class="leading-snug">{{ uiStore.aiNotice }}</span>
-      <button
-        class="shrink-0 opacity-70 hover:opacity-100"
-        @click="uiStore.clearAiNotice"
-      >
-        ✕
-      </button>
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <span class="shrink-0">✓</span>
+        <span class="truncate leading-snug">{{ uiStore.aiNotice }}</span>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button
+          v-if="uiStore.lastOptimization?.originalText"
+          class="px-2 py-0.5 rounded border border-green-400 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900 text-green-800 dark:text-green-200 font-medium"
+          @click="handleRegenerate"
+        >
+          {{ t('optimizer.regenerate') }}
+        </button>
+        <button
+          v-if="uiStore.lastOptimization?.originalClipboard && uiStore.lastOptimization.originalClipboard !== uiStore.lastOptimization.optimizedText"
+          class="px-2 py-0.5 rounded border border-green-400 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-900 text-green-800 dark:text-green-200"
+          :title="t('optimizer.restoreClipboardHint')"
+          @click="handleRestoreOriginalClipboard"
+        >
+          {{ t('optimizer.restoreClipboard') }}
+        </button>
+        <button
+          class="shrink-0 opacity-70 hover:opacity-100 px-1"
+          @click="uiStore.clearAiNotice"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
     <!-- AI 优化进行中（用户中途唤起窗口时可见，可取消） -->
@@ -407,6 +502,7 @@ onUnmounted(() => {
       :mode="uiStore.optimizePreviewData.mode"
       @apply="handlePreviewApply"
       @cancel="handlePreviewCancel"
+      @regenerate="handlePreviewRegenerate"
     />
 
     <!-- 确认对话框 -->

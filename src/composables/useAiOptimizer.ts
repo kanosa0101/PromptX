@@ -89,6 +89,11 @@ export function useAiOptimizer() {
           uiStore.updateOptimizePreview(full)
         }
       })
+      uiStore.setLastOptimization({
+        originalText: text,
+        optimizedText: optimized,
+        mode: 'selection',
+      })
       if (previewMode) {
         // 应用动作由 App.vue 预览面板的确认回调触发
         uiStore.finishOptimizePreview()
@@ -149,6 +154,11 @@ export function useAiOptimizer() {
           uiStore.updateOptimizePreview(full)
         }
       })
+      uiStore.setLastOptimization({
+        originalText: text,
+        optimizedText: optimized,
+        mode: 'clipboard',
+      })
       if (previewMode) {
         uiStore.finishOptimizePreview()
         return
@@ -189,6 +199,60 @@ export function useAiOptimizer() {
     clipboardOptimizeController?.abort()
   }
 
+  /** 用户在提示中点击「重新生成」 */
+  const regenerate = async () => {
+    const last = uiStore.lastOptimization
+    if (!last || !last.originalText) return
+    log(`用户触发重新生成: ${last.originalText.length} 字符, 模式: ${last.mode}`)
+    if (isTauri()) {
+      await invoke('prepare_optimize_session', {
+        text: last.originalText,
+        originalClipboard: last.originalClipboard || null,
+      }).catch(() => {})
+    }
+    if (last.mode === 'clipboard') {
+      await runClipboardOptimize(last.originalText)
+    } else {
+      await runOptimize(last.originalText)
+    }
+  }
+
+  /** 重试选区截取 */
+  const retryCapture = async () => {
+    uiStore.clearAiFallback()
+    if (isTauri()) {
+      log('用户请求重试选区截取')
+      await invoke('ai_retry_capture').catch(() => {})
+    }
+  }
+
+  /** 用户选择使用剪贴板中的现有候选内容进行优化 */
+  const useFallbackOptimize = async () => {
+    const fallbackText = uiStore.aiFallbackData?.text
+    uiStore.clearAiFallback()
+    if (!fallbackText) return
+    log(`用户确认使用剪贴板候选文本优化: ${fallbackText.length} 字符`)
+    if (isTauri()) {
+      await invoke('prepare_optimize_session', {
+        text: fallbackText,
+        originalClipboard: fallbackText,
+      }).catch(() => {})
+    }
+    await runOptimize(fallbackText)
+  }
+
+  /** 恢复优化前的原剪贴板 */
+  const restoreOriginalClipboard = async () => {
+    const last = uiStore.lastOptimization
+    if (!last?.originalClipboard) return
+    if (isTauri()) {
+      await invoke('restore_clipboard', { text: last.originalClipboard }).catch(() => {})
+    } else {
+      await navigator.clipboard.writeText(last.originalClipboard)
+    }
+    showNotice(t('optimizer.restoredClipboard'))
+  }
+
   /** 注册事件监听（在 App 挂载时调用一次） */
   const start = async () => {
     if (!isTauri()) {
@@ -202,6 +266,11 @@ export function useAiOptimizer() {
         }),
         listen<{ text: string }>('promptx-ai-clipboard', (event) => {
           runClipboardOptimize(event.payload.text)
+        }),
+        listen<{ clipboardText: string; message: string }>('promptx-ai-fallback', (event) => {
+          log(`收到剪贴板候选事件(${event.payload.clipboardText.length} 字符)`)
+          invoke('show_window').catch(() => {})
+          uiStore.showAiFallback(event.payload.clipboardText)
         }),
         listen<{ message: string }>('promptx-ai-error', (event) => {
           log('收到错误事件: ' + event.payload.message)
@@ -224,5 +293,15 @@ export function useAiOptimizer() {
     if (noticeTimer) clearTimeout(noticeTimer)
   }
 
-  return { start, stop, cancelOptimize }
+  return {
+    start,
+    stop,
+    cancelOptimize,
+    runOptimize,
+    runClipboardOptimize,
+    regenerate,
+    retryCapture,
+    useFallbackOptimize,
+    restoreOriginalClipboard,
+  }
 }
