@@ -87,6 +87,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ ok: true })
       return false
 
+    case 'px-optimize-retry': {
+      // Side Panel「重试」：复用最后一次截取的上下文重新优化
+      // （失败发生在替换之前，页面原选区未被改动，直接重发 AI 请求即可）
+      const ctx = lastOptimizeContext
+      if (!ctx || optimizeRunning) {
+        sendResponse({ ok: false })
+        return false
+      }
+      optimizeRunning = true
+      optimizeCaptured(ctx.tabId, ctx.hasEditableTarget, ctx.text)
+        .catch(handleOptimizeError)
+        .finally(() => {
+          optimizeRunning = false
+        })
+      sendResponse({ ok: true })
+      return false
+    }
+
     default:
       return false
   }
@@ -146,6 +164,13 @@ async function describeErrorLocalized(error: unknown): Promise<string> {
 // 避免并发请求与历史双写（SW 存活期内有效；SW 重启后标记自然复位）
 let optimizeRunning = false
 
+// 最近一次截取上下文（Side Panel「重试」复用；SW 重启后自然清空）
+let lastOptimizeContext: {
+  tabId: number
+  hasEditableTarget: boolean
+  text: string
+} | null = null
+
 async function runOptimizeFlow(): Promise<void> {
   if (optimizeRunning) {
     console.warn('[PromptX] Optimize already running, ignored')
@@ -178,43 +203,61 @@ async function runOptimizeFlow(): Promise<void> {
       return
     }
 
-    // 2. 调 AI 优化（background 发起请求，绕开页面 CSP/CORS；流式增量转发给 Side Panel）
-    await setBadge('…')
-    const settings = await loadAiSettings()
-    notifySidepanel({ action: 'px-optimize-start' })
-    const optimized = await optimizeText(settings, text, undefined, (_delta, full) => {
-      notifySidepanel({ action: 'px-optimize-stream', text: full })
-    })
-
-    // 3. 应用结果（预览确认模式下先发给 Side Panel，用户确认后再应用）
-    const hasEditableTarget = capture?.hasEditableTarget ?? false
-    if (settings.optimizePreview && sidepanelConnected) {
-      pendingPreview = { tabId: tab.id, hasEditableTarget, text: optimized, original: text }
-      notifySidepanel({
-        action: 'px-optimize-preview',
-        text: optimized,
-        mode: hasEditableTarget ? 'selection' : 'clipboard',
-      })
-      return
+    lastOptimizeContext = {
+      tabId: tab.id,
+      hasEditableTarget: capture?.hasEditableTarget ?? false,
+      text,
     }
-
-    await applyOptimizedResult(tab.id, hasEditableTarget, optimized)
-    notifySidepanel({ action: 'px-optimize-done' })
-
-    // 4. 存入「AI 优化」历史空间（失败不影响主流程；预览模式在确认时存）
-    await saveOptimizeHistory(text, optimized)
+    await optimizeCaptured(tab.id, capture?.hasEditableTarget ?? false, text)
   } catch (error) {
-    console.error('[PromptX] AI optimize failed:', error)
-    const message = await describeErrorLocalized(error)
-    // Side Panel 打开时同步失败状态（否则面板的「优化中」横幅会一直卡住）
-    notifySidepanel({ action: 'px-optimize-error', message })
-    await setBadge('!', '#DC2626')
-    clearBadgeLater(3000)
-    // 系统通知展示失败原因（Key 未配置 / 接口报错 / 网络故障等）
-    await showFailureNotice(await currentLocale(), message)
+    await handleOptimizeError(error)
   } finally {
     optimizeRunning = false
   }
+}
+
+/** 优化已截取的文本并应用/存历史（快捷键触发与 Side Panel「重试」共用） */
+async function optimizeCaptured(
+  tabId: number,
+  hasEditableTarget: boolean,
+  text: string,
+): Promise<void> {
+  // 2. 调 AI 优化（background 发起请求，绕开页面 CSP/CORS；流式增量转发给 Side Panel）
+  await setBadge('…')
+  const settings = await loadAiSettings()
+  notifySidepanel({ action: 'px-optimize-start' })
+  const optimized = await optimizeText(settings, text, undefined, (_delta, full) => {
+    notifySidepanel({ action: 'px-optimize-stream', text: full })
+  })
+
+  // 3. 应用结果（预览确认模式下先发给 Side Panel，用户确认后再应用）
+  if (settings.optimizePreview && sidepanelConnected) {
+    pendingPreview = { tabId, hasEditableTarget, text: optimized, original: text }
+    notifySidepanel({
+      action: 'px-optimize-preview',
+      text: optimized,
+      mode: hasEditableTarget ? 'selection' : 'clipboard',
+    })
+    return
+  }
+
+  await applyOptimizedResult(tabId, hasEditableTarget, optimized)
+  notifySidepanel({ action: 'px-optimize-done' })
+
+  // 4. 存入「AI 优化」历史空间（失败不影响主流程；预览模式在确认时存）
+  await saveOptimizeHistory(text, optimized)
+}
+
+/** 优化失败统一收尾：面板横幅 + 徽标 + 系统通知 */
+async function handleOptimizeError(error: unknown): Promise<void> {
+  console.error('[PromptX] AI optimize failed:', error)
+  const message = await describeErrorLocalized(error)
+  // Side Panel 打开时同步失败状态（否则面板的「优化中」横幅会一直卡住）
+  notifySidepanel({ action: 'px-optimize-error', message })
+  await setBadge('!', '#DC2626')
+  clearBadgeLater(3000)
+  // 系统通知展示失败原因（Key 未配置 / 接口报错 / 网络故障等）
+  await showFailureNotice(await currentLocale(), message)
 }
 
 /** 应用优化结果：可编辑区原位替换，失败回退复制到剪贴板 */

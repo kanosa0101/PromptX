@@ -276,9 +276,6 @@ const checkAppUpdate = async () => {
 
 // 初始化应用并注册键盘监听
 onMounted(async () => {
-  if (isTauri()) {
-    invoke('ai_debug_log', { message: '[FE] onMounted start' }).catch(() => {})
-  }
   await promptStore.loadPrompts()
   await settingsStore.loadSettings()
   await checkHotkeyStatus()
@@ -287,16 +284,10 @@ onMounted(async () => {
   checkAppUpdate()
   window.addEventListener('keydown', handleKeyDown)
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', handleSystemThemeChange)
+  // 启动完成留一条精简日志（白屏排查期的全量状态 dump 已移除，异常经 main.ts 全局捕获上报）
   if (isTauri()) {
     invoke('ai_debug_log', {
-      message: `[FE] onMounted done. prompts: ${promptStore.prompts.length}, spaces: ${promptStore.spaces.length}, space: ${promptStore.currentSpaceId}, filtered: ${promptStore.filteredPrompts.length}, uiState: ${JSON.stringify({
-        settings: uiStore.showSettings,
-        promptEditor: uiStore.showPromptEditor,
-        varForm: uiStore.showVariableForm,
-        help: uiStore.showHelp,
-        market: uiStore.showTemplateMarket,
-        spaceEditor: uiStore.showSpaceEditor,
-      })}`
+      message: `[FE] ready. prompts: ${promptStore.prompts.length}, spaces: ${promptStore.spaces.length}`
     }).catch(() => {})
   }
 })

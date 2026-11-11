@@ -1,8 +1,8 @@
 # 产品需求文档（PRD）：PromptX
 
-**文档版本**: v5.0（三版合并版）
-**对齐应用版本**: v2.0.0（2026-10-25）
-**文档历史**: v1.0 初版规划（2026-05-15）→ v2.0 MVP 总结（2026-05-16）→ v3.x 实态对齐（2026-06 ~ 09）→ v4.0 合并为单份文档并对齐 v1.2.0 → v4.1 对齐 v1.3.0 → v4.2 对齐 v1.5.0 → v5.0 对齐 v2.0.0
+**文档版本**: v5.1（三版合并版）
+**对齐应用版本**: v2.0.6（2026-11-08）
+**文档历史**: v1.0 初版规划（2026-05-15）→ v2.0 MVP 总结（2026-05-16）→ v3.x 实态对齐（2026-06 ~ 09）→ v4.0 合并为单份文档并对齐 v1.2.0 → v4.1 对齐 v1.3.0 → v4.2 对齐 v1.5.0 → v5.0 对齐 v2.0.0 → v5.1 对齐 v2.0.6
 
 > 本文是产品唯一 PRD：既有规划（用户/价值/边界）也有实态对齐（功能/数据/API 均经代码验证）。
 > 历史版本（PRD v1.0 / 2.0 / 3.x）已并入本文，不再单独保留。
@@ -45,7 +45,7 @@
 
 ---
 
-## 2. 功能清单（实态，v1.2.0）
+## 2. 功能清单（实态，v2.0.6）
 
 ### 2.1 全局唤醒与窗口管理 ✅
 
@@ -57,6 +57,7 @@
 | 失焦自动隐藏 | 按 `autoHide` 设置决定 |
 | 窗口透明度 | 滑块 50%–100%，防抖应用 |
 | 开机自启 | `--hidden` 参数静默驻留后台（登录不弹窗），快捷键唤出 |
+| 白屏防御 | `error`/`unhandledrejection`/Vue `errorHandler` 三路全局捕获：错误写诊断日志 + 红色浮层展示（绝不静默白屏）；F12 呼出 DevTools（`PROMPTX_DEVTOOLS` 环境变量启动即开） |
 
 ### 2.2 搜索与导航 ✅
 
@@ -146,7 +147,7 @@ API Key / 服务地址 / 模型 / 深度思考开关 / 优化结果预览确认�
 | 原位替换 | 跨 AI 等待期保持选区边界；替换前校验原文未变 |
 | 消息安全 | `sender.id === chrome.runtime.id` 校验 |
 | 跨上下文存储 | 写队列 + Web Locks 互斥（background ↔ sidepanel 读改写原子化，不丢数据） |
-| 失败通知 | AI 失败弹系统通知展示原因；徽标反馈进度（…/✓/C/!） |
+| 失败通知 | AI 失败面板红色横幅展示原因（可前往设置 / 一键重试，重试由 background 复用最后截取上下文）+ 系统通知；徽标反馈进度（…/✓/C/!） |
 | 主题记忆 | 打开侧边栏即应用已存主题（含跟随系统） |
 
 ### 2.8 AI 快捷优化 ✅（两种模式）
@@ -156,7 +157,7 @@ API Key / 服务地址 / 模型 / 深度思考开关 / 优化结果预览确认�
 | 能力 | 选区替换模式 | 剪贴板模式 |
 |------|-------------|-----------|
 | 触发 | 全局快捷键（默认 `Ctrl+Alt+O`） | 全局快捷键（默认 `Ctrl+Shift+B`） |
-| 输入 | enigo 模拟 Ctrl+C 截取（窗口不显示、焦点不转移；哨兵判定防陈旧剪贴板） | 直接读剪贴板 |
+| 输入 | 原生 Win32 SendInput 模拟 Ctrl+C 截取（窗口不显示、焦点不转移；先等待物理修饰键释放再模拟；哨兵判定 + 截取后 600ms 轮询适应慢速应用） | 直接读剪贴板 |
 | 输出 | 模拟 Ctrl+V 贴回原位（恢复截取时刻焦点窗口），恢复原剪贴板 | 优化结果写回剪贴板，用户自行粘贴 |
 | 适用 | 编辑器/文档等可选区场景 | 终端/自绘界面等选区不可靠场景 |
 | 扩展端 | `Alt+Shift+O`：选区原位替换（等价选区模式） | —（浏览器内无此场景） |
@@ -164,7 +165,10 @@ API Key / 服务地址 / 模型 / 深度思考开关 / 优化结果预览确认�
 **共性设计**：
 - OpenAI 兼容 Chat Completions；默认 DeepSeek（`https://api.deepseek.com` / `deepseek-flash`），任意兼容服务可配
 - 60s 超时（AbortController）、超时/网络/5xx/429 自动重试一次；用户取消立即中止且不重试、不报错
-- 桌面端优化进行中主窗口显示进度条 + 取消按钮，完成有成功提示
+- 桌面端优化进行中主窗口显示进度条 + 取消按钮；成功/失败横幅带动作按钮——重新生成、恢复原剪贴板、失败时前往设置/重试
+- 候选回退（桌面端）：未截取到新选区但剪贴板有内容时弹出候选横幅——「使用剪贴板内容优化」或「重新获取选区」（隐藏窗口后重新截取），不直接报错
+- 重新生成（桌面端）：优化完成/失败后一键对原文重新优化（`prepare_optimize_session` 登记上下文）
+- 贴回后优化结果保留在剪贴板（可继续粘贴到别处），成功横幅提供「恢复原剪贴板」按需还原
 - 桌面端 API Key 存 Windows 凭据管理器（`data.json` 不落明文，旧数据自动迁移）；扩展端存 `chrome.storage.local`
 - 输入超 12000 字符截断；Markdown 代码块包裹自动剥离；深度思考开关（关闭时请求 `thinking: disabled`）
 - 并发防护：进行中重复触发直接忽略（双端）
@@ -178,7 +182,7 @@ API Key / 服务地址 / 模型 / 深度思考开关 / 优化结果预览确认�
 
 | 项 | 说明 |
 |----|------|
-| 测试 | 148 个前端（搜索/高亮转义/变量/AI 客户端含取消与流式 SSE/store 契约/编辑器草稿/收藏排序/i18n 词表对齐/backend 契约）+ 50 个 Rust（热键解析/存储原子性与损坏恢复/跨进程缓存失效/密钥存取/历史清理/空间排序校验/NM 帧与协议分发） |
+| 测试 | 142 个前端（搜索/高亮转义/变量/AI 客户端含取消与流式 SSE/store 契约/编辑器草稿/收藏排序/i18n 词表对齐/backend 契约）+ 50 个 Rust（热键解析/存储原子性与损坏恢复/跨进程缓存失效/密钥存取/历史清理/空间排序校验/NM 帧与协议分发） |
 | CI | 8 个 job：双端 lint/typecheck/test/build + clippy -D warnings + rustfmt + macOS 编译 |
 | 发布 | 推 `v*` 标签自动构建 NSIS/MSI/扩展 zip 并发布 Release；更新包 minisign 签名 + `latest.json` 自动更新清单 |
 | 安全 | CodeQL 每周扫描；API Key 钥匙串存储；CSP 收敛；更新包签名校验 |
@@ -226,16 +230,16 @@ interface Settings {
 
 ---
 
-## 4. API 清单（桌面端 Tauri Commands，25 个）
+## 4. API 清单（桌面端 Tauri Commands，29 个）
 
 | 分组 | 命令 |
 |------|------|
 | 提示词（6） | `get_app_data` `create_prompt` `update_prompt` `delete_prompt` `update_prompt_usage` `import_data` |
 | 空间（4） | `create_space` `update_space` `delete_space` `reorder_spaces` |
-| 剪贴板（2） | `get_wakeup_clipboard` `paste_and_restore` |
-| AI 优化（5） | `optimize_apply_result` `optimize_cancel` `clipboard_optimize_apply_result` `clipboard_optimize_cancel` `ai_debug_log` |
+| 剪贴板（3） | `get_wakeup_clipboard` `paste_and_restore` `restore_clipboard` |
+| AI 优化（7） | `optimize_apply_result` `optimize_cancel` `prepare_optimize_session` `ai_retry_capture` `clipboard_optimize_apply_result` `clipboard_optimize_cancel` `ai_debug_log` |
 | 设置（4） | `get_settings` `update_settings` `register_hotkey` `get_hotkey_status` |
-| 窗口（2） | `hide_window` `show_window` |
+| 窗口（3） | `hide_window` `show_window` `open_devtools` |
 | 同步（2） | `get_nm_status` `set_nm_sync` |
 
 数据类命令均为 async，含磁盘写入/钥匙串访问的命令体经 `spawn_blocking` 在阻塞线程池执行（不占 async worker）；存储经 `Arc` 内存缓存（只读热路径零克隆），写路径原子化。
@@ -254,6 +258,7 @@ interface Settings {
 | `↑` `↓` / `Tab` `Shift+Tab` | 导航 / 切换空间 |
 | `Enter` / `Esc` | 输出 / 逐层关闭面板（无面板时隐藏窗口） |
 | `Ctrl+N/E/D/,` | 新建 / 编辑 / 删除 / 设置 |
+| `F12` | 呼出 DevTools（诊断用） |
 
 ### 扩展端
 
@@ -290,6 +295,7 @@ interface Settings {
 | NM 同步仅 Windows | 低 | macOS/Linux 的 NM 注册方式（plist/路径）不同，随平台支持落地 |
 | 桌面端退出即 NM 断开 | 低 | NM host 经单实例转发方案未实施（v1 直接共享 data.json + 文件锁），主进程退出期间扩展自动回退独立模式 |
 | 首次运行种子数据为中文 | 低 | 双端默认空间/示例提示词暂未按系统语言本地化（仅影响英文用户首次启动的初始数据，可自行改名/删除） |
+| 扩展 Side Panel 白屏（MV3 CSP） | 高（修复已入主干待发布） | vue-i18n 默认以 `new Function` 编译消息，被 MV3 默认 CSP（禁止 unsafe-eval）拦截，v1.5.0 起面板实际空白；已启用 JIT 编译模式根治并实测回归（桌面端同类白屏 v2.0.2 曾以放行 CSP 止血，本次一并收紧） |
 
 ### 7.2 明确不做的事
 
@@ -307,7 +313,8 @@ interface Settings {
 
 ## 8. 版本规划
 
-- **v2.0.0（当前）**：双端数据打通（Native Messaging）、模板市场、多风格预设、UI 合并 Step 2/3（shared/backend 适配层 + VariableForm 下沉）
+- **v2.0.0 ~ v2.0.6（当前，2026-10-25 ~ 11-08）**：v2.0 目标全部落地（双端数据打通 Native Messaging、模板市场、多风格预设、UI 合并 Step 2/3），随后发布维护补丁——扩展 AI 失败横幅、AI 错误 i18n、启动白屏止血、选区截取时效四连修、API Key 保存时机、窗口拖拽 ACL
+- **v2.0.7（待发布）**：扩展 Side Panel 白屏根治（vue-i18n JIT 编译模式，MV3 CSP 兼容）+ 桌面 CSP 收紧 + 扩展失败横幅动作对齐
 - **v2.1 候选**：UI 合并 Step 4（设置面板分块下沉，两端平台区块占比高、待 token 体系更成熟）；NM 单实例转发（桌面端退出期间保持扩展同步可用）；模板市场投稿流程
 - **v2.x+ 暂缓项**：Windows Authenticode 签名（需证书）；云端同步（需服务端）；多平台（macOS/Linux 运行时验证与 NM 注册）
 
@@ -315,4 +322,4 @@ interface Settings {
 
 **文档结束**
 
-> 本文反映截至 2026-10-25 的代码实态（应用 v2.0.0）。所有"已实现"条目均经代码 + 构建 + 测试验证。
+> 本文反映截至 2026-11-08 的代码实态（应用 v2.0.6 + 主干待发布修复）。所有"已实现"条目均经代码 + 构建 + 测试验证。

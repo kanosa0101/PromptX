@@ -14,16 +14,30 @@ function reportGlobalError(type: string, error: unknown) {
   if (isTauri()) {
     invoke('ai_debug_log', { message: fullMsg }).catch(() => {})
   }
+
+  // 错误内容全部经 textContent 写入，避免错误消息内含 HTML 被当作标记注入
   const errDiv = document.createElement('div')
   errDiv.style.cssText =
     'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(20,20,30,0.95);color:#ff6b6b;padding:20px;font-family:monospace;font-size:12px;z-index:999999;overflow:auto;user-select:text;'
-  errDiv.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-      <h3 style="color:#ff8787;margin:0;">[Frontend Error: ${type}]</h3>
-      <button style="background:#ff6b6b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;" onclick="this.parentElement.parentElement.remove()">关闭 (Close)</button>
-    </div>
-    <pre style="white-space:pre-wrap;color:#eee;">${msg}</pre>
-  `
+
+  const header = document.createElement('div')
+  header.style.cssText =
+    'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;'
+  const title = document.createElement('h3')
+  title.style.cssText = 'color:#ff8787;margin:0;'
+  title.textContent = `[Frontend Error: ${type}]`
+  const closeBtn = document.createElement('button')
+  closeBtn.style.cssText =
+    'background:#ff6b6b;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-weight:bold;'
+  closeBtn.textContent = '关闭 (Close)'
+  closeBtn.addEventListener('click', () => errDiv.remove())
+  header.append(title, closeBtn)
+
+  const body = document.createElement('pre')
+  body.style.cssText = 'white-space:pre-wrap;color:#eee;'
+  body.textContent = msg
+
+  errDiv.append(header, body)
   document.body.appendChild(errDiv)
 }
 

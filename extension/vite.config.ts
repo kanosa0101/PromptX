@@ -40,6 +40,12 @@ function copyManifestPlugin() {
 
 export default defineConfig({
   plugins: [vue(), copyManifestPlugin()],
+  define: {
+    // vue-i18n 启用 JIT（AST 解释器）模式：运行时编译消息不再走 new Function（eval）。
+    // MV3 扩展默认 CSP 禁止 unsafe-eval 且无法放开，缺此标志时首次 t() 即抛
+    // EvalError，Side Panel 整页白屏（v1.5.0~v2.0.6 实际受影响，v2.0.7 修复）
+    __INTLIFY_JIT_COMPILATION__: true,
+  },
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

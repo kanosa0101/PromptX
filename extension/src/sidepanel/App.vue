@@ -165,14 +165,36 @@
       </div>
     </div>
 
-    <!-- AI 优化失败（background 推送，点击关闭） -->
+    <!-- AI 优化失败（background 推送；可前往设置或重试） -->
     <div
       v-if="aiError"
-      class="mx-2 my-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs cursor-pointer"
-      :title="t('common.close')"
-      @click="uiStore.clearAiError()"
+      class="mx-2 my-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/30 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs shadow-lg flex items-center justify-between gap-2"
     >
-      {{ aiError }}
+      <div class="flex items-center gap-1.5 min-w-0 flex-1">
+        <span class="shrink-0">⚠️</span>
+        <span class="leading-snug break-words">{{ aiError }}</span>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button
+          class="px-2 py-0.5 rounded border border-red-400 dark:border-red-700 bg-red-100/60 dark:bg-red-900/40 hover:bg-red-200/60 dark:hover:bg-red-800/60 text-red-800 dark:text-red-200 font-medium"
+          @click="openSettingsFromAiError"
+        >
+          {{ t('optimizer.openSettings') }}
+        </button>
+        <button
+          class="px-2 py-0.5 rounded border border-red-400 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900 text-red-800 dark:text-red-200 font-medium"
+          @click="retryOptimize"
+        >
+          {{ t('optimizer.retry') }}
+        </button>
+        <button
+          class="shrink-0 opacity-70 hover:opacity-100 px-1"
+          :title="t('common.close')"
+          @click="uiStore.clearAiError()"
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
     <!-- AI 优化结果预览 -->
@@ -500,6 +522,18 @@ const onPreviewApply = () => {
 const onPreviewCancel = () => {
   chrome.runtime.sendMessage({ action: 'px-optimize-preview-cancel' }).catch(() => {})
   uiStore.closeOptimizePreview()
+}
+
+// 错误横幅：前往设置（API Key/服务地址等配置问题）
+const openSettingsFromAiError = () => {
+  uiStore.clearAiError()
+  uiStore.openSettings()
+}
+
+// 错误横幅：重试（background 复用最后一次截取上下文重新优化；
+// 成功重启时其 px-optimize-start 推送会顺带清除本横幅，被拒则横幅保留）
+const retryOptimize = () => {
+  chrome.runtime.sendMessage({ action: 'px-optimize-retry' }).catch(() => {})
 }
 
 let nmUnlisten: (() => void) | undefined
